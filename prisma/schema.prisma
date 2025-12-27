@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum EstadoPedido {
+  PENDIENTE
+  CONFIRMADO
+  EN_PRODUCCION
+  COMPLETADO
+  CANCELADO
+  ENTREGADO
+}
+
+enum EstadoConfeccion {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+  CON_OBSERVACIONES
+  RECHAZADA
+}
+
+enum EstadoCotizacion {
+  PENDIENTE
+  ENVIADA
+  ACEPTADA
+  RECHAZADA
+  VENCIDA
+}
+
+enum EstadoDespacho {
+  PENDIENTE
+  EMPAQUETADO
+  EN_TRANSITO
+  ENTREGADO
+  DEVUELTO
+}
+
+enum EstadoProducto {
+  activo
+  inactivo
+  agotado
+}
+
+enum EstadoTaller {
+  ACTIVO
+  INACTIVO
+  SUSPENDIDO
+}
+
+enum PrioridadPedido {
+  BAJA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+enum EstadoUsuario {
+  activo
+  inactivo
+  suspendido
+}
+
+enum RolUsuario {
+  administrador
+  cortador
+  diseñador
+  recepcionista
+  ayudante
+  representante_taller
+}
+
+// ============================================
+// MODELOS
+// ============================================
+
+model categorias {
+  id          BigInt      @id @default(autoincrement())
+  nombre      String      @unique
+  descripcion String?
+  activo      Boolean     @default(true)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @default(now()) @updatedAt
+  
+  productos   productos[]
+
+  @@map("categorias")
+}
+
+model clientes {
+  id            BigInt    @id @default(autoincrement())
+  ruc           BigInt
+  razon_social  String?   @db.VarChar
+  email         String?   @db.VarChar
+  telefono      BigInt?
+  direccion     String?   @db.VarChar
+  activo        Boolean?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now()) @updatedAt
+  auth_id       String?   @unique @db.Uuid
+  
+  pedidos       pedidos[]
+
+  @@map("clientes")
+}
+
+model confecciones {
+  id             BigInt            @id @default(autoincrement())
+  pedido_id      BigInt
+  taller_id      BigInt
+  estado         EstadoConfeccion  @default(PENDIENTE)
+  fecha_inicio   DateTime
+  fecha_fin      DateTime?
+  observaciones  String?
+  created_at     DateTime          @default(now())
+  updated_at     DateTime          @updatedAt
+  
+  taller         talleres          @relation(fields: [taller_id], references: [id])
+
+  @@map("confecciones")
+}
+
+model cotizaciones {
+  id              BigInt            @id @default(autoincrement())
+  total           Float
+  creado_por      String?
+  created_at      DateTime          @default(now())
+  fecha_cotizac   DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  usuario_id      BigInt
+  estado          EstadoCotizacion  @default(PENDIENTE)
+  
+  usuario         usuarios          @relation(fields: [usuario_id], references: [id])
+  items           items_cotizacion[]
+
+  @@map("cotizaciones")
+}
+
+model despachos {
+  id                  BigInt          @id @default(autoincrement())
+  pedido_id           BigInt
+  fecha_despacho      DateTime
+  created_at          DateTime        @default(now())
+  direccion_entrega   String
+  fecha_entrega       DateTime?
+  updated_at          DateTime        @updatedAt
+  usuario_id          BigInt
+  estado              EstadoDespacho  @default(PENDIENTE)
+  
+  usuario             usuarios        @relation(fields: [usuario_id], references: [id])
+
+  @@map("despachos")
+}
+
+model detalles_pedido {
+  id               BigInt   @id @default(autoincrement())
+  pedido_id        BigInt
+  producto_id      BigInt
+  cantidad         Int
+  talla            String   @db.VarChar
+  color            String?  @db.VarChar
+  precio_unitario  Decimal
+  subtotal         Decimal
+  notas            String?
+  created_at       DateTime @default(now())
+  nombre_producto  String
+  sku_producto     String
+  
+  pedido           pedidos  @relation(fields: [pedido_id], references: [id])
+  producto         productos @relation(fields: [producto_id], references: [id])
+
+  @@map("detalles_pedido")
+}
+
+model inventario {
+  id               BigInt    @id @default(autoincrement())
+  nombre           String
+  tipo             String
+  unidad_medida    String
+  stock_actual     Int
+  created_at       DateTime  @default(now())
+  stock_minimo     Int
+  updated_at       DateTime  @updatedAt
+  producto_id      BigInt?
+  
+  producto         productos? @relation(fields: [producto_id], references: [id])
+  lista_materiales lista_materiales[]
+
+  @@map("inventario")
+}
+
+model items_cotizacion {
+  id               BigInt      @id @default(autoincrement())
+  cotizacion_id    BigInt
+  cantidad         Int
+  precio_unitario  Float
+  subtotal         Float
+  created_at       DateTime    @default(now())
+  updated_at       DateTime    @updatedAt
+  variante_id      BigInt
+  
+  cotizacion       cotizaciones @relation(fields: [cotizacion_id], references: [id])
+
+  @@map("items_cotizacion")
+}
+
+model lista_materiales {
+  id                  BigInt    @id @default(autoincrement())
+  producto_id         BigInt?
+  insumo_id           BigInt?
+  created_at          DateTime  @default(now())
+  cantidad_requerida  Float?
+  updated_at          DateTime? @updatedAt
+  
+  producto            productos? @relation(fields: [producto_id], references: [id])
+  insumo              inventario? @relation(fields: [insumo_id], references: [id])
+
+  @@map("lista_materiales")
+}
+
+model pedidos {
+  id                      BigInt          @id @default(autoincrement())
+  cliente_id              BigInt?
+  fecha_pedido            DateTime?       @default(now())
+  fecha_entrega_estimada  DateTime?
+  estado                  EstadoPedido?   @default(PENDIENTE)
+  prioridad               PrioridadPedido? @default(NORMAL)
+  subtotal                Decimal?        @default(0)
+  descuento               Decimal?        @default(0)
+  impuesto                Decimal?        @default(0)
+  total                   Decimal
+  notas                   String?
+  direccion_envio         String?
+  created_by              String?         @db.Uuid
+  created_at              DateTime        @default(now())
+  updated_at              DateTime?       @updatedAt
+  updated_by              String?         @db.Uuid
+  datos_cliente           Json?
+  orden_id                String?
+  cliente_email           String?
+  metodo_pago             String?
+  transaccion_token       String?
+  
+  cliente                 clientes?       @relation(fields: [cliente_id], references: [id])
+  detalles                detalles_pedido[]
+
+  @@map("pedidos")
+}
+
+model productos {
+  id               BigInt          @id @default(autoincrement())
+  nombre           String
+  descripcion      String?
+  created_at       DateTime        @default(now())
+  categoria_id     BigInt
+  imagen           String?
+  precio           Float
+  stock            Int             @default(0)
+  stock_minimo     Int             @default(400)
+  updated_at       DateTime        @updatedAt
+  estado           EstadoProducto  @default(activo)
+  sku              String          @unique
+  
+  categoria        categorias      @relation(fields: [categoria_id], references: [id])
+  detallesPedido   detalles_pedido[]
+  variantes        variantes_producto[]
+  lista_materiales lista_materiales[]
+  inventario       inventario[]
+
+  @@map("productos")
+}
+
+model talleres {
+  id            BigInt        @id @default(autoincrement())
+  nombre        String
+  direccion     String
+  telefono      String
+  email         String?
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  ruc           String        @unique
+  contacto      String
+  especialidad  String?
+  estado        EstadoTaller  @default(ACTIVO)
+  
+  confecciones  confecciones[]
+
+  @@map("talleres")
+}
+
+model usuarios {
+  id              BigInt         @id @default(autoincrement())
+  email           String         @unique
+  nombre_completo String
+  telefono        String?
+  estado          EstadoUsuario  @default(activo)
+  rol             RolUsuario     @default(administrador)
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+  auth_id         String?        @unique @db.Uuid
+  ultimo_acceso   DateTime?
+  created_by      String?        @db.Uuid
+  
+  cotizaciones    cotizaciones[]
+  despachos       despachos[]
+
+  @@map("usuarios")
+}
+
+model variantes_producto {
+  id                BigInt    @id @default(autoincrement())
+  producto_id       BigInt?
+  nombre            String    @db.VarChar
+  talla             String?   @db.VarChar
+  color             String?   @db.VarChar
+  precio_adicional  Decimal?  @default(0)
+  stock_adicional   Int?      @default(0)
+  sku               String?   @db.VarChar
+  imagen_url        String?
+  activo            Boolean?  @default(true)
+  created_at        DateTime? @default(now())
+  updated_at        DateTime? @default(now()) @updatedAt
+  
+  producto            productos? @relation(fields: [producto_id], references: [id])
+
+  @@map("variantes_producto")
+}
