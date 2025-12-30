@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { userCache } from '@/lib/cache';
 
 const routePermissions: Record<string, string[]> = {
   '/admin/Panel-Administrativo/dashboard': ['administrador', 'recepcionista', 'diseñador', 'cortador', 'ayudante', 'representante_taller'],
@@ -20,8 +21,6 @@ const routePermissions: Record<string, string[]> = {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  console.log('[MIDDLEWARE] Processing:', pathname);
 
   let response = NextResponse.next({ request });
 
@@ -44,44 +43,45 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  console.log('[MIDDLEWARE] User:', user?.id || 'No user');
-
-  // Rutas públicas
-  const publicPaths = ['/admin/login', '/admin/acceso-denegado'];
+  // Rutas públicas - no validar
+  const publicPaths = ['/admin/login', '/admin/acceso-denegado', '/admin/auth/signout'];
   if (publicPaths.some(path => pathname.startsWith(path))) {
-    console.log('[MIDDLEWARE] Public path');
     return response;
   }
 
   // Protección Panel Administrativo
   if (pathname.startsWith('/admin/Panel-Administrativo')) {
     if (!user) {
-      console.log('[MIDDLEWARE] No user, redirecting to login');
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
 
-    const { data: usuario, error } = await supabase
-      .from('usuarios')
-      .select('rol, estado')
-      .eq('auth_id', user.id)
-      .maybeSingle();
+    let usuario = userCache.get(user.id);
 
-    console.log('[MIDDLEWARE] Usuario:', { usuario, error });
+    if (!usuario) {
+      // Si no está en caché, consultar BD
+      const { data: usuarioData, error } = await supabase
+        .from('usuarios')
+        .select('rol, estado')
+        .eq('auth_id', user.id)
+        .maybeSingle();
 
-    if (error || !usuario) {
-      console.log('[MIDDLEWARE] User not found in DB');
-      return NextResponse.redirect(new URL('/admin/login?error=usuario_no_encontrado', request.url));
+      if (error || !usuarioData) {
+        return NextResponse.redirect(new URL('/admin/login?error=usuario_no_encontrado', request.url));
+      }
+
+      usuario = usuarioData;
+      // Guardar en caché para próximas requests
+      userCache.set(user.id, usuario);
     }
 
     const estadoLimpio = usuario.estado?.toString().toLowerCase().trim();
 
     if (estadoLimpio !== 'activo') {
-      console.log('[MIDDLEWARE] User inactive');
       return NextResponse.redirect(new URL('/admin/login?error=usuario_inactivo', request.url));
     }
 
     const userRole = usuario.rol?.toLowerCase();
-    
+
     const matchedRoute = Object.keys(routePermissions)
       .filter(route => pathname === route || pathname.startsWith(route + '/'))
       .sort((a, b) => b.length - a.length)[0];
@@ -89,7 +89,6 @@ export async function middleware(request: NextRequest) {
     if (matchedRoute) {
       const allowedRoles = routePermissions[matchedRoute];
       if (userRole && !allowedRoles.includes(userRole)) {
-        console.log('[MIDDLEWARE] Access denied');
         return NextResponse.redirect(new URL('/admin/acceso-denegado', request.url));
       }
     }
@@ -99,7 +98,6 @@ export async function middleware(request: NextRequest) {
 
   // Redirigir usuarios logueados del login al dashboard
   if (user && pathname === '/admin/login') {
-    console.log('[MIDDLEWARE] Logged user on login, redirect to dashboard');
     return NextResponse.redirect(new URL('/admin/Panel-Administrativo/dashboard', request.url));
   }
 

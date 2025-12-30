@@ -1,6 +1,6 @@
 "use client";
 
-import { usePermissions } from '@/app/hooks/usePermissions';
+import { usePermissions } from '@/lib/hooks/usePermissions';
 import AdminDashboard from '@/components/admin/dashboards/DashboardAdmin';
 import DashboardAyudante from '@/components/admin/dashboards/DashboardAyudante';
 import DashboardCortador from '@/components/admin/dashboards/DashboardCortador';
