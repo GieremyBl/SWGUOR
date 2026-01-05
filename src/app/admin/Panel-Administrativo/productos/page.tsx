@@ -37,7 +37,6 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { toast } from "sonner";
 
-// ✅ Lazy loading de componentes
 const CreateProductoDialog = dynamic(
   () => import("@/components/admin/productos/CreateProductoDialog"),
   { loading: () => <p className="text-sm text-gray-500">Cargando formulario...</p> }
@@ -260,8 +259,8 @@ export default function ProductosPage() {
                   categoria_id: categoria.id,
                   estado: (row as any).Estado || "activo",
                   updated_at: new Date().toISOString(),
-                },
-              ]);
+                } as any,
+              ] as any);
 
               if (error) {
                 errorCount++;

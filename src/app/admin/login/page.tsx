@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LogIn, AlertCircle, Mail } from "lucide-react";
-import { Usuario } from "@/types/auth.types";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,7 +16,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -53,12 +51,32 @@ export default function LoginPage() {
       }
 
       console.log("[LOGIN] Autenticación exitosa, obteniendo datos del usuario");
-
-      const { data: usuario, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('auth_id', data.user.id)
-        .single() as any;
+      
+      // Reintentar obtener datos del usuario con backoff
+      let usuario = null;
+      let usuarioError = null;
+      const maxReintentos = 3;
+      
+      for (let intento = 0; intento < maxReintentos; intento++) {
+        const resultado = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('auth_id', data.user.id)
+          .single() as any;
+        
+        usuarioError = resultado.error;
+        usuario = resultado.data;
+        
+        if (usuario) {
+          console.log("[LOGIN] Usuario encontrado en intento:", intento + 1);
+          break;
+        }
+        
+        if (intento < maxReintentos - 1) {
+          console.log("[LOGIN] Usuario no encontrado, reintentando en 1 segundo...");
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
 
       console.log("[LOGIN] Datos del usuario:", {
         encontrado: !!usuario,
@@ -69,7 +87,7 @@ export default function LoginPage() {
 
       if (usuarioError || !usuario) {
         console.error("[LOGIN] Error obteniendo usuario de BD:", usuarioError);
-        setError("Error obteniendo datos del usuario.");
+        setError("No se encontraron datos del usuario. Contacta al administrador.");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
@@ -102,10 +120,13 @@ export default function LoginPage() {
 
   const updateUserLastAccess = async (userId: number) => {
     try {
-      await supabase
-        .from('usuarios')
+      const { error } = await (supabase.from('usuarios') as any)
         .update({ ultimo_acceso: new Date().toISOString() })
         .eq('id', userId);
+      
+      if (error) {
+        console.error('[LOGIN] Error actualizando último acceso:', error);
+      }
     } catch (error) {
       console.error('[LOGIN] Error actualizando último acceso:', error);
       // No lanzamos error porque no queremos bloquear el login

@@ -1,13 +1,20 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 
 // Cliente singleton para el navegador
-let supabaseClient: ReturnType<typeof createBrowserClient> | null = null;
+let supabaseClient: ReturnType<typeof createClient> | null = null;
 
 export function getSupabaseBrowserClient() {
   if (!supabaseClient) {
-    supabaseClient = createBrowserClient(
+    supabaseClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+        },
+      }
     );
   }
   return supabaseClient;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 interface Usuario {
   id: string | number;
@@ -74,31 +74,56 @@ export function usePermissions() {
       const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (!authUser) {
+        console.warn('[usePermissions] No authenticated user found');
         setUsuario(null);
         setPermissions({});
         return;
       }
 
-      const { data: userData, error } = await supabase
-        .from('usuarios')
-        .select('id, nombre_completo, rol, estado')
-        .eq('auth_id', authUser.id)
-        .single();
+      console.log('[usePermissions] Auth user found:', authUser.id);
+
+      // Reintentar obtener datos del usuario con backoff
+      let userData = null;
+      let error = null;
+      const maxReintentos = 3;
+      
+      for (let intento = 0; intento < maxReintentos; intento++) {
+        const resultado = await supabase
+          .from('usuarios')
+          .select('id, nombre_completo, rol, estado')
+          .eq('auth_id', authUser.id)
+          .single();
+
+        error = resultado.error;
+        userData = resultado.data;
+        
+        if (userData) {
+          console.log('[usePermissions] User data found in attempt:', intento + 1);
+          break;
+        }
+        
+        if (intento < maxReintentos - 1) {
+          console.warn('[usePermissions] User data not found, retrying in 500ms...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
 
       if (error || !userData) {
-        console.error('Error fetching user permissions:', error);
+        console.error('[usePermissions] Error fetching user permissions:', error);
         setUsuario(null);
         setPermissions({});
         return;
       }
 
+      console.log('[usePermissions] User data retrieved:', { id: (userData as any).id, rol: (userData as any).rol });
+      
       setUsuario(userData as Usuario);
 
       const userPermissions = ROLE_PERMISSIONS[(userData as any).rol?.toLowerCase()] || {};
       setPermissions(userPermissions);
 
     } catch (error) {
-      console.error('Error in usePermissions:', error);
+      console.error('[usePermissions] Unexpected error:', error);
       setUsuario(null);
       setPermissions({});
     } finally {
