@@ -2,12 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { LogIn, AlertCircle, Mail } from "lucide-react";
+import { supabase, updateLastAccess } from "@/lib/supabase";
+import dynamic from "next/dynamic";
+
+// Importaciones dinámicas de componentes pesados
+const AlertCircle = dynamic(() => import("lucide-react").then(m => ({ default: m.AlertCircle })), {
+  ssr: false,
+});
+const LogIn = dynamic(() => import("lucide-react").then(m => ({ default: m.LogIn })), {
+  ssr: false,
+});
+const Mail = dynamic(() => import("lucide-react").then(m => ({ default: m.Mail })), {
+  ssr: false,
+});
+
+// Tipo para el usuario
+interface Usuario {
+  id: number;
+  rol: string;
+  estado: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,126 +35,73 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    console.log("[LOGIN] Iniciando autenticación para:", email);
-
     try {
+      // Paso 1: Autenticar
       const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log("[LOGIN] Resultado de autenticación:", {
-        success: !!data.user,
-        userId: data.user?.id,
-        hasSession: !!data.session,
-        error: loginError?.message
-      });
-
-      if (loginError) {
-        console.error("[LOGIN] Error de autenticación:", loginError);
-        setError("Credenciales inválidas. Por favor, intenta de nuevo.");
+      if (loginError || !data.user) {
+        setError("Credenciales inválidas");
         setIsLoading(false);
         return;
       }
 
-      if (!data.user) {
-        console.error("[LOGIN] No se obtuvo usuario del auth");
-        setError("Error al iniciar sesión.");
-        setIsLoading(false);
-        return;
-      }
+      // Paso 2: Obtener usuario
+      const queryResult = await supabase
+        .from('usuarios')
+        .select('id, rol, estado')
+        .eq('auth_id', data.user.id)
+        .maybeSingle();
 
-      console.log("[LOGIN] Autenticación exitosa, obteniendo datos del usuario");
-      
-      // Reintentar obtener datos del usuario con backoff
-      let usuario = null;
-      let usuarioError = null;
-      const maxReintentos = 3;
-      
-      for (let intento = 0; intento < maxReintentos; intento++) {
-        const resultado = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('auth_id', data.user.id)
-          .single() as any;
-        
-        usuarioError = resultado.error;
-        usuario = resultado.data;
-        
-        if (usuario) {
-          console.log("[LOGIN] Usuario encontrado en intento:", intento + 1);
-          break;
-        }
-        
-        if (intento < maxReintentos - 1) {
-          console.log("[LOGIN] Usuario no encontrado, reintentando en 1 segundo...");
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-
-      console.log("[LOGIN] Datos del usuario:", {
-        encontrado: !!usuario,
-        id: usuario?.id,
-        estado: usuario?.estado,
-        rol: usuario?.rol
-      });
+      const usuario = queryResult.data as Usuario | null;
+      const usuarioError = queryResult.error;
 
       if (usuarioError || !usuario) {
-        console.error("[LOGIN] Error obteniendo usuario de BD:", usuarioError);
-        setError("No se encontraron datos del usuario. Contacta al administrador.");
+        setError("Usuario no encontrado en el sistema");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
       }
 
-      const estadoNormalizado = usuario.estado?.toString().trim().toUpperCase();
-
-      if (estadoNormalizado !== 'ACTIVO') {
-        console.error("[LOGIN] Usuario no autorizado, estado:", usuario.estado);
+      // Paso 3: Verificar estado
+      if (usuario.estado?.toUpperCase() !== 'ACTIVO') {
+        setError("Tu cuenta no está activa");
         await supabase.auth.signOut();
-        setError("Tu cuenta no está activa. Contacta a soporte.");
         setIsLoading(false);
         return;
       }
 
-      console.log("[LOGIN] Usuario activo, actualizando último acceso");
-      
-      await updateUserLastAccess(usuario.id);
+      // Paso 4: Actualizar último acceso usando el helper
+      updateLastAccess(usuario.id);
 
-      console.log("[LOGIN] Redirigiendo al dashboard");
-
+      // Paso 5: Redirigir inmediatamente
       router.push("/admin/Panel-Administrativo/dashboard");
+      router.refresh();
 
     } catch (error) {
-      console.error("[LOGIN] Error inesperado:", error);
-      setError("Ocurrió un error. Por favor, intenta de nuevo.");
+      console.error("[LOGIN] Error:", error);
+      setError("Error al iniciar sesión");
+    } finally {
       setIsLoading(false);
-    }
-  };
-
-  const updateUserLastAccess = async (userId: number) => {
-    try {
-      const { error } = await (supabase.from('usuarios') as any)
-        .update({ ultimo_acceso: new Date().toISOString() })
-        .eq('id', userId);
-      
-      if (error) {
-        console.error('[LOGIN] Error actualizando último acceso:', error);
-      }
-    } catch (error) {
-      console.error('[LOGIN] Error actualizando último acceso:', error);
-      // No lanzamos error porque no queremos bloquear el login
     }
   };
 
   return (
     <div className="min-h-screen relative bg-linear-to-br from-gray-50 via-gray-100 to-white flex flex-col items-center justify-center p-4">
+      {/* Imagen de fondo con lazy loading */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-15"
-        style={{ backgroundImage: "url('/costura.jpg')" }}
+        style={{ 
+          backgroundImage: "url('/costura.webp')",
+          backgroundSize: 'cover',
+          willChange: 'transform'
+        }}
       />
       
       <div className="relative z-10 w-full max-w-md">
+        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-gray-900">
             Modas y Estilos GUOR
@@ -150,15 +111,20 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="shadow-xl border-0 rounded-xl">
-          <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
-            <CardDescription>
+        {/* Card - Usando estilos directos en vez de componentes */}
+        <div className="bg-white shadow-xl border-0 rounded-xl overflow-hidden">
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4 space-y-1">
+            <h2 className="text-2xl font-bold">Iniciar Sesión</h2>
+            <p className="text-sm text-gray-500">
               Ingresa tus credenciales corporativas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+          </div>
+
+          {/* Content */}
+          <div className="px-6 pb-6">
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Error */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -166,9 +132,12 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email Corporativo</Label>
-                <Input
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email Corporativo
+                </label>
+                <input
                   id="email"
                   type="email"
                   placeholder="usuario@guor.com"
@@ -177,13 +146,16 @@ export default function LoginPage() {
                   required
                   disabled={isLoading}
                   autoComplete="email"
-                  className="h-11"
+                  className="w-full h-11 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Contraseña
+                </label>
+                <input
                   id="password"
                   type="password"
                   placeholder="••••••••"
@@ -192,26 +164,28 @@ export default function LoginPage() {
                   required
                   disabled={isLoading}
                   autoComplete="current-password"
-                  className="h-11"
+                  className="w-full h-11 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
-              <Button 
+              {/* Button */}
+              <button 
                 type="submit" 
-                className="w-full h-11 bg-linear-to-r from-rose-500 to-pink-600 transition-all duration-300 hover:from-rose-600 hover:to-pink-700 hover:shadow-md hover:scale-[1.01]"
                 disabled={isLoading}
+                className="w-full h-11 bg-linear-to-r from-rose-500 to-pink-600 text-white rounded-md font-medium transition-all duration-300 hover:from-rose-600 hover:to-pink-700 hover:shadow-md hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   "Iniciando sesión..."
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4 mr-2" />
+                    <LogIn className="w-4 h-4" />
                     Iniciar Sesión
                   </>
                 )}
-              </Button>
+              </button>
             </form>
 
+            {/* Info adicional */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
@@ -230,9 +204,10 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
+        {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-6">
           © 2025 Modas y Estilos GUOR. Todos los derechos reservados.
         </p>

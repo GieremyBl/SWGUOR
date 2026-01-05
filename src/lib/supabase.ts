@@ -1,68 +1,45 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Cliente singleton para el navegador
-let supabaseClient: ReturnType<typeof createClient> | null = null;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function getSupabaseBrowserClient() {
-  if (!supabaseClient) {
-    supabaseClient = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: false,
-        },
-      }
-    );
-  }
-  return supabaseClient;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Faltan variables de entorno de Supabase');
 }
 
-// Export para compatibilidad con código existente
-export const supabase = getSupabaseBrowserClient();
-
-// Helpers de autenticación
-export async function getCurrentUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error) {
-    console.error('[SUPABASE] Error obteniendo usuario:', error);
-    return null;
+// Cliente sin genéricos para evitar problemas de tipo
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce'
+    }
   }
-  
-  return user;
-}
+);
 
-export async function getCurrentSession() {
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
-  if (error) {
-    console.error('[SUPABASE] Error obteniendo sesión:', error);
-    return null;
-  }
-  
-  return session;
-}
+// Funciones optimizadas
+export const getCurrentUser = () => supabase.auth.getUser();
+export const getCurrentSession = () => supabase.auth.getSession();
+export const signIn = (email: string, password: string) => 
+  supabase.auth.signInWithPassword({ email, password });
+export const signOut = () => supabase.auth.signOut();
 
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  
-  if (error) {
-    throw error;
+// Helper para actualizar último acceso
+export const updateLastAccess = async (userId: number): Promise<void> => {
+  try {
+    const { error } = await supabase
+      .from('usuarios')
+      .update({ ultimo_acceso: new Date().toISOString() })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Error actualizando último acceso:', error);
+    }
+  } catch (e) {
+    console.error('Error inesperado actualizando último acceso:', e);
   }
-  
-  return data;
-}
-
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  
-  if (error) {
-    throw error;
-  }
-}
+};
