@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Palette, Package, FileText, TrendingUp, Clock, CheckCircle, Eye, Edit3, ShoppingCart } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
 // 1. Interfaz para el estado 'activeProducts'

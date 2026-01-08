@@ -138,7 +138,7 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    window.location.href = '/admin/login';
   };
 
   return (
@@ -193,17 +193,21 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
 
         {/* Perfil Compacto */}
         {!isCollapsed && usuario.nombre_completo && (
-          <div className="px-6 mb-6 animate-in fade-in slide-in-from-left-4 duration-300">
-            <div className="bg-white/60 p-3 rounded-2xl border border-amber-100/50 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-linear-to-tr from-rose-400 to-rose-500 text-white flex items-center justify-center font-bold shadow-rose-200 shadow-md text-sm">
+          <Link
+            href="/admin/Panel-Administrativo/perfil"
+            onClick={() => setIsMobileOpen(false)}
+            className="block px-6 mb-6 animate-in fade-in slide-in-from-left-4 duration-300 hover:opacity-80 transition-opacity cursor-pointer"
+          >
+            <div className="bg-white/60 p-3 rounded-2xl border border-amber-100/50 shadow-sm flex items-center gap-3 hover:bg-white hover:shadow-md transition-all cursor-pointer">
+              <div className="w-10 h-10 rounded-full bg-linear-to-r from-rose-400 to-rose-500 text-white flex items-center justify-center font-bold shadow-rose-200 shadow-md text-sm shrink-0">
                 {usuario.nombre_completo.charAt(0)}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 text-left">
                 <p className="text-sm font-semibold text-gray-800 truncate">{usuario.nombre_completo}</p>
                 <p className="text-xs text-gray-500 capitalize truncate">{usuario.rol.replace('_', ' ')}</p>
               </div>
             </div>
-          </div>
+          </Link>
         )}
 
         {/* Navegación */}

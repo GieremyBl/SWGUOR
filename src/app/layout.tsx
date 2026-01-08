@@ -29,9 +29,9 @@ export default function RootLayout({
         {/* Preload de fuentes críticas */}
         <link
           rel="preload"
-          href="/costura.jpg"
+          href="/costura.webp"
           as="image"
-          type="image/jpeg"
+          type="image/webp"
         />
       </head>
       <body className={`min-h-screen bg-background antialiased ${inter.variable}`}>

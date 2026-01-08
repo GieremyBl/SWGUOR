@@ -21,8 +21,11 @@ const routePermissions: Record<string, string[]> = {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  let response = NextResponse.next({ request });
+  
+  // Creamos la respuesta una sola vez
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,81 +34,52 @@ export async function middleware(request: NextRequest) {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
   );
 
+  // Una sola llamada para obtener el usuario
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Rutas públicas - no validar
-  const publicPaths = ['/admin/login', '/admin/acceso-denegado', '/admin/auth/signout'];
-  if (publicPaths.some(path => pathname.startsWith(path))) {
-    return response;
+  // 1. Si está en login y ya tiene sesión -> al dashboard
+  if (pathname === '/admin/login' && user) {
+    return NextResponse.redirect(new URL('/admin/Panel-Administrativo/dashboard', request.url));
   }
 
-  // Protección Panel Administrativo
-  if (pathname.startsWith('/admin/Panel-Administrativo')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
+  // 2. Si intenta entrar al panel y NO hay sesión -> al login
+  if (pathname.startsWith('/admin/Panel-Administrativo') && !user) {
+    return NextResponse.redirect(new URL('/admin/login', request.url));
+  }
 
+  // 3. Verificación de Rol y Estado (Solo si está dentro del panel)
+  if (pathname.startsWith('/admin/Panel-Administrativo') && user) {
     let usuario = userCache.get(user.id);
 
     if (!usuario) {
-      // Si no está en caché, consultar BD
-      const { data: usuarioData, error } = await supabase
+      const { data: usuarioData } = await supabase
         .from('usuarios')
         .select('rol, estado')
         .eq('auth_id', user.id)
         .maybeSingle();
 
-      if (error || !usuarioData) {
-        return NextResponse.redirect(new URL('/admin/login?error=usuario_no_encontrado', request.url));
+      if (!usuarioData || usuarioData.estado?.toLowerCase() !== 'activo') {
+        return NextResponse.redirect(new URL('/admin/login?error=acceso_denegado', request.url));
       }
-
       usuario = usuarioData;
-      // Guardar en caché para próximas requests
       userCache.set(user.id, usuario);
     }
-
-    const estadoLimpio = usuario.estado?.toString().toLowerCase().trim();
-
-    if (estadoLimpio !== 'activo') {
-      return NextResponse.redirect(new URL('/admin/login?error=usuario_inactivo', request.url));
-    }
-
-    const userRole = usuario.rol?.toLowerCase();
-
-    const matchedRoute = Object.keys(routePermissions)
-      .filter(route => pathname === route || pathname.startsWith(route + '/'))
-      .sort((a, b) => b.length - a.length)[0];
-
-    if (matchedRoute) {
-      const allowedRoles = routePermissions[matchedRoute];
-      if (userRole && !allowedRoles.includes(userRole)) {
-        return NextResponse.redirect(new URL('/admin/acceso-denegado', request.url));
-      }
-    }
-
+    
     response.headers.set('x-user-role', usuario.rol);
-  }
-
-  // Redirigir usuarios logueados del login al dashboard
-  if (user && pathname === '/admin/login') {
-    return NextResponse.redirect(new URL('/admin/Panel-Administrativo/dashboard', request.url));
   }
 
   return response;
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
-  ],
+  matcher: ['/admin/:path*'],
 };

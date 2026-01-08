@@ -16,13 +16,6 @@ const Mail = dynamic(() => import("lucide-react").then(m => ({ default: m.Mail }
   ssr: false,
 });
 
-// Tipo para el usuario
-interface Usuario {
-  id: number;
-  rol: string;
-  estado: string;
-}
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -38,25 +31,22 @@ export default function LoginPage() {
     try {
       // Paso 1: Autenticar
       const { data, error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: email.trim(),
+        password: password.trim(),
       });
 
-      if (loginError || !data.user) {
+      if (loginError || !data?.user?.id) {
         setError("Credenciales inválidas");
         setIsLoading(false);
         return;
       }
 
-      // Paso 2: Obtener usuario
-      const queryResult = await supabase
+      // Paso 2: Obtener usuario de la BD
+      const { data: usuario, error: usuarioError } = await supabase
         .from('usuarios')
         .select('id, rol, estado')
         .eq('auth_id', data.user.id)
-        .maybeSingle();
-
-      const usuario = queryResult.data as Usuario | null;
-      const usuarioError = queryResult.error;
+        .single();
 
       if (usuarioError || !usuario) {
         setError("Usuario no encontrado en el sistema");
@@ -66,23 +56,32 @@ export default function LoginPage() {
       }
 
       // Paso 3: Verificar estado
-      if (usuario.estado?.toUpperCase() !== 'ACTIVO') {
+      if (usuario.estado?.toUpperCase().trim() !== 'ACTIVO') {
         setError("Tu cuenta no está activa");
         await supabase.auth.signOut();
         setIsLoading(false);
         return;
       }
 
-      // Paso 4: Actualizar último acceso usando el helper
+      // Paso 4: Actualizar último acceso (sin esperar)
       updateLastAccess(usuario.id);
 
-      // Paso 5: Redirigir inmediatamente
+      // Paso 5: Verificar sesión antes de redirigir
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        setError("Error al sincronizar la sesión");
+        setIsLoading(false);
+        return;
+      }
+
+      // Paso 6: Redirigir al dashboard
       router.push("/admin/Panel-Administrativo/dashboard");
       router.refresh();
 
-    } catch (error) {
-      console.error("[LOGIN] Error:", error);
-      setError("Error al iniciar sesión");
+    } catch (err: any) {
+      console.error("[LOGIN] Error inesperado:", err);
+      setError("Ocurrió un error inesperado");
     } finally {
       setIsLoading(false);
     }
@@ -90,13 +89,12 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative bg-linear-to-br from-gray-50 via-gray-100 to-white flex flex-col items-center justify-center p-4">
-      {/* Imagen de fondo con lazy loading */}
+      {/* Imagen de fondo optimizada - SIN willChange */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-15"
         style={{ 
           backgroundImage: "url('/costura.webp')",
           backgroundSize: 'cover',
-          willChange: 'transform'
         }}
       />
       
@@ -111,9 +109,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Card - Usando estilos directos en vez de componentes */}
+        {/* Card */}
         <div className="bg-white shadow-xl border-0 rounded-xl overflow-hidden">
-          {/* Header */}
           <div className="px-6 pt-6 pb-4 space-y-1">
             <h2 className="text-2xl font-bold">Iniciar Sesión</h2>
             <p className="text-sm text-gray-500">
@@ -121,10 +118,8 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Content */}
           <div className="px-6 pb-6">
             <form onSubmit={handleLogin} className="space-y-4">
-              {/* Error */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
@@ -132,7 +127,6 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                   Email Corporativo
@@ -150,7 +144,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                   Contraseña
@@ -168,7 +161,6 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Button */}
               <button 
                 type="submit" 
                 disabled={isLoading}
@@ -185,7 +177,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Info adicional */}
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
@@ -207,7 +198,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-6">
           © 2025 Modas y Estilos GUOR. Todos los derechos reservados.
         </p>

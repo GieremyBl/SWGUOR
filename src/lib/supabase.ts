@@ -16,7 +16,30 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      flowType: 'pkce'
+      flowType: 'pkce',
+      storage: typeof window !== 'undefined' ? {
+        getItem: (key) => {
+          try {
+            return window.localStorage?.getItem(key) ?? null;
+          } catch {
+            return null;
+          }
+        },
+        setItem: (key, value) => {
+          try {
+            window.localStorage?.setItem(key, value);
+          } catch {
+            // ignore
+          }
+        },
+        removeItem: (key) => {
+          try {
+            window.localStorage?.removeItem(key);
+          } catch {
+            // ignore
+          }
+        },
+      } : undefined,
     }
   }
 );
