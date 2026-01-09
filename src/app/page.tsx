@@ -36,5 +36,5 @@ export default async function Home() {
   }
 
   // Si no hay sesión, redirigir al login
-  redirect('/login');
+  redirect('/admin/login');
 }

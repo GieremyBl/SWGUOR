@@ -6,6 +6,7 @@ import { Inter } from 'next/font/google';
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap', // Mejora la carga de fuentes
 });
 
 export const metadata: Metadata = {
@@ -20,10 +21,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`min-h-screen bg-background antialiased ${inter.variable}`}
-      >
+      <head>
+        {/* Preconnect a Supabase para mejorar velocidad */}
+        <link rel="preconnect" href="https://fkpvmgfsopjhvorckost.supabase.co" />
+        <link rel="dns-prefetch" href="https://fkpvmgfsopjhvorckost.supabase.co" />
+        
+        {/* Preload de fuentes críticas */}
+        <link
+          rel="preload"
+          href="/costura.webp"
+          as="image"
+          type="image/webp"
+        />
+      </head>
+      <body className={`min-h-screen bg-background antialiased ${inter.variable}`}>
         {children}
-      <Toaster />
+        <Toaster />
       </body>
     </html>
   );

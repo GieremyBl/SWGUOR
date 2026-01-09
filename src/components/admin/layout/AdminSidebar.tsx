@@ -139,7 +139,7 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
   const handleLogout = async () => {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    window.location.href = '/admin/login';
   };
 
   return (

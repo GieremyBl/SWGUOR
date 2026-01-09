@@ -101,12 +101,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative bg-linear-to-br from-gray-50 via-gray-100 to-white flex flex-col items-center justify-center p-4">
+      {/* Imagen de fondo optimizada - SIN willChange */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-15"
-        style={{ backgroundImage: "url('/costura.jpg')" }}
+        style={{ 
+          backgroundImage: "url('/costura.webp')",
+          backgroundSize: 'cover',
+        }}
       />
       
       <div className="relative z-10 w-full max-w-md">
+        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold text-gray-900">
             Modas y Estilos GUOR
@@ -116,14 +121,16 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="shadow-xl border-0 rounded-xl">
-          <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
-            <CardDescription>
+        {/* Card */}
+        <div className="bg-white shadow-xl border-0 rounded-xl overflow-hidden">
+          <div className="px-6 pt-6 pb-4 space-y-1">
+            <h2 className="text-2xl font-bold">Iniciar Sesión</h2>
+            <p className="text-sm text-gray-500">
               Ingresa tus credenciales corporativas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+          </div>
+
+          <div className="px-6 pb-6">
             <form onSubmit={handleLogin} className="space-y-4">
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
@@ -133,8 +140,10 @@ export default function LoginPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Corporativo</Label>
-                <Input
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email Corporativo
+                </label>
+                <input
                   id="email"
                   type="email"
                   placeholder="usuario@guor.com"
@@ -143,13 +152,15 @@ export default function LoginPage() {
                   required
                   disabled={isLoading}
                   autoComplete="email"
-                  className="h-11"
+                  className="w-full h-11 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Contraseña
+                </label>
+                <input
                   id="password"
                   type="password"
                   placeholder="••••••••"
@@ -158,14 +169,14 @@ export default function LoginPage() {
                   required
                   disabled={isLoading}
                   autoComplete="current-password"
-                  className="h-11"
+                  className="w-full h-11 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
-              <Button 
+              <button 
                 type="submit" 
-                className="w-full h-11 bg-linear-to-r from-rose-500 to-pink-600 transition-all duration-300 hover:from-rose-600 hover:to-pink-700 hover:shadow-md hover:scale-[1.01]"
                 disabled={isLoading}
+                className="w-full h-11 bg-linear-to-r from-rose-500 to-pink-600 text-white rounded-md font-medium transition-all duration-300 hover:from-rose-600 hover:to-pink-700 hover:shadow-md hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>
@@ -174,11 +185,11 @@ export default function LoginPage() {
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4 mr-2" />
+                    <LogIn className="w-4 h-4" />
                     Iniciar Sesión
                   </>
                 )}
-              </Button>
+              </button>
             </form>
 
             <div className="mt-6 pt-6 border-t border-gray-200">
@@ -199,8 +210,8 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <p className="text-center text-sm text-gray-600 mt-6">
           © 2026 Modas y Estilos GUOR. Todos los derechos reservados.
