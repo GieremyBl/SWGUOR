@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { LogIn, AlertCircle, Mail } from "lucide-react";
-import { Usuario } from "@/types/auth.types";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { ESTADOS_USUARIO, ERROR_MESSAGES } from "@/lib/auth/constants";
+import { ADMIN_ROUTES } from "@/lib/constants/admin";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,99 +17,85 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
-    console.log("[LOGIN] Iniciando autenticación para:", email);
-
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
-        email,
+      const supabase = getSupabaseBrowserClient();
+
+      // 1. Autenticación con Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
         password,
       });
 
-      console.log("[LOGIN] Resultado de autenticación:", {
-        success: !!data.user,
-        userId: data.user?.id,
-        hasSession: !!data.session,
-        error: loginError?.message
-      });
-
-      if (loginError) {
-        console.error("[LOGIN] Error de autenticación:", loginError);
-        setError("Credenciales inválidas. Por favor, intenta de nuevo.");
+      if (authError) {
+        setError(ERROR_MESSAGES.INVALID_CREDENTIALS);
         setIsLoading(false);
         return;
       }
 
-      if (!data.user) {
-        console.error("[LOGIN] No se obtuvo usuario del auth");
-        setError("Error al iniciar sesión.");
+      if (!authData?.user) {
+        setError(ERROR_MESSAGES.UNEXPECTED_ERROR);
         setIsLoading(false);
         return;
       }
 
-      console.log("[LOGIN] Autenticación exitosa, obteniendo datos del usuario");
-
+      // 2. Validar usuario en BD
       const { data: usuario, error: usuarioError } = await supabase
         .from('usuarios')
-        .select('*')
-        .eq('auth_id', data.user.id)
-        .single() as any;
+        .select('id, rol, estado, auth_id, nombre_completo, email')
+        .eq('auth_id', authData.user.id)
+        .maybeSingle();
 
-      console.log("[LOGIN] Datos del usuario:", {
-        encontrado: !!usuario,
-        id: usuario?.id,
-        estado: usuario?.estado,
-        rol: usuario?.rol
-      });
-
-      if (usuarioError || !usuario) {
-        console.error("[LOGIN] Error obteniendo usuario de BD:", usuarioError);
-        setError("Error obteniendo datos del usuario.");
+      if (usuarioError) {
         await supabase.auth.signOut();
+        setError(ERROR_MESSAGES.USER_NOT_FOUND);
         setIsLoading(false);
         return;
       }
 
-      const estadoNormalizado = usuario.estado?.toString().trim().toUpperCase();
-
-      if (estadoNormalizado !== 'ACTIVO') {
-        console.error("[LOGIN] Usuario no autorizado, estado:", usuario.estado);
+      if (!usuario) {
         await supabase.auth.signOut();
-        setError("Tu cuenta no está activa. Contacta a soporte.");
+        setError(ERROR_MESSAGES.USER_NOT_FOUND);
         setIsLoading(false);
         return;
       }
 
-      console.log("[LOGIN] Usuario activo, actualizando último acceso");
+      // 3. Validar estado activo
+      const estadoNormalizado = usuario.estado?.toString().toUpperCase().trim();
       
-      await updateUserLastAccess(usuario.id);
+      if (estadoNormalizado !== ESTADOS_USUARIO.ACTIVO) {
+        await supabase.auth.signOut();
+        setError(ERROR_MESSAGES.INACTIVE_USER);
+        setIsLoading(false);
+        return;
+      }
 
-      console.log("[LOGIN] Redirigiendo al dashboard");
-
-      router.push("/admin/Panel-Administrativo/dashboard");
-
-    } catch (error) {
-      console.error("[LOGIN] Error inesperado:", error);
-      setError("Ocurrió un error. Por favor, intenta de nuevo.");
-      setIsLoading(false);
-    }
-  };
-
-  const updateUserLastAccess = async (userId: number) => {
-    try {
-      await supabase
+      // 4. Actualizar último acceso (sin bloquear)
+      supabase
         .from('usuarios')
         .update({ ultimo_acceso: new Date().toISOString() })
-        .eq('id', userId);
-    } catch (error) {
-      console.error('[LOGIN] Error actualizando último acceso:', error);
-      // No lanzamos error porque no queremos bloquear el login
+        .eq('id', usuario.id)
+        .then((result: any) => {
+          if (result.error) {
+            console.warn("Error actualizando último acceso:", result.error);
+          }
+        })
+        .catch((err: any) => {
+          console.warn("Error inesperado actualizando último acceso:", err);
+        });
+
+      // 5. Redirección
+      window.location.href = ADMIN_ROUTES.DASHBOARD;
+
+    } catch (err: any) {
+      console.error("Error crítico en login:", err);
+      setError(ERROR_MESSAGES.UNEXPECTED_ERROR);
+      setIsLoading(false);
     }
   };
 
@@ -181,7 +168,10 @@ export default function LoginPage() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  "Iniciando sesión..."
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Iniciando sesión...
+                  </>
                 ) : (
                   <>
                     <LogIn className="w-4 h-4 mr-2" />
@@ -213,7 +203,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-sm text-gray-600 mt-6">
-          © 2025 Modas y Estilos GUOR. Todos los derechos reservados.
+          © 2026 Modas y Estilos GUOR. Todos los derechos reservados.
         </p>
       </div>
     </div>

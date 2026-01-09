@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase'; 
 
 interface Usuario {
   id: string | number;
@@ -71,6 +71,7 @@ export function usePermissions() {
     try {
       setIsLoading(true);
 
+      const supabase = getSupabaseBrowserClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (!authUser) {

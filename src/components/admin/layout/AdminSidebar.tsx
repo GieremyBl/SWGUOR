@@ -23,7 +23,7 @@ import {
   ChevronDown,
   Shield,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import type { Usuario } from '@/types/supabase.types';
 
 interface AdminSidebarProps {
@@ -137,6 +137,7 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
   };
 
   const handleLogout = async () => {
+    const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
     window.location.href = '/login';
   };
@@ -191,18 +192,28 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
           )}
         </div>
 
-        {/* Perfil Compacto */}
+        {/* Perfil Compacto - AHORA CLICKEABLE */}
         {!isCollapsed && usuario.nombre_completo && (
           <div className="px-6 mb-6 animate-in fade-in slide-in-from-left-4 duration-300">
-            <div className="bg-white/60 p-3 rounded-2xl border border-amber-100/50 shadow-sm flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-linear-to-tr from-rose-400 to-rose-500 text-white flex items-center justify-center font-bold shadow-rose-200 shadow-md text-sm">
-                {usuario.nombre_completo.charAt(0)}
+            <Link 
+              href="/admin/Panel-Administrativo/perfil"
+              onClick={() => setIsMobileOpen(false)}
+              className="block group"
+            >
+              <div className="bg-white/60 p-3 rounded-2xl border border-amber-100/50 shadow-sm flex items-center gap-3 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-rose-200 cursor-pointer">
+                <div className="w-10 h-10 rounded-full bg-linear-to-tr from-rose-400 to-rose-500 text-white flex items-center justify-center font-bold shadow-rose-200 shadow-md text-sm group-hover:scale-110 transition-transform">
+                  {usuario.nombre_completo.charAt(0)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-rose-600 transition-colors">
+                    {usuario.nombre_completo}
+                  </p>
+                  <p className="text-xs text-gray-500 capitalize truncate">
+                    {usuario.rol.replace('_', ' ')}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{usuario.nombre_completo}</p>
-                <p className="text-xs text-gray-500 capitalize truncate">{usuario.rol.replace('_', ' ')}</p>
-              </div>
-            </div>
+            </Link>
           </div>
         )}
 

@@ -1,10 +1,9 @@
 /**
  * Rutas del Panel Administrativo
- * Basadas en tu estructura de carpetas
- */
+**/
 export const ADMIN_ROUTES = {
   // Dashboard principal
-  DASHBOARD: '/Panel-Administrativo/dashboard',
+  DASHBOARD: '/admin/Panel-Administrativo/dashboard',
   
   // Gestión de productos y catálogo
   CATEGORIAS: '/admin/Panel-Administrativo/categorias',

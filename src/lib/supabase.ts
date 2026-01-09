@@ -13,11 +13,9 @@ export function getSupabaseBrowserClient() {
   return supabaseClient;
 }
 
-// Export para compatibilidad con código existente
-export const supabase = getSupabaseBrowserClient();
-
 // Helpers de autenticación
 export async function getCurrentUser() {
+  const supabase = getSupabaseBrowserClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   
   if (error) {
@@ -29,6 +27,7 @@ export async function getCurrentUser() {
 }
 
 export async function getCurrentSession() {
+  const supabase = getSupabaseBrowserClient();
   const { data: { session }, error } = await supabase.auth.getSession();
   
   if (error) {
@@ -40,6 +39,7 @@ export async function getCurrentSession() {
 }
 
 export async function signIn(email: string, password: string) {
+  const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -53,6 +53,7 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
+  const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.auth.signOut();
   
   if (error) {

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Users, UserPlus, Building2, FileText, Package, TrendingUp, Download, Settings, BarChart3, ShoppingCart } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
 interface ActividadReciente {
@@ -33,7 +33,8 @@ export default function AdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-
+      
+      const supabase = getSupabaseBrowserClient();
       // Contar usuarios
       const { count: usuariosCount } = await supabase
         .from('usuarios')

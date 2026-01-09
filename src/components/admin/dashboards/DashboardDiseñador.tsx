@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Palette, Package, FileText, TrendingUp, Clock, CheckCircle, Eye, Edit3, ShoppingCart } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
 // 1. Interfaz para el estado 'activeProducts'
@@ -61,7 +61,8 @@ export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-
+      const supabase = getSupabaseBrowserClient();
+      
       // Productos activos
       const { data: productosData, count: productosCount } = await supabase
         .from('productos')
