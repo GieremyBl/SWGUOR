@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Mail, Lock, Save, AlertCircle, CheckCircle2, Shield, Calendar, Camera, Upload } from "lucide-react";
+import { User, Mail, Lock, Save, AlertCircle, CheckCircle2, Shield, Calendar, Camera, Upload, Eye, EyeOff } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,9 @@ export default function PerfilPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   
   // Cambio de contraseña
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -430,7 +434,7 @@ export default function PerfilPage() {
                     <Input
                       id="telefono"
                       type="tel"
-                      placeholder="+51 999 999 999"
+                      placeholder="+51 987 654 321"
                       value={telefono}
                       onChange={(e) => setTelefono(e.target.value)}
                       disabled={isSaving}
@@ -482,6 +486,8 @@ export default function PerfilPage() {
                   </Button>
                 ) : (
                   <form onSubmit={handleChangePassword} className="space-y-5">
+                    
+                    {/* Contraseña Actual */}
                     <div className="space-y-2">
                       <Label htmlFor="currentPassword">Contraseña Actual *</Label>
                       <Input
@@ -492,27 +498,43 @@ export default function PerfilPage() {
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         required
                         disabled={isSaving}
-                        className="h-11"
+                        className="h-11, pr-10"
                       />
+                      <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                     </div>
 
+                    {/* Nueva Contraseña */}
                     <div className="space-y-2">
                       <Label htmlFor="newPassword">Nueva Contraseña *</Label>
                       <Input
                         id="newPassword"
-                        type="password"
+                        type={showNewPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         required
                         disabled={isSaving}
-                        className="h-11"
+                        className="h-11, pr-10"
                       />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
                       <p className="text-xs text-gray-500">
                         Mínimo 6 caracteres
                       </p>
                     </div>
 
+                    {/* Confirmar Nueva Contraseña */}
                     <div className="space-y-2">
                       <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña *</Label>
                       <Input
@@ -525,6 +547,13 @@ export default function PerfilPage() {
                         disabled={isSaving}
                         className="h-11"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
                     </div>
 
                     <div className="flex gap-3">

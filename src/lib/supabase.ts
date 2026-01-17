@@ -27,7 +27,7 @@ export async function getCurrentUser() {
 }
 
 export async function getCurrentSession() {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = getSupabaseBrowserClient();   
   const { data: { session }, error } = await supabase.auth.getSession();
   
   if (error) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Producto, Categoria } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,19 @@ export default function EditProductoDialog({
     estado: producto.estado,
   });
 
+  useEffect(() => {
+    setFormData({
+      nombre: producto.nombre,
+      descripcion: producto.descripcion || "",
+      sku: producto.sku,
+      precio: producto.precio.toString(),
+      stock: producto.stock.toString(),
+      stock_minimo: producto.stock_minimo.toString(),
+      categoria_id: producto.categoria_id.toString(),
+      estado: producto.estado,
+    });
+  }, [isOpen, producto]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -62,6 +75,7 @@ export default function EditProductoDialog({
     try {
       setLoading(true);
 
+      const supabase = getSupabaseBrowserClient();
       const { error } = await supabase
         .from("productos")
         .update({

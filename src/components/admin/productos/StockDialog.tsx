@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Producto } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,7 @@ export default function StockDialog({
           ? producto.stock + cantidadNum
           : Math.max(0, producto.stock - cantidadNum);
 
+      const supabase = getSupabaseBrowserClient();
       const { error } = await supabase
         .from("productos")
         .update({

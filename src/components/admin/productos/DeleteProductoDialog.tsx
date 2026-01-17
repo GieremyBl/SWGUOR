@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Producto } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,7 @@ export default function DeleteProductoDialog({
     try {
       setLoading(true);
 
+      const supabase = getSupabaseBrowserClient();
       const { error } = await supabase
         .from("productos")
         .delete()

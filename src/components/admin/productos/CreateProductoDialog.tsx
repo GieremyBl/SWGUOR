@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Categoria } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,11 +60,12 @@ export default function CreateProductoDialog({
     try {
       setLoading(true);
 
+      const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.from("productos").insert([
         {
           nombre: formData.nombre,
           descripcion: formData.descripcion || null,
-          sku: formData.sku,
+          sku: formData.sku.trim().toUpperCase(),
           precio: parseFloat(formData.precio),
           stock: parseInt(formData.stock) || 0,
           stock_minimo: parseInt(formData.stock_minimo) || 400,
@@ -74,23 +75,22 @@ export default function CreateProductoDialog({
         },
       ]);
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("El SKU ya existe. Por favor usa uno diferente.");
+        } else {
+          throw error;
+        }
+      };
 
-      toast.success("Producto creado correctamente");
-      setFormData({
-        nombre: "",
-        descripcion: "",
-        sku: "",
-        precio: "",
-        stock: "0",
-        stock_minimo: "400",
-        categoria_id: "",
-        estado: "activo",
-      });
-      onSuccess();
-    } catch (error) {
-      console.error("Error creando producto:", error);
-      toast.error("Error al crear el producto");
+      toast.success("Producto y SKU actualizados");
+      onClose();
+      setTimeout(() => {
+        onSuccess();
+      }, 100);
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast.error("Error al actualizar: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -121,16 +121,18 @@ export default function CreateProductoDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sku">SKU *</Label>
+            <Label htmlFor="sku">SKU (Simplifícalo ahora)</Label>
             <Input
               id="sku"
               value={formData.sku}
-              onChange={(e) =>
-                setFormData({ ...formData, sku: e.target.value })
-              }
-              placeholder="Ej: POLO-001-BL"
-              required
+              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+              placeholder="Ej: CAM-CAN-001"
+              className="font-mono uppercase"
+              // disabled={true}
             />
+            <p className="text-[10px] text-muted-foreground italic">
+              Una vez simplificado, es recomendable bloquear este campo.
+            </p>
           </div>
 
           <div className="space-y-2">
