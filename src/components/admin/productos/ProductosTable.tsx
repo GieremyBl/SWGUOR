@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { Edit2, Trash2, Package, BarChart3 } from "lucide-react";
 import type { Producto, Categoria } from "@/types/supabase.types";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 interface ProductosTableProps {
   data: Producto[];
@@ -12,6 +11,9 @@ interface ProductosTableProps {
   onDelete: (p: Producto) => void;
   onStock: (p: Producto) => void;
 }
+
+// 1. Definimos la URL base fuera del componente
+const STORAGE_URL = "https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/";
 
 export default function ProductosTable({ 
   data, 
@@ -57,29 +59,27 @@ export default function ProductosTable({
               </tr>
             ) : (
               data.map((p: Producto) => {
-                const { data: urlData } = getSupabaseBrowserClient()
-                  .storage
-                  .from('productos')
-                  .getPublicUrl(p.imagen || '');
-                
-                const publicUrl = urlData.publicUrl; 
+                // 2. CONSTRUCCIÓN ELÉCTRICA DE LA URL (Sin llamadas a DB)
                 const hasImage = p.imagen && p.imagen.trim() !== '';
+                const publicUrl = hasImage ? `${STORAGE_URL}${p.imagen}` : null;
 
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 flex items-center gap-4">
                       <div className="w-12 h-12 relative bg-gray-100 rounded-md border border-gray-200 shrink-0 overflow-hidden">
-                        {hasImage ? (
+                        {publicUrl ? (
                           <Image 
                             src={publicUrl} 
                             alt={p.nombre || "Producto"} 
                             fill 
                             sizes="48px"
                             className="object-cover"
-                            unoptimized 
+                            // 3. LAZY LOADING ACTIVADO POR DEFECTO EN NEXT/IMAGE
+                            placeholder="blur"
+                            blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = "https://placehold.co/100x100?text=Error+404";
+                              target.src = "https://placehold.co/100x100?text=Error";
                             }}
                           />
                         ) : (
@@ -101,7 +101,7 @@ export default function ProductosTable({
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        p.stock <= p.stock_minimo 
+                        p.stock <= (p.stock_minimo || 5)
                           ? 'bg-red-50 text-red-700 border border-red-100' 
                           : 'bg-blue-50 text-blue-700 border border-blue-100'
                       }`}>

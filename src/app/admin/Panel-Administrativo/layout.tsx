@@ -1,4 +1,4 @@
-// src/app/Panel-Administrativo/layout.tsx
+
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -62,7 +62,7 @@ export default async function PanelAdministrativoLayout({
     <div className="flex h-screen overflow-hidden">
       <AdminSidebar usuario={usuario} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <AdminHeader />
+        <AdminHeader usuario={usuario} />
         <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-8">
           {children}
         </main>

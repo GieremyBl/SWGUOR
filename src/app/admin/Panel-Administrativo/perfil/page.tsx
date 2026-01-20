@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Mail, Lock, Save, AlertCircle, CheckCircle2, Shield, Calendar, Camera, Upload, Eye, EyeOff } from "lucide-react";
+import { User, Lock, Save, AlertCircle, CheckCircle2, Shield, Calendar, Camera, Eye, EyeOff } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 import { usePermissions } from "@/lib/hooks/usePermissions";

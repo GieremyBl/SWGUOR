@@ -1,54 +1,41 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import type { Categoria } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { 
-  Plus, Search, Layers, CheckCircle2, 
-  XCircle, ChevronLeft, ChevronRight
+  FileSpreadsheet, Plus, Search, Layers, RefreshCw, 
+  CheckCircle2, XCircle, ChevronLeft, ChevronRight 
 } from "lucide-react";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import CategoriasTable from "@/components/admin/categorias/CategoriasTable";
-import CreateCategoriaDialog from "@/components/admin/categorias/CreateCategoriaDialog";
-import EditCategoriaDialog from "@/components/admin/categorias/EditCategoriaDialog";
-import DeleteCategoriaDialog from "@/components/admin/categorias/DeleteCategoriaDialog";
+import { exportToExcel } from "@/lib/export-utils";
+
+// Lazy loading de componentes de Categorías
+const CategoriasTable = dynamic(() => import("@/components/admin/categorias/CategoriasTable"));
+const CreateCategoriaDialog = dynamic(() => import("@/components/admin/categorias/CreateCategoriaDialog"));
+const EditCategoriaDialog = dynamic(() => import("@/components/admin/categorias/EditCategoriaDialog"));
+const DeleteCategoriaDialog = dynamic(() => import("@/components/admin/categorias/DeleteCategoriaDialog"));
 
 export default function CategoriasPage() {
-  const { isLoading: userLoading } = usePermissions();
-  
-  // Estados de datos
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categorias, setCategorias] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-
-  // Estados de Paginación
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Estados de Modales
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
-  const [activeDialog, setActiveDialog] = useState<"edit" | "delete" | null>(null);
-  const [selectedEstado, setSelectedEstado] = useState<string>("todos");
+  const [selectedCategoria, setSelectedCategoria] = useState<any | null>(null);
+  const [dialogMode, setDialogMode] = useState<"edit" | "delete" | null>(null);
+  
+  // Estados de filtrado e igual que Clientes
+  const [currentPage, setCurrentPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<boolean | null>(null);
+  const pageSize = 10;
 
-  useEffect(() => {
-    loadCategorias();
-  }, []);
+  const [stats, setStats] = useState({ total: 0, activas: 0, inactivas: 0 });
 
-  const loadCategorias = async () => {
+  const loadCategorias = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await supabase
         .from("categorias")
@@ -56,216 +43,180 @@ export default function CategoriasPage() {
         .order("nombre", { ascending: true });
 
       if (error) throw error;
-      setCategorias(data || []);
-    } catch (error) {
-      toast.error("Error al cargar las categorías");
+
+      const results = data || [];
+      setCategorias(results);
+      
+      // Actualizar estadísticas basadas en la carga
+      setStats({
+        total: results.length,
+        activas: results.filter((c: any) => c.activo).length,
+        inactivas: results.filter((c: any) => !c.activo).length
+      });
+    } catch (err) {
+      toast.error("Error al cargar categorías");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // 1. Filtrado Lógico
+  useEffect(() => { loadCategorias(); }, [loadCategorias]);
+
+  // Lógica de filtrado (Buscador + Status)
   const filteredCategorias = useMemo(() => {
-  return categorias.filter((c) => {
-    const matchSearch = 
-      c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchEstado = 
-      selectedEstado === "todos" || 
-      (selectedEstado === "activo" ? c.activo : !c.activo);
+    return categorias.filter((c: any) => {
+      const matchSearch = c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchStatus = statusFilter === null || c.activo === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [categorias, searchTerm, statusFilter]);
 
-    return matchSearch && matchEstado;
-  });
-}, [categorias, searchTerm, selectedEstado]);
+  // Paginación
+  const totalPages = Math.ceil(filteredCategorias.length / pageSize);
+  const paginatedData = filteredCategorias.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
-  // 2. Cálculo de Paginación
-  const totalPages = Math.ceil(filteredCategorias.length / itemsPerPage);
-  const paginatedCategorias = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredCategorias.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredCategorias, currentPage]);
-
-  const handleAction = (categoria: Categoria, type: "edit" | "delete") => {
-    setSelectedCategoria(categoria);
-    setActiveDialog(type);
+  const handleExportExcel = () => {
+    const dataToExport = filteredCategorias.map((c: any) => ({
+      Categoría: c.nombre,
+      Descripción: c.descripcion || "Sin descripción",
+      Estado: c.activo ? "Activa" : "Inactiva",
+      "Fecha Creación": new Date(c.created_at).toLocaleDateString()
+    }));
+    exportToExcel(dataToExport, { filename: `Categorias_GUOR_${new Date().toISOString().split('T')[0]}` });
+    toast.success("Exportación completada");
   };
-
-  if (userLoading || loading) return <LoadingState />;
 
   return (
-    <div className="space-y-6 p-4 md:p-8 bg-gray-50 min-h-screen">
-      {/* Contenedor con Ancho Máximo Centrado */}
+    <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header con Título y Botón Principal */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Header Unificado */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Categorías</h1>
-            <p className="text-gray-600">Organización del catálogo textil - Guor</p>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+              <Layers className="text-pink-600" /> Directorio de Categorías
+            </h1>
+            <p className="text-gray-500 text-sm">Gestión de líneas y agrupaciones de productos</p>
           </div>
-          <Button 
-            onClick={() => setIsCreateOpen(true)} 
-            className="bg-pink-600 hover:bg-pink-700 shadow-md transition-all active:scale-95"
-          >
-            <Plus className="w-4 h-4 mr-2" /> Nueva Categoría
+
+          <div className="flex items-center gap-3">
+            <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11">
+              <FileSpreadsheet className="w-5 h-5" />
+              <span className="hidden sm:inline">Exportar Excel</span>
+            </Button>
+            <Button onClick={() => setIsCreateOpen(true)} className="bg-pink-600 hover:bg-pink-700 shadow-lg font-bold gap-2 h-11">
+              <Plus className="w-5 h-5" /> Nueva Categoría
+            </Button>
+          </div>
+        </div>
+
+        {/* Cartas de Estadísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatCard 
+            title="TODAS LAS LÍNEAS" 
+            value={stats.total} 
+            icon={<Layers className="w-6 h-6" />} 
+            isActive={statusFilter === null} 
+            color="pink" 
+            onClick={() => {setStatusFilter(null); setCurrentPage(0);}} 
+          />
+          <StatCard 
+            title="ACTIVAS" 
+            value={stats.activas} 
+            icon={<CheckCircle2 className="w-6 h-6" />} 
+            isActive={statusFilter === true} 
+            color="emerald" 
+            onClick={() => {setStatusFilter(true); setCurrentPage(0);}} 
+          />
+          <StatCard 
+            title="INACTIVAS" 
+            value={stats.inactivas} 
+            icon={<XCircle className="w-6 h-6" />} 
+            isActive={statusFilter === false} 
+            color="orange" 
+            onClick={() => {setStatusFilter(false); setCurrentPage(0);}} 
+          />
+        </div>
+
+        {/* Buscador Simple */}
+        <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border shadow-sm">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
+            <Input 
+              placeholder="Buscar por nombre o descripción de categoría..." 
+              className="pl-10 h-11 border-gray-200 focus:ring-pink-500"
+              value={searchTerm}
+              onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(0);}}
+            />
+          </div>
+          <Button variant="outline" className="h-11 border-gray-200" onClick={loadCategorias}>
+            <RefreshCw className={`w-4 h-4 ${loading && 'animate-spin'}`} />
           </Button>
         </div>
 
-       {/* Tarjetas de Estadísticas Rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard 
-                title="Total Categorías" 
-                value={categorias.length} 
-                icon={<Layers className="text-blue-600 w-6 h-6"/>} 
+        {/* Tabla y Paginación */}
+        {loading ? (
+          <div className="h-64 flex flex-col items-center justify-center bg-white rounded-xl border animate-pulse">
+            <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest">Cargando...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <CategoriasTable 
+              data={paginatedData} 
+              onEdit={(c: any) => {setSelectedCategoria(c); setDialogMode("edit");}}
+              onDelete={(c: any) => {setSelectedCategoria(c); setDialogMode("delete");}}
             />
-            <StatCard 
-                title="Activas" 
-                value={categorias.filter(c => c.activo).length} 
-                icon={<CheckCircle2 className="text-green-600 w-6 h-6"/>} 
-            />
-            <StatCard 
-                title="Inactivas" 
-                value={categorias.filter(c => !c.activo).length} 
-                icon={<XCircle className="text-red-600 w-6 h-6"/>} 
-            />
-        </div>
-
-        {/* Barra de Búsqueda */}
-        <Card className="border-0 shadow-sm">
-            <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Buscador */}
-                <div className="relative md:col-span-2">
-                    <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-                    <Input 
-                    placeholder="Buscar por nombre o descripción..." 
-                    className="pl-10 h-11" 
-                    value={searchTerm} 
-                    onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1);
-                    }} 
-                    />
-                </div>
-
-                {/* Filtro de Estado */}
-                <Select value={selectedEstado} onValueChange={(v) => {
-                    setSelectedEstado(v);
-                    setCurrentPage(1);
-                }}>
-                    <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Filtrar por estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="todos">Todos los estados</SelectItem>
-                    <SelectItem value="activo">Solo Activos</SelectItem>
-                    <SelectItem value="inactivo">Solo Inactivos</SelectItem>
-                    </SelectContent>
-                </Select>
-                </div>
-            </CardContent>
-            </Card>
-        {/* Tabla Principal Centrada */}
-        <Card className="overflow-hidden shadow-md border-0">
-          <CategoriasTable 
-            data={paginatedCategorias}
-            onEdit={(c) => handleAction(c, "edit")}
-            onDelete={(c) => handleAction(c, "delete")}
-          />
-
-          {/* Pie de Página con Controles de Paginación */}
-          <div className="px-6 py-4 bg-white border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500 font-medium">
-              Mostrando {filteredCategorias.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredCategorias.length)} de {filteredCategorias.length} categorías
-            </p>
             
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
-              </Button>
-              
-              <div className="hidden sm:flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "ghost"}
-                    size="sm"
-                    className={`w-8 h-8 p-0 ${currentPage === page ? "bg-pink-600 hover:bg-pink-700" : ""}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </Button>
-                ))}
+            <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
+              <p className="text-xs text-gray-500">
+                Mostrando <span className="font-bold text-gray-900">{paginatedData.length}</span> de <span className="font-bold text-gray-900">{filteredCategorias.length}</span>
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="px-4 py-1.5 text-xs font-bold bg-gray-50 border rounded-lg flex items-center">
+                  Página {currentPage + 1} de {totalPages || 1}
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage + 1 >= totalPages}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
-
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-              >
-                Siguiente <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
             </div>
           </div>
-        </Card>
+        )}
       </div>
 
-      {/* Renderizado Condicional de Modales */}
-      <CreateCategoriaDialog 
-        isOpen={isCreateOpen} 
-        onClose={() => setIsCreateOpen(false)} 
-        onSuccess={loadCategorias} 
-      />
-      
-      {selectedCategoria && (
-        <>
-          <EditCategoriaDialog 
-            isOpen={activeDialog === "edit"} 
-            categoria={selectedCategoria} 
-            onClose={() => setActiveDialog(null)} 
-            onSuccess={loadCategorias} 
-          />
-          <DeleteCategoriaDialog 
-            isOpen={activeDialog === "delete"} 
-            categoria={selectedCategoria} 
-            onClose={() => setActiveDialog(null)} 
-            onSuccess={loadCategorias} 
-          />
-        </>
+      {/* Modales */}
+      <CreateCategoriaDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={loadCategorias} />
+      {selectedCategoria && dialogMode === "edit" && (
+        <EditCategoriaDialog isOpen={true} categoria={selectedCategoria} onClose={() => {setDialogMode(null); setSelectedCategoria(null);}} onSuccess={loadCategorias} />
+      )}
+      {selectedCategoria && dialogMode === "delete" && (
+        <DeleteCategoriaDialog isOpen={true} categoria={selectedCategoria} onClose={() => {setDialogMode(null); setSelectedCategoria(null);}} onSuccess={loadCategorias} />
       )}
     </div>
   );
 }
 
-// Sub-componentes internos para el Page
-function StatCard({ title, value, icon }: any) {
-  return (
-    <Card className="border-0 shadow-sm">
-      <CardContent className="pt-6 flex justify-between items-center">
-        <div>
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        </div>
-        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 shadow-sm">
-          {icon}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// Subcomponente StatCard Unificado
+function StatCard({ title, value, icon, isActive, color, onClick }: any) {
+  const styles: any = {
+    pink: { active: "border-pink-500 ring-pink-50 bg-white", iconActive: "bg-pink-600 text-white", textActive: "text-pink-600" },
+    emerald: { active: "border-emerald-500 ring-emerald-50 bg-white", iconActive: "bg-emerald-600 text-white", textActive: "text-emerald-600" },
+    orange: { active: "border-orange-500 ring-orange-50 bg-white", iconActive: "bg-orange-600 text-white", textActive: "text-orange-600" }
+  };
+  const currentStyle = styles[color] || styles.pink;
 
-function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-3">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600" />
-      <p className="text-sm text-gray-500 font-medium">Cargando categorías...</p>
-    </div>
+    <button onClick={onClick} className={`group p-4 rounded-xl border transition-all duration-300 flex items-center gap-4 cursor-pointer outline-none ${isActive ? `ring-4 shadow-xl scale-[1.02] z-10 ${currentStyle.active}` : 'bg-white border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-95'}`}>
+      <div className={`p-3 rounded-lg transition-all duration-300 ${isActive ? `${currentStyle.iconActive} rotate-3` : 'bg-gray-100 text-gray-600 group-hover:rotate-3'}`}>{icon}</div>
+      <div className="text-left">
+        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{title}</p>
+        <p className={`text-2xl font-black tracking-tight ${isActive ? currentStyle.textActive : 'text-gray-800'}`}>{value}</p>
+      </div>
+    </button>
   );
 }

@@ -1,47 +1,30 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  Menu,
-  X,
-  LogOut,
-  Boxes,
-  Truck,
-  FileText,
-  Scissors,
-  Building,
-  DollarSign,
-  Bell,
-  Grid3x3,
-  ChevronDown,
-  Shield,
+  LayoutDashboard, Package, ShoppingCart, Users, Menu, X,
+  LogOut, Boxes, Truck, FileText, Scissors, Building,
+  DollarSign, Bell, Grid3x3, ChevronDown, Shield, User
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import type { Usuario } from '@/types/supabase.types';
-
-interface AdminSidebarProps {
-  usuario: Usuario;
-}
+import { LucideIcon } from 'lucide-react';
 
 type SubMenuItem = {
   title: string;
   href: string;
-  icon?: any;
+  icon?: LucideIcon; 
 };
 
 type NavItem = {
   title: string;
   href?: string;
-  icon: any;
+  icon: LucideIcon; 
   roles: string[];
-  subItems?: SubMenuItem[];
+  subItems?: { title: string; href: string; icon?: LucideIcon }[];
 };
 
 const navItems: NavItem[] = [
@@ -112,15 +95,22 @@ const navItems: NavItem[] = [
   }
 ];
 
-export default function AdminSidebar({ usuario }: AdminSidebarProps) {
+export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
+  const router = useRouter();
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const filteredNavItems = navItems.filter(item =>
-    item.roles.includes(usuario.rol)
-  );
+  const filteredNavItems = useMemo(() => {
+    return navItems.filter(item => item.roles.includes(usuario.rol));
+  }, [usuario.rol]);
+
+  const handleLogout = async () => {
+    const supabase = getSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace('/admin/login'); // Redirección instantánea sin recarga
+  };
 
   const toggleMenu = (title: string) => {
     if (isCollapsed) setIsCollapsed(false);
@@ -136,20 +126,14 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
     return subItems.some(subItem => pathname === subItem.href);
   };
 
-  const handleLogout = async () => {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signOut();
-    window.location.href = '/admin/login';
-  };
-
   return (
     <>
-      {/* Botón móvil */}
+      {/* Botón móvil optimizado */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-rose-500 text-white rounded-full shadow-lg hover:bg-rose-600 transition-all"
+        className="lg:hidden fixed top-3 left-4 z-50 p-3 bg-rose-600 text-white rounded-xl shadow-lg active:scale-90 transition-all"
       >
-        {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Overlay móvil */}
@@ -160,17 +144,22 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
         />
       )}
 
+      {/* Sidebar */}
       <aside
         onMouseEnter={() => setIsCollapsed(false)}
-        onMouseLeave={() => setIsCollapsed(true)}
+        onMouseLeave={() => {
+            setIsCollapsed(true);
+            setOpenMenus([]); // Cerramos submenús al colapsar para limpieza visual
+        }}
         className={cn(
-          "flex flex-col h-screen transition-all duration-300 ease-in-out border-r border-amber-100 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
-          isCollapsed ? "w-24" : "w-72", 
-          "fixed lg:relative z-40",
+          "flex flex-col h-screen transition-all duration-300 ease-in-out border-r border-amber-100/50",
+          isCollapsed ? "w-20" : "w-72",
+          "fixed lg:sticky top-0 z-40 bg-[#fffbf2]",
+          "overflow-x-hidden",
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
-        style={{ backgroundColor: '#fffbf2' }}
       >
+
         {/* Header */}
         <div className="h-24 flex items-center justify-between px-6 mb-2 transition-all duration-300">
           {!isCollapsed ? (
@@ -192,24 +181,33 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
           )}
         </div>
 
-        {/* Perfil Compacto - AHORA CLICKEABLE */}
+        {/* PERFIL: Inicial + Nombre + Icono Ámbar */}
         {!isCollapsed && usuario.nombre_completo && (
-          <div className="px-6 mb-6 animate-in fade-in slide-in-from-left-4 duration-300">
+          <div className="px-4 mb-3 animate-in fade-in duration-500 overflow-hidden">
             <Link 
               href="/admin/Panel-Administrativo/perfil"
               onClick={() => setIsMobileOpen(false)}
-              className="block group"
+              className="group block"
             >
-              <div className="bg-white/60 p-3 rounded-2xl border border-amber-100/50 shadow-sm flex items-center gap-3 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-rose-200 cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-linear-to-tr from-rose-400 to-rose-500 text-white flex items-center justify-center font-bold shadow-rose-200 shadow-md text-sm group-hover:scale-110 transition-transform">
+              <div className="bg-white/60 p-2 rounded-2xl border border-amber-100/40 flex items-center gap-3 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-rose-200 cursor-pointer">
+                
+                {/* Contenedor de la Inicial (Avatar) */}
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-linear-to-tr from-rose-500 to-rose-600 text-white flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition-transform uppercase">
                   {usuario.nombre_completo.charAt(0)}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-rose-600 transition-colors">
-                    {usuario.nombre_completo}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize truncate">
-                    {usuario.rol.replace('_', ' ')}
+
+                {/* Contenedor de Textos: Aquí eliminamos los ml-4.5 para alinear desde el origen */}
+                <div className="min-w-0 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <User size={12} className="text-rose-500 shrink-0" strokeWidth={3} /> 
+                    <p className="text-sm font-bold text-gray-800 truncate group-hover:text-rose-600 transition-colors">
+                      {usuario.nombre_completo.split(' ')[0]}
+                    </p>
+                  </div>
+                  
+                  {/* El texto "Mi Cuenta" ahora hereda la alineación del contenedor flex padre */}
+                  <p className="text-[10px] text-amber-700/60 font-bold uppercase tracking-widest leading-none ml-4.5">
+                    Mi Cuenta
                   </p>
                 </div>
               </div>
@@ -217,37 +215,31 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
           </div>
         )}
 
-        {/* Navegación */}
-        <nav className="flex-1 px-4 space-y-2 overflow-y-auto [&::-webkit-scrollbar]:hidden">
+        {/* Navigation */}
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-hide">
           {filteredNavItems.map((item) => {
             const Icon = item.icon;
-            const hasSubItems = item.subItems && item.subItems.length > 0;
             const isOpen = openMenus.includes(item.title);
-            const isActive = pathname === item.href || isSubItemActive(item.subItems);
+            const isActive = item.href === pathname || 
+            item.subItems?.some(s => s.href === pathname);
 
             return (
-              <div key={item.title} className="mb-1">
-                {hasSubItems ? (
+              <div key={item.title}>
+                {item.subItems ? (
                   <button
                     onClick={() => toggleMenu(item.title)}
                     className={cn(
-                      'w-full flex items-center justify-between px-4 rounded-xl transition-all duration-300 group',
-                      isCollapsed ? "py-4" : "py-3",
-                      isActive 
-                        ? 'bg-linear-to-r from-rose-500 to-pink-600 text-white shadow-md shadow-rose-200' 
-                        : 'text-gray-600 hover:bg-white hover:text-rose-600 hover:shadow-sm'
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all",
+                      isActive ? "bg-rose-500 text-white shadow-md" : "text-gray-500 hover:bg-white hover:text-rose-600",
+                      isCollapsed && "justify-center"
                     )}
                   >
-                    <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
-                      <Icon className={cn(
-                        "transition-all duration-300",
-                        isCollapsed ? "w-8 h-8" : "w-5 h-5", 
-                        !isActive && "text-gray-400 group-hover:text-rose-500"
-                      )} />
-                      {!isCollapsed && <span className="font-medium text-sm truncate">{item.title}</span>}
-                    </div>
+                    <Icon size={isCollapsed ? 24 : 20} />
                     {!isCollapsed && (
-                      <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isOpen && "rotate-180")} />
+                      <>
+                        <span className="flex-1 text-left text-sm font-semibold">{item.title}</span>
+                        <ChevronDown size={14} className={cn("transition-transform", isOpen && "rotate-180")} />
+                      </>
                     )}
                   </button>
                 ) : (
@@ -255,44 +247,31 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
                     href={item.href!}
                     onClick={() => setIsMobileOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-4 rounded-xl transition-all duration-300 group',
-                      isCollapsed ? "py-4" : "py-3",
-                      isActive
-                        ? 'bg-linear-to-r from-rose-500 to-pink-600 text-white shadow-md shadow-rose-200'
-                        : 'text-gray-600 hover:bg-white hover:text-rose-600 hover:shadow-sm',
+                      "flex items-center gap-3 px-3 py-3 rounded-xl transition-all",
+                      pathname === item.href ? "bg-rose-500 text-white shadow-md" : "text-gray-500 hover:bg-white hover:text-rose-600",
                       isCollapsed && "justify-center"
                     )}
                   >
-                    <Icon className={cn(
-                      "transition-all duration-300",
-                      isCollapsed ? "w-8 h-8" : "w-5 h-5",
-                      !isActive && "text-gray-400 group-hover:text-rose-500"
-                    )} />
-                    {!isCollapsed && <span className="font-medium text-sm truncate">{item.title}</span>}
+                    <Icon size={isCollapsed ? 24 : 20} />
+                    {!isCollapsed && <span className="text-sm font-semibold">{item.title}</span>}
                   </Link>
                 )}
 
-                {/* Submenú */}
-                {hasSubItems && isOpen && !isCollapsed && (
-                  <div className="mt-1 ml-4 pl-4 space-y-1 border-l border-amber-200/60 animate-in slide-in-from-top-2 duration-200">
-                    {item.subItems!.map((subItem) => {
-                      const isSubActive = pathname === subItem.href;
-                      const SubIcon = subItem.icon;
-                      return (
-                        <Link
-                          key={subItem.href}
-                          href={subItem.href}
-                          onClick={() => setIsMobileOpen(false)}
-                          className={cn(
-                            'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-                            isSubActive ? 'bg-rose-50 text-rose-600 font-medium' : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
-                          )}
-                        >
-                          {SubIcon && <SubIcon className={cn("w-4 h-4", isSubActive ? "text-rose-500" : "text-gray-400")} />}
-                          <span className="truncate">{subItem.title}</span>
-                        </Link>
-                      );
-                    })}
+                {/* Submenu animado */}
+                {!isCollapsed && isOpen && item.subItems && (
+                  <div className="ml-9 mt-1 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                    {item.subItems.map(sub => (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        className={cn(
+                          "block py-2 px-3 text-xs rounded-lg transition-colors",
+                          pathname === sub.href ? "text-rose-600 font-bold bg-rose-50" : "text-gray-400 hover:text-gray-700 hover:bg-gray-50"
+                        )}
+                      >
+                        {sub.title}
+                      </Link>
+                    ))}
                   </div>
                 )}
               </div>
@@ -300,21 +279,18 @@ export default function AdminSidebar({ usuario }: AdminSidebarProps) {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-amber-100">
-          {!isCollapsed ? (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors group"
-            >
-              <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-sm truncate">Cerrar Sesión</span>
-            </button>
-          ) : (
-            <button onClick={handleLogout} className="w-full flex justify-center p-2 text-gray-500 hover:text-red-600">
-              <LogOut className="w-8 h-8" />
-            </button>
-          )}
+        {/* User Footer */}
+        <div className="p-4 border-t border-amber-100 bg-amber-50/30">
+           <button 
+             onClick={handleLogout}
+             className={cn(
+               "flex items-center gap-3 w-full p-2 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all",
+               isCollapsed && "justify-center"
+             )}
+           >
+             <LogOut size={22} />
+             {!isCollapsed && <span className="text-sm font-bold">Cerrar Sesión</span>}
+           </button>
         </div>
       </aside>
     </>

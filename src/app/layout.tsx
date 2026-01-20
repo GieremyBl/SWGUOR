@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import "./globals.css";
-import { Inter } from 'next/font/google';
+import { Inter, Playfair_Display } from 'next/font/google';
 
+// Fuente para CUERPO Y DATOS (Limpia y funcional)
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-sans',
-  display: 'swap', // Mejora la carga de fuentes
+  display: 'swap', 
+});
+
+// Fuente para TÍTULOS Y MARCA (Elegancia de moda)
+const playfair = Playfair_Display({ 
+  subsets: ["latin"], 
+  variable: "--font-serif",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -20,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${inter.variable} ${playfair.variable}`}>
       <head>
         {/* Preconnect a Supabase para mejorar velocidad */}
         <link rel="preconnect" href="https://fkpvmgfsopjhvorckost.supabase.co" />
@@ -34,9 +42,10 @@ export default function RootLayout({
           type="image/webp"
         />
       </head>
-      <body className={`min-h-screen bg-background antialiased ${inter.variable}`}>
+      {/* Añadimos font-sans por defecto para que todo el cuerpo la use */}
+      <body className="min-h-screen bg-background antialiased font-sans">
         {children}
-        <Toaster />
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
