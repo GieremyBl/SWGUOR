@@ -1,161 +1,122 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase'; 
+import { Usuario } from '@/types/supabase.types';
 
-interface Usuario {
-  id: string | number;
-  nombre_completo: string;
-  rol: string;
-  estado: string;
+// 1. Definimos nuestra propia interfaz para evitar conflictos con la de TS
+interface AppPermissions {
+  [resource: string]: string[]; // Esto permite usar 'usuarios', 'productos', etc.
 }
 
-interface Permissions {
-  [key: string]: string[];
-}
-
-const ROLE_PERMISSIONS: { [key: string]: Permissions } = {
-  admin: {
+const ROLE_PERMISSIONS: { [role: string]: AppPermissions } = {
+  administrador: {
     usuarios: ['view', 'create', 'edit', 'delete'],
-    clientes: ['view', 'create', 'edit', 'delete'],
-    talleres: ['view', 'create', 'edit', 'delete'],
-    pedidos: ['view', 'create', 'edit', 'delete'],
-    inventario: ['view', 'create', 'edit', 'delete'],
-    productos: ['view', 'create', 'edit', 'delete'],
-    confecciones: ['view', 'create', 'edit', 'delete'],
-    cotizaciones: ['view', 'create', 'edit', 'delete'],
-    despachos: ['view', 'create', 'edit', 'delete'],
-    pagos: ['view', 'create', 'edit', 'delete'],
-    ventas: ['view', 'create', 'edit', 'delete'],
+    clientes: ['view', 'export'],
+    productos: ['view', 'export'],
+    pedidos: ['view', 'export'],
+    inventario: ['view', 'export'],
+    talleres: ['view', 'create','export'],
     reportes: ['view', 'export'],
-    configuracion: ['view', 'edit'],
   },
-  gerente: {
-    usuarios: ['view'],
-    clientes: ['view', 'create', 'edit'],
-    talleres: ['view', 'create', 'edit'],
-    pedidos: ['view', 'create', 'edit'],
-    inventario: ['view'],
+ representante_taller: {
     productos: ['view'],
+    talleres: ['view', 'edit'],
     confecciones: ['view', 'create', 'edit'],
-    cotizaciones: ['view', 'create', 'edit'],
-    despachos: ['view', 'create', 'edit'],
-    pagos: ['view'],
-    ventas: ['view'],
-    reportes: ['view', 'export'],
+    inventario: ['view', 'edit'],
   },
-  supervisor: {
-    clientes: ['view'],
-    pedidos: ['view', 'edit'],
-    inventario: ['view'],
-    productos: ['view'],
-    confecciones: ['view', 'edit'],
-    despachos: ['view', 'edit'],
-    ventas: ['view'],
+  recepcionista: {
+    productos: ['view', 'export'],
+    clientes: ['view', 'create', 'edit'],
+    pedidos: ['view', 'create', 'edit'],
+    pagos: ['view', 'create'],
+    cotizaciones: ['view', 'create'],
   },
-  usuario: {
+  diseñador: {
+    productos: ['view'], 
+    confecciones: ['view', 'create', 'edit'], 
     pedidos: ['view'],
+  },
+  cortador: {
+    productos: ['view'], 
+    confecciones: ['view', 'update_status'],
+    pedidos: ['view'],
+  },
+  ayudante: {
     productos: ['view'],
-    cotizaciones: ['view'],
+    confecciones: ['view'],
+    despachos: ['view', 'update_status'],
   },
 };
 
 export function usePermissions() {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [permissions, setPermissions] = useState<Permissions>({});
+  const [permissions, setPermissions] = useState<AppPermissions>({});
 
-  useEffect(() => {
-    fetchUserPermissions();
-  }, []);
-
-  const fetchUserPermissions = async () => {
+  // 1. Memorizamos la carga de datos para que no se dispare mil veces
+  const fetchUserPermissions = useCallback(async () => {
     try {
       setIsLoading(true);
-
       const supabase = getSupabaseBrowserClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
 
       if (!authUser) {
-        console.warn('[usePermissions] No authenticated user found');
         setUsuario(null);
         setPermissions({});
         return;
       }
 
-      console.log('[usePermissions] Auth user found:', authUser.id);
-
-      // Reintentar obtener datos del usuario con backoff
-      let userData = null;
-      let error = null;
-      const maxReintentos = 3;
-      
-      for (let intento = 0; intento < maxReintentos; intento++) {
-        const resultado = await supabase
-          .from('usuarios')
-          .select('id, nombre_completo, rol, estado')
-          .eq('auth_id', authUser.id)
-          .single();
-
-        error = resultado.error;
-        userData = resultado.data;
-        
-        if (userData) {
-          console.log('[usePermissions] User data found in attempt:', intento + 1);
-          break;
-        }
-        
-        if (intento < maxReintentos - 1) {
-          console.warn('[usePermissions] User data not found, retrying in 500ms...');
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
+      const { data: userData, error } = await supabase
+        .from('usuarios')
+        .select('id, nombre_completo, rol, estado')
+        .eq('auth_id', authUser.id)
+        .single();
 
       if (error || !userData) {
-        console.error('[usePermissions] Error fetching user permissions:', error);
         setUsuario(null);
         setPermissions({});
         return;
       }
 
-      console.log('[usePermissions] User data retrieved:', { id: (userData as any).id, rol: (userData as any).rol });
-      
       setUsuario(userData as Usuario);
-
-      const userPermissions = ROLE_PERMISSIONS[(userData as any).rol?.toLowerCase()] || {};
-      setPermissions(userPermissions);
+      const roleKey = (userData as any).rol?.toLowerCase() || '';
+      setPermissions(ROLE_PERMISSIONS[roleKey] || {});
 
     } catch (error) {
-      console.error('[usePermissions] Unexpected error:', error);
-      setUsuario(null);
-      setPermissions({});
+      console.error("Error permissions:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const can = (action: string, resource: string): boolean => {
+  useEffect(() => {
+    fetchUserPermissions();
+  }, [fetchUserPermissions]);
+
+  // 2. can debe estar envuelto en useCallback
+  const can = useCallback((action: string, resource: string): boolean => {
     if (!usuario) return false;
     const resourcePermissions = permissions[resource] || [];
     return resourcePermissions.includes(action);
-  };
+  }, [usuario, permissions]);
 
-  const cannot = (action: string, resource: string): boolean => {
-    return !can(action, resource);
-  };
+  const cannot = useCallback((action: string, resource: string): boolean => !can(action, resource), [can]);
 
-  const hasRole = (role: string | string[]): boolean => {
+  const hasRole = useCallback((role: string | string[]): boolean => {
     if (!usuario) return false;
+    const currentRol = usuario.rol?.toLowerCase() || '';
     if (Array.isArray(role)) {
-      return role.includes(usuario.rol?.toLowerCase() || '');
+      return role.some(r => r.toLowerCase() === currentRol);
     }
-    return usuario.rol?.toLowerCase() === role.toLowerCase();
-  };
+    return currentRol === role.toLowerCase();
+  }, [usuario]);
 
-  return {
-    usuario,
-    isLoading,
-    permissions,
-    can,
-    cannot,
-    hasRole,
-  };
+  // 3. Retornamos valores estables
+  return useMemo(() => ({ 
+    usuario, 
+    isLoading, 
+    permissions, 
+    can, 
+    cannot, 
+    hasRole 
+  }), [usuario, isLoading, permissions, can, cannot, hasRole]);
 }

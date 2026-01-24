@@ -243,7 +243,7 @@
           }
         }
 
-        // Tabla: inventario
+       // Tabla: inventario
         inventario: {
           Row: {
             id: number
@@ -251,18 +251,24 @@
             tipo: string
             unidad_medida: string
             stock_actual: number
-            created_at: string
             stock_minimo: number
+            categoria_id: number | null
+            producto_id: number | null
+            cantidad_usada: number | null
+            created_at: string
             updated_at: string
           }
           Insert: {
-            id?: never // GENERATED ALWAYS AS IDENTITY
+            id?: never 
             nombre: string
             tipo: string
             unidad_medida: string
             stock_actual: number
-            created_at?: string
             stock_minimo: number
+            categoria_id?: number | null
+            producto_id?: number | null
+            cantidad_usada?: number | null
+            created_at?: string
             updated_at: string
           }
           Update: {
@@ -270,8 +276,11 @@
             tipo?: string
             unidad_medida?: string
             stock_actual?: number
-            created_at?: string
             stock_minimo?: number
+            categoria_id?: number | null
+            producto_id?: number | null
+            cantidad_usada?: number | null
+            created_at?: string
             updated_at?: string
           }
         }
@@ -411,6 +420,7 @@
         // Tabla: productos
         productos: {
           Row: {
+            ficha_url: null
             id: number
             nombre: string
             descripcion: string | null
@@ -658,3 +668,15 @@
   export type TallerUpdate = Database['public']['Tables']['talleres']['Update']
   export type UsuarioUpdate = Database['public']['Tables']['usuarios']['Update']
   export type VarianteProductoUpdate = Database['public']['Tables']['variantes_producto']['Update']
+
+  /**
+ * Tipo extendido para mostrar el nombre de la categoría en la tabla de Inventario
+ */
+export type InventarioConRelaciones = Inventario & {
+  categorias: {
+    nombre: string
+  } | null
+  productos: {
+    nombre: string
+  } | null
+}

@@ -1,25 +1,12 @@
-import type { Metadata } from "next";
-import { Toaster } from "sonner";
+import { Inter } from "next/font/google";
 import "./globals.css";
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Toaster } from "sonner";
 
-// Fuente para CUERPO Y DATOS (Limpia y funcional)
-const inter = Inter({ 
-  subsets: ['latin'],
-  variable: '--font-sans',
-  display: 'swap', 
-});
+const inter = Inter({ subsets: ["latin"] });
 
-// Fuente para TÍTULOS Y MARCA (Elegancia de moda)
-const playfair = Playfair_Display({ 
-  subsets: ["latin"], 
-  variable: "--font-serif",
-  display: 'swap',
-});
-
-export const metadata: Metadata = {
-  title: "Modas y Estilos Guor - Sistema de Gestión",
-  description: "Sistema de Gestión Textil",
+export const metadata = {
+  title: "Sistema GUOR - Gestión de Modas",
+  description: "Panel administrativo y control de inventarios",
 };
 
 export default function RootLayout({
@@ -28,24 +15,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} ${playfair.variable}`}>
-      <head>
-        {/* Preconnect a Supabase para mejorar velocidad */}
-        <link rel="preconnect" href="https://fkpvmgfsopjhvorckost.supabase.co" />
-        <link rel="dns-prefetch" href="https://fkpvmgfsopjhvorckost.supabase.co" />
+    <html lang="es">
+      <body className={inter.className}>
+        {/* El Toaster para notificaciones debe ir aquí para que funcione en todo el sitio */}
+        <Toaster position="top-right" richColors closeButton />
         
-        {/* Preload de fuentes críticas */}
-        <link
-          rel="preload"
-          href="/costura.webp"
-          as="image"
-          type="image/webp"
-        />
-      </head>
-      {/* Añadimos font-sans por defecto para que todo el cuerpo la use */}
-      <body className="min-h-screen bg-background antialiased font-sans">
+        {/* Aquí simplemente renderizamos el contenido sin lógica de redirección */}
         {children}
-        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { Producto, Categoria } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Loader2, Save } from "lucide-react";
 
 interface EditProductoDialogProps {
   isOpen: boolean;
@@ -41,113 +41,126 @@ export default function EditProductoDialog({
 }: EditProductoDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    nombre: producto.nombre,
-    descripcion: producto.descripcion || "",
-    sku: producto.sku,
-    precio: producto.precio.toString(),
-    stock: producto.stock.toString(),
-    stock_minimo: producto.stock_minimo.toString(),
-    categoria_id: producto.categoria_id.toString(),
-    estado: producto.estado,
+    nombre: "",
+    descripcion: "",
+    sku: "",
+    precio: "",
+    stock: "",
+    stock_minimo: "",
+    categoria_id: "",
+    estado: "",
   });
 
+  // Sincronizar el formulario cuando el producto cambie o el diálogo se abra
   useEffect(() => {
-    setFormData({
-      nombre: producto.nombre,
-      descripcion: producto.descripcion || "",
-      sku: producto.sku,
-      precio: producto.precio.toString(),
-      stock: producto.stock.toString(),
-      stock_minimo: producto.stock_minimo.toString(),
-      categoria_id: producto.categoria_id.toString(),
-      estado: producto.estado,
-    });
+    if (producto) {
+      setFormData({
+        nombre: producto.nombre || "",
+        descripcion: producto.descripcion || "",
+        sku: producto.sku || "",
+        precio: producto.precio?.toString() || "0",
+        stock: producto.stock?.toString() || "0",
+        stock_minimo: producto.stock_minimo?.toString() || "5",
+        categoria_id: producto.categoria_id?.toString() || "",
+        estado: producto.estado || "activo",
+      });
+    }
   }, [isOpen, producto]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    if (!formData.nombre || !formData.sku || !formData.categoria_id || !formData.precio) {
-      toast.error("Por favor completa todos los campos requeridos");
-      return;
-    }
+  try {
+    // Preparamos el payload incluyendo el ID para que la API lo encuentre
+    const payload = {
+      id: producto.id,
+      nombre: formData.nombre,
+      descripcion: formData.descripcion || null,
+      sku: formData.sku.trim().toUpperCase(),
+      precio: parseFloat(formData.precio),
+      stock: parseInt(formData.stock),
+      stock_minimo: parseInt(formData.stock_minimo),
+      categoria_id: parseInt(formData.categoria_id),
+      estado: formData.estado,
+      updated_at: new Date().toISOString(),
+    };
 
-    try {
-      setLoading(true);
+    const response = await fetch(`/api/admin/productos`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("productos")
-        .update({
-          nombre: formData.nombre,
-          descripcion: formData.descripcion || null,
-          sku: formData.sku,
-          precio: parseFloat(formData.precio),
-          stock: parseInt(formData.stock) || 0,
-          stock_minimo: parseInt(formData.stock_minimo) || 400,
-          categoria_id: parseInt(formData.categoria_id),
-          estado: formData.estado as any,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", producto.id);
+    const result = await response.json();
 
-      if (error) throw error;
+    if (!response.ok) throw new Error(result.error || "Error al actualizar");
 
-      toast.success("Producto actualizado correctamente");
-      onSuccess();
-    } catch (error) {
-      console.error("Error actualizando producto:", error);
-      toast.error("Error al actualizar el producto");
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.success("Producto actualizado correctamente");
+    onSuccess();
+    onClose();
+  } catch (error: any) {
+    console.error("Error:", error);
+    toast.error(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Editar Producto</DialogTitle>
-          <DialogDescription>
-            Actualiza los datos del producto
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-md rounded-4xl border-none shadow-2xl overflow-hidden p-0 bg-gray-50">
+        <div className="bg-white p-6 border-b">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black flex items-center gap-2">
+              <span className="bg-pink-100 text-pink-600 p-2 rounded-xl">
+                <Save className="w-5 h-5" />
+              </span>
+              Editar Producto
+            </DialogTitle>
+            <DialogDescription className="font-medium text-gray-500">
+              Modifica los detalles de la prenda seleccionada.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre del Producto *</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Nombre del Producto</Label>
             <Input
-              id="nombre"
               value={formData.nombre}
-              onChange={(e) =>
-                setFormData({ ...formData, nombre: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+              className="rounded-xl border-gray-200 focus:ring-pink-500"
               required
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="sku">SKU *</Label>
-            <Input
-              id="sku"
-              value={formData.sku}
-              onChange={(e) =>
-                setFormData({ ...formData, sku: e.target.value })
-              }
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">SKU (Protegido)</Label>
+              <Input value={formData.sku} disabled className="rounded-xl bg-gray-100 font-mono text-gray-500 cursor-not-allowed" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Precio (S/)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.precio}
+                onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                className="rounded-xl border-gray-200"
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="categoria">Categoría *</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Categoría</Label>
             <Select
               value={formData.categoria_id}
-              onValueChange={(value) =>
-                setFormData({ ...formData, categoria_id: value })
-              }
+              onValueChange={(value) => setFormData({ ...formData, categoria_id: value })}
             >
-              <SelectTrigger>
-                <SelectValue />
+              <SelectTrigger className="rounded-xl border-gray-200">
+                <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
               <SelectContent>
                 {categorias.map((cat) => (
@@ -159,83 +172,45 @@ export default function EditProductoDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="precio">Precio (S/) *</Label>
-            <Input
-              id="precio"
-              type="number"
-              step="0.01"
-              value={formData.precio}
-              onChange={(e) =>
-                setFormData({ ...formData, precio: e.target.value })
-              }
-              required
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                value={formData.stock}
-                onChange={(e) =>
-                  setFormData({ ...formData, stock: e.target.value })
-                }
-              />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Stock Actual</Label>
+              <Input type="number" value={formData.stock} disabled className="rounded-xl bg-gray-100 text-pink-600 font-bold cursor-not-allowed" />
+              <p className="text-[9px] text-gray-400 italic text-center">Solo edición vía Taller</p>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="stock_minimo">Stock Mínimo</Label>
-              <Input
-                id="stock_minimo"
-                type="number"
-                value={formData.stock_minimo}
-                onChange={(e) =>
-                  setFormData({ ...formData, stock_minimo: e.target.value })
-                }
-              />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Estado del Sistema</Label>
+              <div className={`h-10 flex items-center px-4 rounded-xl text-xs font-black uppercase border ${
+                parseInt(formData.stock) === 0 ? "bg-red-50 text-red-600 border-red-100" : 
+                parseInt(formData.stock) <= 400 ? "bg-orange-50 text-orange-600 border-orange-100" : 
+                "bg-emerald-50 text-emerald-600 border-emerald-100"
+              }`}>
+                {parseInt(formData.stock) === 0 ? "Agotado" : 
+                 parseInt(formData.stock) <= 400 ? "Inactivo (Stock Bajo)" : "Activo"}
+              </div>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descripcion">Descripción</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Descripción</Label>
             <Textarea
-              id="descripcion"
               value={formData.descripcion}
-              onChange={(e) =>
-                setFormData({ ...formData, descripcion: e.target.value })
-              }
-              rows={3}
+              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+              className="rounded-xl border-gray-200 resize-none"
+              rows={2}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="estado">Estado</Label>
-            <Select
-              value={formData.estado}
-              onValueChange={(value) =>
-                setFormData({ ...formData, estado: value as any })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="activo">Activo</SelectItem>
-                <SelectItem value="inactivo">Inactivo</SelectItem>
-                <SelectItem value="agotado">Agotado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <DialogFooter className="pt-4 gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} className="rounded-xl font-bold">
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Guardando..." : "Guardar Cambios"}
+            <Button 
+              type="submit" 
+              disabled={loading} 
+              className="bg-gray-900 hover:bg-black text-white rounded-xl px-8 font-black transition-all active:scale-95"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Actualizar Prenda"}
             </Button>
           </DialogFooter>
         </form>

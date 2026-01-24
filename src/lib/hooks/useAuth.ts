@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import type { Usuario } from '@/types/auth.types';
 
 export function useAuth() {
@@ -10,7 +10,7 @@ export function useAuth() {
 
   useEffect(() => {
     let isMounted = true;
-
+    let supabase = getSupabaseBrowserClient();
     const initAuth = async () => {
       try {
         // Obtener sesión inicial
@@ -55,7 +55,7 @@ export function useAuth() {
       subscription.unsubscribe();
     };
   }, []); // Sin dependencias para que solo se ejecute una vez
-
+  let supabase = getSupabaseBrowserClient();
   const loadUserData = async (authId: string) => {
     try {
       const { data, error } = await supabase

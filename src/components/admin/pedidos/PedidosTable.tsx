@@ -1,38 +1,25 @@
 "use client";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Eye, Printer, Truck, Calendar, User, Hash, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Eye, MoreHorizontal, Printer, Truck } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
+// 1. Interfaces tipadas y opcionales según permisos
 interface PedidosTableProps {
   data: any[];
   onView: (pedido: any) => void;
+  onCancel?: (pedido: any) => void; // Opcional: Solo si tiene permiso 'delete'
+  onUpdateStatus?: (pedido: any) => void; // Opcional: Solo si tiene permiso 'edit'
 }
 
-export default function PedidosTable({ data, onView }: PedidosTableProps) {
+export default function PedidosTable({ data, onView, onCancel, onUpdateStatus }: PedidosTableProps) {
   
-  // Función para renderizar el estilo del Badge según el estado
   const getStatusBadge = (status: string) => {
     const styles: any = {
-      pendiente: "bg-orange-50 text-orange-700 border-orange-100",
-      completado: "bg-emerald-50 text-emerald-700 border-emerald-100",
-      cancelado: "bg-red-50 text-red-700 border-red-100",
-      en_envio: "bg-blue-50 text-blue-700 border-blue-100",
+      pendiente: "bg-orange-50 text-orange-600 border-orange-100",
+      completado: "bg-emerald-50 text-emerald-600 border-emerald-100",
+      cancelado: "bg-rose-50 text-rose-600 border-rose-100",
+      en_envio: "bg-blue-50 text-blue-600 border-blue-100",
     };
 
     const label: any = {
@@ -43,84 +30,140 @@ export default function PedidosTable({ data, onView }: PedidosTableProps) {
     };
 
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${styles[status] || styles.pendiente}`}>
+      <Badge 
+        className={`rounded-full px-4 py-1 text-[10px] font-black border-2 uppercase ${styles[status] || styles.pendiente}`}
+        variant="outline"
+      >
         {label[status] || status}
-      </span>
+      </Badge>
     );
   };
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-      <Table>
-        <TableHeader className="bg-gray-50/50">
-          <TableRow>
-            <TableHead className="font-bold text-gray-700 w-25">Pedido</TableHead>
-            <TableHead className="font-bold text-gray-700">Cliente</TableHead>
-            <TableHead className="font-bold text-gray-700 text-center">Fecha</TableHead>
-            <TableHead className="font-bold text-gray-700 text-center">Estado</TableHead>
-            <TableHead className="font-bold text-gray-700 text-right">Total</TableHead>
-            <TableHead className="w-20"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="h-32 text-center text-gray-400 font-medium">
-                No se encontraron pedidos registrados.
-              </TableCell>
-            </TableRow>
-          ) : (
-            data.map((pedido) => (
-              <TableRow key={pedido.id} className="hover:bg-gray-50/50 transition-colors">
-                <TableCell className="font-bold text-pink-600">
-                  #{pedido.id.toString().padStart(4, '0')}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-gray-900">
-                      {pedido.clientes?.nombre} {pedido.clientes?.apellido}
-                    </span>
-                    <span className="text-[10px] text-gray-400 uppercase tracking-tighter">
-                      ID: {pedido.cliente_id}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center text-sm text-gray-600">
-                  {new Date(pedido.created_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-center">
-                  {getStatusBadge(pedido.estado)}
-                </TableCell>
-                <TableCell className="text-right font-black text-gray-900">
-                  S/ {pedido.total?.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-pink-50 hover:text-pink-600">
-                        <MoreHorizontal className="h-4 w-4" />
+    <div className="space-y-4">
+      <div className="overflow-x-auto pb-4">
+        <table className="w-full border-separate border-spacing-y-3">
+          <thead>
+            <tr className="text-left">
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase">Orden</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase">Cliente</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase text-center">Fecha</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase text-center">Estado</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="bg-white rounded-2xl border border-slate-100 py-16 text-center shadow-sm">
+                  <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No hay pedidos registrados</p>
+                </td>
+              </tr>
+            ) : (
+              data.map((pedido) => (
+                <tr key={pedido.id} className="group transition-all duration-200">
+                  {/* ID del Pedido y Total */}
+                  <td className="bg-white border-y border-l border-slate-100 py-5 px-6 rounded-l-2xl shadow-sm group-hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center border border-pink-100">
+                        <Hash size={16} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-black text-pink-600 text-sm tracking-tight">
+                          #{pedido.id.toString().padStart(4, '0')}
+                        </span>
+                        <span className="text-slate-900 font-black text-sm uppercase">
+                          S/ {pedido.total?.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Información del Cliente */}
+                  <td className="bg-white border-y border-slate-100 py-5 px-6 shadow-sm group-hover:shadow-md transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                        <User size={14} />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-700 text-[13px] uppercase tracking-tight">
+                          {pedido.clientes?.nombre} {pedido.clientes?.apellido}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                          DNI/RUC: {pedido.clientes?.dni_ruc || 'Sin Identificación'}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Fecha */}
+                  <td className="bg-white border-y border-slate-100 text-center shadow-sm group-hover:shadow-md transition-all">
+                    <div className="inline-flex items-center gap-2 text-slate-500 font-bold text-xs bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                      <Calendar size={14} className="text-slate-400" />
+                      {new Date(pedido.created_at).toLocaleDateString()}
+                    </div>
+                  </td>
+
+                  {/* Estado */}
+                  <td className="bg-white border-y border-slate-100 text-center shadow-sm group-hover:shadow-md transition-all">
+                    {getStatusBadge(pedido.estado)}
+                  </td>
+
+                  {/* Acciones Condicionales */}
+                  <td className="bg-white border-y border-r border-slate-100 px-6 rounded-r-2xl text-right shadow-sm group-hover:shadow-md transition-all">
+                    <div className="flex justify-end items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => onView(pedido)}
+                        className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
+                        title="Ver Detalles"
+                      >
+                        <Eye size={16} />
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuLabel className="text-xs uppercase text-gray-400">Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => onView(pedido)} className="gap-2 cursor-pointer">
-                        <Eye className="w-4 h-4 text-blue-500" /> Ver Detalles
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2 cursor-pointer">
-                        <Printer className="w-4 h-4 text-gray-500" /> Imprimir Ticket
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="gap-2 cursor-pointer text-orange-600">
-                        <Truck className="w-4 h-4" /> Actualizar Estado
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+
+                      {/* Botón de Envío: Solo si tiene permiso de editar */}
+                      {onUpdateStatus && (
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => onUpdateStatus(pedido)}
+                          className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 transition-all"
+                          title="Actualizar Estado/Envío"
+                        >
+                          <Truck size={16} />
+                        </Button>
+                      )}
+
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-100 transition-all"
+                        title="Imprimir Comprobante"
+                      >
+                        <Printer size={16} />
+                      </Button>
+
+                      {/* Botón de Cancelar: Solo si tiene permiso de eliminar */}
+                      {onCancel && pedido.estado !== 'cancelado' && (
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => onCancel(pedido)}
+                          className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all"
+                          title="Anular Pedido"
+                        >
+                          <XCircle size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

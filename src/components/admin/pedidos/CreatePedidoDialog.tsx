@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -15,51 +14,50 @@ import { Search, ShoppingCart, Trash2, Plus, Minus, User, Package, Calculator } 
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface CreatePedidoDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-export default function CreatePedidoDialog({ isOpen, onClose, onSuccess }: CreatePedidoDialogProps) {
+export default function CreatePedidoDialog({ isOpen, onClose, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
   const [clientes, setClientes] = useState<any[]>([]);
   const [productos, setProductos] = useState<any[]>([]);
   
-  // Estado del Formulario
   const [selectedCliente, setSelectedCliente] = useState<string>("");
   const [searchProd, setSearchProd] = useState("");
   const [carrito, setCarrito] = useState<any[]>([]);
 
-  // Cargar datos iniciales
+  // 1. Cargar datos iniciales desde tus nuevas APIs
   useEffect(() => {
     if (isOpen) {
       const loadInitialData = async () => {
-        const supabase = getSupabaseBrowserClient();
-        const [cliRes, prodRes] = await Promise.all([
-          supabase.from("clientes").select("id, nombre, apellido").order("nombre"),
-          supabase.from("productos").select("*").gt("stock", 0).order("nombre")
-        ]);
-        setClientes(cliRes.data || []);
-        setProductos(prodRes.data || []);
+        try {
+          const [cliRes, prodRes] = await Promise.all([
+            fetch('/api/admin/clientes'),
+            fetch('/api/admin/productos') // Asegúrate de que esta API filtre los activos
+          ]);
+          
+          const cliData = await cliRes.json();
+          const prodData = await prodRes.json();
+          
+          setClientes(cliData || []);
+          setProductos(prodData.filter((p: any) => p.stock > 0) || []);
+        } catch (error) {
+          toast.error("Error al cargar datos");
+        }
       };
       loadInitialData();
     }
   }, [isOpen]);
 
-  // Filtrar productos por búsqueda
   const filteredProducts = useMemo(() => {
     if (!searchProd) return [];
     return productos.filter(p => 
       p.nombre.toLowerCase().includes(searchProd.toLowerCase()) || 
-      p.sku.toLowerCase().includes(searchProd.toLowerCase())
+      p.sku?.toLowerCase().includes(searchProd.toLowerCase())
     ).slice(0, 5);
   }, [searchProd, productos]);
 
   const addToCart = (prod: any) => {
     const exists = carrito.find(item => item.id === prod.id);
     if (exists) {
-      if (exists.cantidad >= prod.stock) return toast.error("Stock máximo alcanzado");
+      if (exists.cantidad >= prod.stock) return toast.error("Stock insuficiente");
       setCarrito(carrito.map(item => item.id === prod.id ? { ...item, cantidad: item.cantidad + 1 } : item));
     } else {
       setCarrito([...carrito, { ...prod, cantidad: 1 }]);
@@ -78,44 +76,50 @@ export default function CreatePedidoDialog({ isOpen, onClose, onSuccess }: Creat
     }));
   };
 
-  const removeFromCart = (id: number) => setCarrito(carrito.filter(item => item.id !== id));
+  // Remover producto del carrito
+  const removeFromCart = (id: number) => {
+  setCarrito(carrito.filter(item => item.id !== id));
+  toast.info("Producto removido");
+  };
 
   const total = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
 
+  // 2. Lógica de guardado enviando todo a la API de pedidos
   const handleSave = async () => {
     if (!selectedCliente) return toast.error("Seleccione un cliente");
     if (carrito.length === 0) return toast.error("El carrito está vacío");
 
     setLoading(true);
     try {
-      const supabase = getSupabaseBrowserClient();
-      
-      // 1. Crear el pedido
-      const { data: pedido, error: pError } = await supabase
-        .from("pedidos")
-        .insert([{ cliente_id: Number(selectedCliente), total, estado: "pendiente" }])
-        .select()
-        .single();
+      const pedidoData = {
+        cliente_id: selectedCliente,
+        metodo_pago: "EFECTIVO", // Puedes añadir un selector para esto luego
+        subtotal: total / 1.18,  // Ejemplo de desglose de IGV
+        impuesto: total - (total / 1.18),
+        total: total,
+        productos: carrito.map(item => ({
+          id: item.id,
+          cantidad: item.cantidad,
+          precio: item.precio
+        }))
+      };
 
-      if (pError) throw pError;
+      const response = await fetch('/api/admin/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pedidoData),
+      });
 
-      // 2. Crear los detalles del pedido
-      const detalles = carrito.map(item => ({
-        pedido_id: pedido.id,
-        producto_id: item.id,
-        cantidad: item.cantidad,
-        precio_unitario: item.precio
-      }));
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Error al procesar pedido");
 
-      const { error: dError } = await supabase.from("pedido_detalles").insert(detalles);
-      if (dError) throw dError;
-
-      toast.success("Pedido creado correctamente");
+      toast.success("Venta realizada con éxito");
       onSuccess();
       onClose();
       setCarrito([]);
-    } catch (err) {
-      toast.error("Error al procesar el pedido");
+      setSelectedCliente("");
+    } catch (err: any) {
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -123,122 +127,131 @@ export default function CreatePedidoDialog({ isOpen, onClose, onSuccess }: Creat
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-black">
-            <ShoppingCart className="text-pink-600" /> Nuevo Pedido de Venta
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col rounded-3xl p-0 border-none">
+        <div className="p-6 bg-white flex-1 overflow-y-auto">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="flex items-center gap-2 text-2xl font-black">
+              <div className="p-2 bg-pink-100 rounded-xl">
+                <ShoppingCart className="text-pink-600" />
+              </div>
+              Punto de Venta Modas GUOR
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-          {/* Columna Izquierda: Selección */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <User className="w-3 h-3" /> Cliente
-              </label>
-              <Select onValueChange={setSelectedCliente} value={selectedCliente}>
-                <SelectTrigger className="h-12 border-gray-200">
-                  <SelectValue placeholder="Seleccionar cliente..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {clientes.map(c => (
-                    <SelectItem key={c.id} value={c.id.toString()}>{c.nombre} {c.apellido}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 relative">
-              <label className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <Package className="w-3 h-3" /> Buscar Productos
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3.5 w-4 h-4 text-gray-400" />
-                <Input 
-                  placeholder="Escriba nombre o SKU..." 
-                  className="pl-10 h-12 border-gray-200 focus:ring-pink-500"
-                  value={searchProd}
-                  onChange={(e) => setSearchProd(e.target.value)}
-                />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Buscador y Selección */}
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <User className="w-3 h-3" /> Identificar Cliente
+                </label>
+                <Select onValueChange={setSelectedCliente} value={selectedCliente}>
+                  <SelectTrigger className="h-14 border-gray-200 rounded-2xl shadow-sm focus:ring-pink-500">
+                    <SelectValue placeholder="Buscar cliente por Razón Social..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {clientes.map(c => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        <span className="font-bold">{c.razon_social}</span> 
+                        <span className="ml-2 text-gray-400 text-xs">({c.ruc})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {/* Resultados de búsqueda rápidos */}
-              {filteredProducts.length > 0 && (
-                <div className="absolute z-50 w-full bg-white border rounded-xl shadow-2xl mt-1 overflow-hidden">
-                  {filteredProducts.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => addToCart(p)}
-                      className="w-full p-3 text-left hover:bg-pink-50 flex justify-between items-center border-b last:border-0"
-                    >
-                      <div>
-                        <p className="font-bold text-gray-900">{p.nombre}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">SKU: {p.sku} | Stock: {p.stock}</p>
-                      </div>
-                      <span className="font-black text-pink-600">S/ {p.precio.toFixed(2)}</span>
-                    </button>
-                  ))}
+              <div className="space-y-2 relative">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Package className="w-3 h-3" /> Añadir Prendas
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-4.5 w-5 h-5 text-gray-400" />
+                  <Input 
+                    placeholder="Escriba nombre de prenda o SKU..." 
+                    className="pl-12 h-14 border-gray-200 rounded-2xl shadow-sm focus:ring-pink-500 text-lg"
+                    value={searchProd}
+                    onChange={(e) => setSearchProd(e.target.value)}
+                  />
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Columna Derecha: Carrito */}
-          <div className="bg-gray-50 rounded-2xl border p-4 flex flex-col min-h-100">
-            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Calculator className="w-3 h-3" /> Resumen del Carrito
-            </h3>
-
-            <div className="flex-1 space-y-3 overflow-y-auto max-h-75 pr-2">
-              {carrito.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-50">
-                  <ShoppingCart className="w-12 h-12 mb-2" />
-                  <p className="text-sm font-bold">Carrito vacío</p>
-                </div>
-              ) : (
-                carrito.map(item => (
-                  <div key={item.id} className="bg-white p-3 rounded-xl border flex items-center justify-between shadow-sm">
-                    <div className="flex-1">
-                      <p className="font-bold text-sm text-gray-800 line-clamp-1">{item.nombre}</p>
-                      <p className="text-xs text-pink-600 font-black">S/ {item.precio.toFixed(2)}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center border rounded-lg bg-gray-50">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:text-pink-600"><Minus className="w-3 h-3" /></button>
-                        <span className="w-8 text-center text-sm font-black">{item.cantidad}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:text-pink-600"><Plus className="w-3 h-3" /></button>
-                      </div>
-                      <button onClick={() => removeFromCart(item.id)} className="text-gray-300 hover:text-red-500 transition-colors">
-                        <Trash2 className="w-4 h-4" />
+                {filteredProducts.length > 0 && (
+                  <div className="absolute z-50 w-full bg-white border border-gray-100 rounded-2xl shadow-2xl mt-2 overflow-hidden animate-in fade-in zoom-in duration-200">
+                    {filteredProducts.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => addToCart(p)}
+                        className="w-full p-4 text-left hover:bg-pink-50 flex justify-between items-center border-b border-gray-50 last:border-0 transition-colors"
+                      >
+                        <div>
+                          <p className="font-bold text-gray-900">{p.nombre}</p>
+                          <p className="text-[10px] text-pink-500 font-bold uppercase">Stock: {p.stock} disponibles</p>
+                        </div>
+                        <span className="font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg text-sm">S/ {p.precio.toFixed(2)}</span>
                       </button>
-                    </div>
+                    ))}
                   </div>
-                ))
-              )}
+                )}
+              </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex justify-between items-end">
-                <span className="text-xs font-black text-gray-400 uppercase">Total a Pagar</span>
-                <span className="text-3xl font-black text-gray-900 tracking-tighter">S/ {total.toFixed(2)}</span>
+            {/* Resumen de Compra */}
+            <div className="bg-gray-50 rounded-4xl border border-gray-100 p-6 flex flex-col min-h-100">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <Calculator className="w-3 h-3" /> Detalle de Venta
+              </h3>
+
+              <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                {carrito.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-300">
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <ShoppingCart className="w-8 h-8 opacity-20" />
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-widest">Esperando productos...</p>
+                  </div>
+                ) : (
+                  carrito.map(item => (
+                    <div key={item.id} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between shadow-sm animate-in slide-in-from-right duration-300">
+                      <div className="flex-1">
+                        <p className="font-bold text-sm text-gray-800">{item.nombre}</p>
+                        <p className="text-xs text-gray-400 font-medium">S/ {item.precio.toFixed(2)} x {item.cantidad}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center border border-gray-100 rounded-xl bg-gray-50 p-1">
+                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 hover:bg-white rounded-lg transition-all"><Minus className="w-3 h-3" /></button>
+                          <span className="w-8 text-center text-sm font-black">{item.cantidad}</span>
+                          <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 hover:bg-white rounded-lg transition-all"><Plus className="w-3 h-3" /></button>
+                        </div>
+                        <button onClick={() => removeFromCart(item.id)} className="p-2 text-gray-300 hover:text-red-500 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-6 pt-6 border-t-2 border-dashed border-gray-200">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Estimado</span>
+                  <span className="text-4xl font-black text-gray-900 tracking-tighter">S/ {total.toFixed(2)}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="mt-6">
-          <Button variant="outline" onClick={onClose} disabled={loading} className="h-12 font-bold px-8">
-            Cancelar
+        <div className="p-6 bg-white border-t flex gap-4">
+          <Button variant="ghost" onClick={onClose} disabled={loading} className="h-14 flex-1 rounded-2xl font-bold">
+            Descartar
           </Button>
           <Button 
             onClick={handleSave} 
             disabled={loading || carrito.length === 0} 
-            className="h-12 bg-pink-600 hover:bg-pink-700 font-black px-10 shadow-lg"
+            className="h-14 flex-2 bg-pink-600 hover:bg-pink-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-pink-100 transition-all active:scale-95"
           >
-            {loading ? "Procesando..." : "Confirmar Venta"}
+            {loading ? "Registrando en Caja..." : "Finalizar Pedido"}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

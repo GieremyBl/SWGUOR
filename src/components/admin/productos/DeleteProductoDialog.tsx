@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
-import type { Producto } from "@/types/supabase.types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,40 +11,34 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { AlertCircle } from "lucide-react";
-
-interface DeleteProductoDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  producto: Producto;
-}
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 export default function DeleteProductoDialog({
   isOpen,
   onClose,
   onSuccess,
   producto,
-}: DeleteProductoDialogProps) {
+}: any) {
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
+    if (!producto?.id) return;
+    
     try {
       setLoading(true);
+      const response = await fetch(`/api/admin/productos?id=${producto.id}`, {
+        method: 'DELETE',
+      });
 
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase
-        .from("productos")
-        .delete()
-        .eq("id", producto.id);
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!response.ok) throw new Error(result.error || "No se pudo eliminar");
 
-      toast.success("Producto eliminado correctamente");
+      toast.success("Producto eliminado del catálogo");
       onSuccess();
-    } catch (error) {
-      console.error("Error eliminando producto:", error);
-      toast.error("Error al eliminar el producto");
+      onClose();
+    } catch (error: any) {
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -54,35 +46,33 @@ export default function DeleteProductoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Eliminar Producto</DialogTitle>
-          <DialogDescription>
-            Esta acción no se puede deshacer
+      <DialogContent className="max-w-sm rounded-4xl border-none shadow-2xl">
+        <DialogHeader className="items-center text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-red-600" />
+          </div>
+          <DialogTitle className="text-xl font-black">¿Estás seguro?</DialogTitle>
+          <DialogDescription className="text-balance font-medium text-gray-500">
+            Estás a punto de eliminar <b>{producto?.nombre}</b>. Esta acción no se puede deshacer.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 my-4">
-          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium text-red-900">¿Eliminar "{producto.nombre}"?</p>
-            <p className="text-sm text-red-700 mt-1">
-              Al eliminar este producto, se eliminarán todas sus referencias en pedidos y detalles.
-            </p>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
+        <DialogFooter className="flex-col sm:flex-col gap-2 mt-4">
           <Button
-            type="button"
             variant="destructive"
             onClick={handleDelete}
             disabled={loading}
+            className="w-full h-12 rounded-2xl font-black text-lg bg-red-600 hover:bg-red-700 transition-all shadow-lg shadow-red-100"
           >
-            {loading ? "Eliminando..." : "Eliminar"}
+            {loading ? <Loader2 className="animate-spin mr-2" /> : "Sí, eliminar producto"}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            disabled={loading}
+            className="w-full h-12 rounded-2xl font-bold text-gray-400"
+          >
+            No, mantenerlo
           </Button>
         </DialogFooter>
       </DialogContent>

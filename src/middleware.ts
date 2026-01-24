@@ -18,7 +18,7 @@ const routePermissions: Record<string, string[]> = {
   '/admin/Panel-Administrativo/ventas': ['administrador', 'recepcionista'],
   '/admin/Panel-Administrativo/despachos': ['administrador', 'recepcionista'],
   '/admin/Panel-Administrativo/pagos': ['administrador'],
-  '/admin/Panel-Administrativo/notificaciones': ['administrador', 'recepcionista'],
+  '/admin/Panel-Administrativo/notificaciones': ['administrador', 'recepcionista', 'diseñador', 'cortador', 'ayudante', 'representante_taller'],
 };
 
 const ESTADO_ACTIVO = 'ACTIVO'; // Cambiado a mayúsculas

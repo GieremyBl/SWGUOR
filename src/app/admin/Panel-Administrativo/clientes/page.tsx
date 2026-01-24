@@ -7,11 +7,11 @@ import { Input } from "@/components/ui/input";
 import { FileSpreadsheet, Plus, Search, Users, RefreshCw, UserCheck, UserMinus, ChevronLeft, ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { exportToExcel } from "@/lib/export-utils";
+import { exportToExcel } from "@/lib/utils/export-utils";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 // Lazy loading
 const ClientesTable = dynamic(() => import("@/components/admin/clientes/ClientesTable"));
-const CreateClienteDialog = dynamic(() => import("@/components/admin/clientes/CreateClienteDialog"));
 const EditClienteDialog = dynamic(() => import("@/components/admin/clientes/EditClienteDialog"));
 const DeleteClienteDialog = dynamic(() => import("@/components/admin/clientes/DeleteClienteDialog"));
 
@@ -116,6 +116,16 @@ export default function ClientesPage() {
                                    statusFilter === true ? stats.activos : stats.inactivos;
   const totalPages = Math.ceil(currentTotalForPagination / pageSize);
 
+  const { can, isLoading: authLoading } = usePermissions();
+
+  if (!authLoading && !can('view', 'clientes')) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <p className="text-gray-500 font-bold uppercase tracking-tighter">No tienes permisos para ver este módulo</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -130,13 +140,12 @@ export default function ClientesPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
-              <FileSpreadsheet className="w-5 h-5" />
-              <span className="hidden sm:inline">Exportar Excel</span>
-            </Button>
-            <Button onClick={() => setIsCreateOpen(true)} className="bg-pink-600 hover:bg-pink-700 shadow-lg font-bold gap-2 h-11 transition-all active:scale-95">
-              <Plus className="w-5 h-5" /> Nuevo Cliente
-            </Button>
+            {can('export', 'clientes') && (
+              <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
+                <FileSpreadsheet className="w-5 h-5" />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -220,7 +229,6 @@ export default function ClientesPage() {
       </div>
 
       {/* Diálogos */}
-      <CreateClienteDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={fetchClientes} />
       {selectedCliente && dialogMode === "edit" && (
         <EditClienteDialog isOpen={true} onClose={() => {setDialogMode(null); setSelectedCliente(null);}} onSuccess={fetchClientes} cliente={selectedCliente} />
       )}

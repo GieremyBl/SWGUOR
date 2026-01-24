@@ -3,10 +3,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Users, UserPlus, Building2, FileText, Package, 
-  TrendingUp, Download, Settings, BarChart3, ShoppingCart 
+  TrendingUp, Download, Settings, BarChart3, ShoppingCart, 
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { usePermissions } from '@/lib/hooks/usePermissions';
+import { useRouter } from 'next/navigation';
 
 interface ActividadReciente {
   action: string;
@@ -35,15 +38,35 @@ interface StatsState {
   ventasMes: string;
 }
 
+interface QuickAction {
+  icon: any;
+  label: string;
+  color: string;
+  path: string;
+  show: boolean;
+}
+interface ModuleItem {
+  icon: any;
+  title: string;
+  count: string | number;
+  color: string;
+  bgColor: string;
+  path: string;
+  show: boolean;
+  alert?: string | null;
+}
+
 export default function AdminDashboard() {
+  const router = useRouter();
   const { can, isLoading: permissionsLoading } = usePermissions();
-  const [stats, setStats] = useState<StatsState>({
+  const [stats, setStats] = useState<StatsState & { stockBajo: number }> ({
     usuarios: 0,
     clientes: 0,
     talleres: 0,
     pedidosActivos: 0,
     productosInventario: 0,
-    ventasMes: 'S/ 0.00'
+    ventasMes: 'S/ 0.00',
+    stockBajo: 0
   });
 
   const [recentActivity, setRecentActivity] = useState<ActividadReciente[]>([]);
@@ -75,16 +98,18 @@ export default function AdminDashboard() {
         { count: workshopCount },
         { count: orderCount },
         { count: productCount },
+        { data: lowStockData },
         { data: salesData },
-        { data: activityData }
+        { data: activityData },
       ] = await Promise.all([
-        supabase.from('usuarios').select('*', { count: 'exact', head: true }),
-        supabase.from('clientes').select('*', { count: 'exact', head: true }),
-        supabase.from('talleres').select('*', { count: 'exact', head: true }),
-        supabase.from('pedidos').select('*', { count: 'exact', head: true }).neq('estado', 'completado'),
-        supabase.from('productos').select('*', { count: 'exact', head: true }),
+        supabase.from('usuarios').select('id', { count: 'exact'}),
+        supabase.from('clientes').select('id', { count: 'exact'}),
+        supabase.from('talleres').select('id', { count: 'exact'}),
+        supabase.from('pedidos').select('id', { count: 'exact', head: false }).neq('estado', 'completado'),
+        supabase.from('productos').select('id', { count: 'exact'}),
+        supabase.from('productos').select('id').lte('stock', 400),
         supabase.from('pedidos').select('total').gte('created_at', startOfMonth.toISOString()),
-        supabase.from('usuarios').select('nombre_completo, created_at, email').order('created_at', { ascending: false }).limit(4)
+        supabase.from('usuarios').select('nombre_completo, created_at, email').order('created_at', { ascending: false }).limit(5)
       ]);
 
        const totalVentas = (salesData as PedidoData[] | null)?.reduce(
@@ -98,12 +123,13 @@ export default function AdminDashboard() {
         talleres: workshopCount || 0,
         pedidosActivos: orderCount || 0,
         productosInventario: productCount || 0,
+        stockBajo: lowStockData?.length || 0,
         ventasMes: `S/ ${totalVentas.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`
       });
 
      if (activityData) {
         setRecentActivity((activityData as UsuarioData[]).map((u: UsuarioData) => ({
-          action: 'Usuario registrado',
+          action: 'Nuevo acceso concedido',
           user: u.nombre_completo || u.email,
           time: getTimeAgo(u.created_at),
           type: 'success'
@@ -116,106 +142,105 @@ export default function AdminDashboard() {
     }
   }, [getTimeAgo]);
 
-  useEffect(() => {
+ useEffect(() => {
+  let isMounted = true;
+  if (isMounted) {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+  }
+  return () => { isMounted = false; };
+}, [fetchDashboardData]);
 
-  const quickActions = useMemo(() => [
-    { icon: UserPlus, label: 'Crear Usuario', color: 'bg-blue-600', show: can('create', 'usuarios') },
-    { icon: Users, label: 'Crear Cliente', color: 'bg-emerald-600', show: can('create', 'clientes') },
-    { icon: Building2, label: 'Registrar Taller', color: 'bg-violet-600', show: can('create', 'talleres') },
-    { icon: Download, label: 'Exportar Reportes', color: 'bg-amber-600', show: can('export', 'reportes') },
+  const quickActions = useMemo<QuickAction[]>(() => [
+    { icon: UserPlus, label: 'Nuevo Usuario', color: 'bg-blue-600', path: '/admin/Panel-Administrativo/usuarios', show: can('create', 'usuarios') },
+    { icon: Building2, label: 'Registrar Taller', color: 'bg-violet-600',path: '/admin/Panel-Administrativo/talleres', show: can('create', 'talleres') },
+    { icon: Download, label: 'Reporte Excel', color: 'bg-amber-600',path: '', show: can('export', 'reportes') },
   ].filter(a => a.show), [can]);
 
-  const modules = useMemo(() => [
-    { icon: Users, title: 'Usuarios', count: stats.usuarios, color: 'text-blue-600', bgColor: 'bg-blue-50', show: can('view', 'usuarios') },
-    { icon: Users, title: 'Clientes', count: stats.clientes, color: 'text-emerald-600', bgColor: 'bg-emerald-50', show: can('view', 'clientes') },
-    { icon: Building2, title: 'Talleres', count: stats.talleres, color: 'text-violet-600', bgColor: 'bg-violet-50', show: can('view', 'talleres') },
-    { icon: ShoppingCart, title: 'Pedidos', count: stats.pedidosActivos, color: 'text-orange-600', bgColor: 'bg-orange-50', show: can('view', 'pedidos') },
-    { icon: Package, title: 'Inventario', count: stats.productosInventario, color: 'text-indigo-600', bgColor: 'bg-indigo-50', show: can('view', 'inventario') },
-    { icon: TrendingUp, title: 'Ventas del Mes', count: stats.ventasMes, color: 'text-pink-600', bgColor: 'bg-pink-50', show: can('view', 'reportes') },
+  const modules = useMemo<ModuleItem[]>(() => [
+    { icon: Users, title: 'Usuarios', count: stats.usuarios, color: 'text-blue-600', bgColor: 'bg-blue-50',path: '/admin/Panel-Administrativo/usuarios', show: can('view', 'usuarios') },
+    { icon: Users, title: 'Clientes', count: stats.clientes, color: 'text-emerald-600', bgColor: 'bg-emerald-50',path: '/admin/Panel-Administrativo/clientes', show: can('view', 'clientes') },
+    { icon: Building2, title: 'Talleres', count: stats.talleres, color: 'text-violet-600', bgColor: 'bg-violet-50', path: '/admin/Panel-Administrativo/talleres',show: can('view', 'talleres') },
+    { icon: ShoppingCart, title: 'Pedidos Activos', count: stats.pedidosActivos, color: 'text-orange-600', bgColor: 'bg-orange-50', path: '/admin/Panel-Administrativo/pedidos', show: can('view', 'pedidos') },
+    { icon: Package, title: 'Inventario Total', count: stats.productosInventario, color: 'text-indigo-600', bgColor: 'bg-indigo-50',path: '/admin/Panel-Administrativo/productos', show: can('view', 'inventario') },
+    { icon: TrendingUp, title: 'Ingresos Mensuales', count: stats.ventasMes, color: 'text-pink-600', bgColor: 'bg-pink-50',path: '', show: can('view', 'reportes') },
+    { icon: Package, title: 'Stock Bajos', count: stats.productosInventario, color: 'text-indigo-600', bgColor: 'bg-indigo-50', path: '/admin/Panel-Administrativo/productos', alert: stats.stockBajo > 0 ? `${stats.stockBajo} Críticos` : null, show: can('view', 'inventario') },
   ].filter(m => m.show), [stats, can]);
 
   if (permissionsLoading || loading) return <LoadingDashboard />;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <header>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Panel de Control</h1>
-          <p className="text-gray-500 font-medium">Modas y Estilos GUOR - Gestión Administrativa</p>
-        </header>
-
-        {/* Acciones Rápidas con Efectos de Puntero */}
-        {quickActions.length > 0 && (
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action, idx) => (
-              <button
-                key={idx}
-                className={`${action.color} text-white p-4 rounded-xl shadow-sm cursor-pointer
-                transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-lg
-                flex items-center gap-4 group overflow-hidden relative`}
-              >
-                <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <action.icon className="w-6 h-6 shrink-0" />
-                <span className="font-bold tracking-wide">{action.label}</span>
-              </button>
-            ))}
-          </section>
-        )}
-
-        {/* Módulos / Stats con Hover dinámico */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map((module, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 
-            hover:shadow-md transition-all group cursor-pointer active:bg-gray-50">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`${module.bgColor} p-3 rounded-xl transition-transform group-hover:scale-110`}>
-                  <module.icon className={`w-6 h-6 ${module.color}`} />
-                </div>
-                <Settings className="w-5 h-5 text-gray-300 hover:text-gray-600 transition-colors" />
-              </div>
-              <h3 className="text-gray-500 text-sm font-bold uppercase tracking-wider">{module.title}</h3>
-              <p className="text-3xl font-black text-gray-900 mt-1">{module.count}</p>
-              <div className="mt-4 flex items-center text-sm font-semibold text-pink-600 group-hover:translate-x-1 transition-transform">
-                Gestionar módulo <span className="ml-1">→</span>
-              </div>
-            </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* Acciones Rápidas */}
+      {quickActions.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action, idx) => (
+            <button
+              key={idx}
+              onClick={() => router.push(action.path)}
+              className={`${action.color} text-white p-4 rounded-2xl shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col gap-3 group`}
+            >
+              <action.icon className="w-5 h-5 opacity-80 group-hover:scale-110 transition-transform" />
+              <span className="font-bold text-xs uppercase tracking-wider">{action.label}</span>
+            </button>
           ))}
-        </section>
-
-        {/* Actividad y Estadísticas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Actividad Reciente */}
-          <CardContainer title="Actividad Reciente" icon={<FileText className="text-gray-400" />}>
-            {recentActivity.length > 0 ? (
-              <div className="space-y-6">
-                {recentActivity.map((activity, idx) => (
-                  <div key={idx} className="flex items-start gap-4">
-                    <div className="w-2 h-2 rounded-full mt-2 bg-pink-500 shadow-[0_0_8px_rgba(236,72,153,0.5)]" />
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-gray-800">{activity.action}</p>
-                      <p className="text-xs text-gray-500 font-medium">{activity.user} • {activity.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-400 text-center py-10 italic">Sin movimientos recientes</p>
-            )}
-          </CardContainer>
-
-          {/* Estadísticas Visuales */}
-          <CardContainer title="Rendimiento del Sistema" icon={<BarChart3 className="text-gray-400" />}>
-            <div className="space-y-6">
-              <ProgressBar label="Eficiencia de Pedidos" value={stats.pedidosActivos > 0 ? 85 : 0} color="bg-pink-500" />
-              <ProgressBar label="Retención de Clientes" value={stats.clientes > 0 ? 92 : 0} color="bg-emerald-500" />
-              <ProgressBar label="Capacidad de Talleres" value={stats.talleres > 0 ? 70 : 0} color="bg-violet-500" />
-            </div>
-          </CardContainer>
         </div>
+      )}
+
+      {/* Módulos Principales */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {modules.map((module, idx) => (
+          <button
+            key={idx}
+            onClick={() => router.push(module.path)}
+            className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group relative text-left"
+          >
+            {module.alert && (
+              <div className="absolute top-6 right-6 flex items-center gap-1 bg-rose-100 text-rose-600 px-2 py-1 rounded-full animate-pulse">
+                <AlertCircle size={12} />
+                <span className="text-[10px] font-black uppercase">{module.alert}</span>
+              </div>
+            )}
+            <div className={`${module.bgColor} w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-6 transition-transform`}>
+              <module.icon className={`w-6 h-6 ${module.color}`} />
+            </div>
+            <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{module.title}</h3>
+            <p className="text-3xl font-black text-slate-900 tracking-tighter mt-1">{module.count}</p>
+            <div className="mt-4 flex items-center text-[10px] font-black text-pink-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+              Gestionar <ArrowRight size={14} className="ml-1" />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {/* Actividad y Rendimiento */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <CardContainer title="Historial de Acceso" icon={<FileText className="text-slate-300" />}>
+          <div className="space-y-4">
+            {recentActivity.map((activity, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs">
+                    {activity.user[0]}
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-slate-800 uppercase">{activity.user}</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{activity.action}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black text-slate-300">{activity.time}</span>
+              </div>
+            ))}
+          </div>
+        </CardContainer>
+
+        <CardContainer title="Operatividad Taller" icon={<BarChart3 className="text-slate-300" />}>
+          <div className="space-y-6">
+            <ProgressBar label="Eficiencia Producción" value={88} color="bg-pink-500" />
+            <ProgressBar label="Cumplimiento Entregas" value={94} color="bg-emerald-500" />
+            <ProgressBar label="Capacidad Logística" value={72} color="bg-violet-500" />
+          </div>
+        </CardContainer>
       </div>
     </div>
   );

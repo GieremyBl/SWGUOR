@@ -20,13 +20,13 @@ export default function AccesoDenegadoPage() {
         </p>
         
         <div className="space-y-3">
-          <Link href="/dashboard">
+          <Link href="/admin/Panel-Administrativo/dashboard">
             <Button className="w-full bg-linear-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700">
               Volver al Dashboard
             </Button>
           </Link>
           
-          <Link href="/login">
+          <Link href="/admin/login">
             <Button variant="outline" className="w-full">
               Cerrar Sesión
             </Button>

@@ -1,12 +1,14 @@
 "use client";
 
-import { Edit2, Trash2, Mail, Phone, User, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Edit2, Trash2, Mail, Phone, User, ShieldCheck, ShieldAlert, Hash } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface ClientesTableProps {
   data: any[];
-  onEdit: (c: any) => void;
-  onDelete: (c: any) => void;
-  onToggleStatus: (c: any) => void;
+  onEdit?: (c: any) => void;
+  onDelete?: (c: any) => void;
+  onToggleStatus?: (c: any) => void;
 }
 
 export default function ClientesTable({ 
@@ -16,102 +18,126 @@ export default function ClientesTable({
   onToggleStatus 
 }: ClientesTableProps) {
 
-  const getEstadoBadge = (activo: boolean) => {
-    return activo 
-      ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-      : 'bg-orange-100 text-orange-800 border-orange-200';
-  };
+  // Determinamos si debemos mostrar la columna de acciones
+  const showActions = !!onEdit || !!onDelete || !!onToggleStatus;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {/* Alineación a la izquierda con padding lateral */}
-              <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider">Cliente</th>
-              <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider">Contacto</th>
-              <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider">RUC / DNI</th>
-              <th className="px-6 py-4 font-semibold text-gray-600 uppercase tracking-wider text-center">Estado</th>
-              <th className="px-6 py-4 text-right font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
+    <div className="space-y-4">
+      <div className="overflow-x-auto pb-4">
+        <table className="w-full border-separate border-spacing-y-3">
+          <thead>
+            <tr className="text-left">
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase">Cliente / Empresa</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase">Contacto</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase">Documento</th>
+              <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase text-center">Estado</th>
+              {showActions && (
+                <th className="px-6 py-2 font-black text-[11px] tracking-widest text-slate-400 uppercase text-right">Acciones</th>
+              )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {data.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">
-                  No se encontraron clientes registrados.
+                <td colSpan={showActions ? 5 : 4} className="bg-white rounded-2xl border border-slate-100 py-16 text-center shadow-sm">
+                  <div className="flex flex-col items-center gap-3">
+                    <User className="w-12 h-12 text-slate-200" />
+                    <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No hay clientes registrados</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               data.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
-                  
-                  {/* 1. Cliente: Avatar + Texto alineado a la izquierda */}
-                  <td className="px-6 py-4">
+                <tr key={c.id} className="group transition-all duration-200">
+                  <td className="bg-white border-y border-l border-slate-100 py-5 px-6 rounded-l-2xl shadow-sm group-hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 flex items-center justify-center bg-pink-50 rounded-full border border-pink-100 text-pink-600 shrink-0">
+                      <div className="h-11 w-11 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center border border-pink-100 group-hover:scale-110 transition-transform duration-300">
                         <User className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-gray-900 leading-tight uppercase truncate">
+                        <div className="font-black text-slate-900 text-sm tracking-tight uppercase leading-none">
                           {c.razon_social}
                         </div>
-                        <div className="text-gray-400 text-[10px]">ID: {c.id}</div>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className="bg-slate-100 text-slate-500 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                            ID: {c.id}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* 2. Contacto: Alineado a la izquierda */}
-                  <td className="px-6 py-4">
+                  <td className="bg-white border-y border-slate-100 py-5 px-6 shadow-sm group-hover:shadow-md transition-all">
                     <div className="flex flex-col gap-1">
-                      <span className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <Mail className="w-3.5 h-3.5 text-gray-400"/> {c.email}
+                      <span className="flex items-center gap-2 text-[13px] font-bold text-slate-600">
+                        <Mail className="w-3.5 h-3.5 text-slate-300"/> {c.email}
                       </span>
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                        <Phone className="w-3.5 h-3.5 text-gray-400"/> {c.telefono || '---'}
+                      <span className="flex items-center gap-2 text-[12px] font-medium text-slate-400">
+                        <Phone className="w-3.5 h-3.5 text-slate-300"/> {c.telefono || '---'}
                       </span>
                     </div>
                   </td>
 
-                  {/* 3. Documento: Alineado a la izquierda */}
-                  <td className="px-6 py-4 font-mono text-sm font-semibold text-gray-700">
-                    {c.ruc || "---"}
+                  <td className="bg-white border-y border-slate-100 py-5 px-6 shadow-sm group-hover:shadow-md transition-all">
+                    <div className="inline-flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                      <Hash size={14} className="text-slate-400" />
+                      <span className="font-mono text-[13px] font-bold text-slate-700">{c.ruc || "---"}</span>
+                    </div>
                   </td>
 
-                  {/* 4. Estado: Mantenemos centrado para equilibrio visual */}
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${getEstadoBadge(c.activo)}`}>
+                  <td className={`bg-white border-y border-slate-100 text-center shadow-sm group-hover:shadow-md transition-all ${!showActions ? 'rounded-r-2xl border-r' : ''}`}>
+                    <Badge className={`rounded-full px-4 py-1 text-[10px] font-black border-2 uppercase ${
+                      c.activo 
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                        : 'bg-orange-50 text-orange-600 border-orange-100'
+                    }`} variant="outline">
                       {c.activo ? "ACTIVO" : "INACTIVO"}
-                    </span>
+                    </Badge>
                   </td>
 
-                  {/* 5. Acciones: Alineado a la derecha */}
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      <button 
-                        onClick={() => onToggleStatus(c)} 
-                        title={c.activo ? "Desactivar" : "Activar"}
-                        className={`p-2 rounded-lg transition-colors ${c.activo ? 'text-gray-400 hover:text-orange-600' : 'text-gray-400 hover:text-emerald-600'}`}
-                      >
-                        {c.activo ? <ShieldAlert className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-                      </button>
+                  {showActions && (
+                    <td className="bg-white border-y border-r border-slate-100 px-6 rounded-r-2xl text-right shadow-sm group-hover:shadow-md transition-all">
+                      <div className="flex justify-end items-center gap-2">
+                        {onToggleStatus && (
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => onToggleStatus(c)}
+                            className={`h-9 w-9 rounded-xl border-slate-200 transition-all ${
+                              c.activo 
+                                ? 'text-slate-400 hover:text-orange-600 hover:bg-orange-50 hover:border-orange-200' 
+                                : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200'
+                            }`}
+                            title={c.activo ? "Desactivar" : "Activar"}
+                          >
+                            {c.activo ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
+                          </Button>
+                        )}
+                        
+                        {onEdit && (
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => onEdit(c)}
+                            className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
+                          >
+                            <Edit2 size={16} />
+                          </Button>
+                        )}
 
-                      <button 
-                        onClick={() => onEdit(c)} 
-                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-
-                      <button 
-                        onClick={() => onDelete(c)} 
-                        className="p-2 text-gray-400 hover:text-rose-600 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                        {onDelete && (
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => onDelete(c)}
+                            className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
