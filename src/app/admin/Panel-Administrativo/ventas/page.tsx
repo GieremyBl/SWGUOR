@@ -61,10 +61,10 @@ export default function VentasPage() {
   }, []);
 
   useEffect(() => { 
-    if (!authLoading && can('view', 'ventas')) {
+    if (!authLoading) {
       loadVentas(); 
     }
-  }, [loadVentas, authLoading, can]);
+  }, [authLoading, loadVentas]);
 
   const filteredVentas = useMemo(() => {
     return ventas.filter((v) => {
@@ -99,6 +99,7 @@ export default function VentasPage() {
   const paginatedData = filteredVentas.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
 
   const handleExportPDF = () => {
+    if (filteredVentas.length === 0) return toast.error("No hay datos para exportar");
     const headers = [["CÓDIGO", "FECHA", "CLIENTE", "ESTADO", "TOTAL"]];
     const body = filteredVentas.map(v => [
       v.codigo_pedido,
@@ -112,16 +113,30 @@ export default function VentasPage() {
       subtitle: `Filtro: ${dateFilter.toUpperCase()} | Generado por Sistema GUOR`,
       filename: `Ventas_${new Date().toISOString().split('T')[0]}` 
     });
+    toast.success("PDF generado correctamente");
   };
 
-  if (authLoading || loading) return <LoadingState />;
-  if (!can('view', 'ventas')) return <AccessDenied />;
+  const handleExportExcel = () => {
+    if (filteredVentas.length === 0) return toast.error("No hay datos para exportar");
+    const dataToExport = filteredVentas.map(v => ({
+      "Código": v.codigo_pedido,
+      "Fecha": new Date(v.created_at).toLocaleDateString(),
+      "Cliente": v.cliente ? `${v.cliente.nombre} ${v.cliente.apellido}` : 'Venta Directa',
+      "Estado": v.estado_pedido.toUpperCase(),
+      "Total": v.total
+    }));
+    exportToExcel(dataToExport, { filename: `Ventas_GUOR_${new Date().toISOString().split('T')[0]}` });
+    toast.success("Excel generado correctamente");
+  };
+
+  if (authLoading) return <LoadingState />;
+  if (!authLoading && !can('view', 'ventas')) return <AccessDenied />;
 
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header Unificado */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
@@ -130,31 +145,59 @@ export default function VentasPage() {
             <p className="text-gray-500 text-sm">Monitor de transacciones Modas y Estilos GUOR</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {can('export', 'ventas') && (
               <>
-                <Button onClick={handleExportPDF} variant="outline" className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11">
+                <Button onClick={handleExportPDF} variant="outline" className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 transition-all active:scale-95">
                   <FileText className="w-5 h-5" />
                   <span className="hidden sm:inline">Exportar PDF</span>
                 </Button>
-                <Button onClick={() => exportToExcel(filteredVentas, { filename: "Ventas_GUOR" })} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11">
+                <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
                   <FileSpreadsheet className="w-5 h-5" />
                   <span className="hidden sm:inline">Exportar Excel</span>
                 </Button>
               </>
             )}
             <Button variant="outline" className="h-11 border-gray-200 shadow-sm font-bold bg-white" onClick={loadVentas}>
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading && 'animate-spin'}`} /> Sincronizar
+              <RefreshCw className={`w-4 h-4 ${loading && 'animate-spin'}`} />
             </Button>
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard title="INGRESOS" value={`S/ ${stats.ingresos.toFixed(2)}`} icon={<DollarSign />} isActive={false} color="blue" onClick={() => {}} />
-          <StatCard title="ÓRDENES" value={stats.total} icon={<ShoppingBag />} isActive={estadoFilter === "todos"} color="pink" onClick={() => {setEstadoFilter("todos"); setCurrentPage(0);}} />
-          <StatCard title="EN TALLER" value={stats.enProduccion} icon={<Clock />} isActive={estadoFilter === "en_produccion"} color="orange" onClick={() => {setEstadoFilter("en_produccion"); setCurrentPage(0);}} />
-          <StatCard title="ENTREGADOS" value={stats.entregados} icon={<CheckCircle2 />} isActive={estadoFilter === "entregado"} color="emerald" onClick={() => {setEstadoFilter("entregado"); setCurrentPage(0);}} />
+          <StatCard 
+            title="INGRESOS" 
+            value={`S/ ${stats.ingresos.toFixed(2)}`} 
+            icon={<DollarSign className="w-6 h-6" />} 
+            isActive={false} 
+            color="blue" 
+            onClick={() => {}} 
+          />
+          <StatCard 
+            title="ÓRDENES" 
+            value={stats.total} 
+            icon={<ShoppingBag className="w-6 h-6" />} 
+            isActive={estadoFilter === "todos"} 
+            color="pink" 
+            onClick={() => {setEstadoFilter("todos"); setCurrentPage(0);}} 
+          />
+          <StatCard 
+            title="EN TALLER" 
+            value={stats.enProduccion} 
+            icon={<Clock className="w-6 h-6" />} 
+            isActive={estadoFilter === "en_produccion"} 
+            color="orange" 
+            onClick={() => {setEstadoFilter("en_produccion"); setCurrentPage(0);}} 
+          />
+          <StatCard 
+            title="ENTREGADOS" 
+            value={stats.entregados} 
+            icon={<CheckCircle2 className="w-6 h-6" />} 
+            isActive={estadoFilter === "entregado"} 
+            color="emerald" 
+            onClick={() => {setEstadoFilter("entregado"); setCurrentPage(0);}} 
+          />
         </div>
 
         {/* Filtros */}
@@ -183,10 +226,10 @@ export default function VentasPage() {
           </div>
 
           <div className="flex items-center gap-4 pt-2 border-t border-gray-50">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filtrar por monto:</span>
-            <Input type="number" placeholder="Min" className="w-24 h-9 text-xs" value={totalRange.min} onChange={(e) => setTotalRange({...totalRange, min: e.target.value})} />
+            <span className="text-xs text-gray-500">Filtrar por monto:</span>
+            <Input type="number" placeholder="Mín" className="w-24 h-9 text-xs" value={totalRange.min} onChange={(e) => setTotalRange({...totalRange, min: e.target.value})} />
             <span className="text-gray-300">-</span>
-            <Input type="number" placeholder="Max" className="w-24 h-9 text-xs" value={totalRange.max} onChange={(e) => setTotalRange({...totalRange, max: e.target.value})} />
+            <Input type="number" placeholder="Máx" className="w-24 h-9 text-xs" value={totalRange.max} onChange={(e) => setTotalRange({...totalRange, max: e.target.value})} />
           </div>
         </div>
 
@@ -196,14 +239,17 @@ export default function VentasPage() {
           
           <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
             <p className="text-xs text-gray-500">
-              Página <span className="font-bold text-gray-900">{currentPage + 1}</span> de <span className="font-bold text-gray-900">{totalPages || 1}</span>
+              Mostrando <span className="font-bold text-gray-900">{paginatedData.length}</span> de <span className="font-bold text-gray-900">{filteredVentas.length}</span>
             </p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0}>
-                <ChevronLeft className="w-4 h-4" /> Anterior
+                <ChevronLeft className="w-4 h-4" />
               </Button>
+              <div className="px-4 py-1.5 text-xs font-bold bg-gray-50 border rounded-lg flex items-center">
+                Página {currentPage + 1} de {totalPages || 1}
+              </div>
               <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage + 1 >= totalPages}>
-                Siguiente <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -221,19 +267,37 @@ export default function VentasPage() {
 
 function StatCard({ title, value, icon, isActive, color, onClick }: any) {
   const styles: any = {
-    blue: { active: "border-blue-500 ring-blue-50 bg-white", iconActive: "bg-blue-600 text-white", textActive: "text-blue-600" },
-    pink: { active: "border-pink-500 ring-pink-50 bg-white", iconActive: "bg-pink-600 text-white", textActive: "text-pink-600" },
-    emerald: { active: "border-emerald-500 ring-emerald-50 bg-white", iconActive: "bg-emerald-600 text-white", textActive: "text-emerald-600" },
-    orange: { active: "border-orange-500 ring-orange-50 bg-white", iconActive: "bg-orange-600 text-white", textActive: "text-orange-600" }
+    blue: {
+      active: "border-blue-500 ring-blue-50 bg-white",
+      iconActive: "bg-blue-600 text-white",
+      textActive: "text-blue-600"
+    },
+    pink: {
+      active: "border-pink-500 ring-pink-50 bg-white",
+      iconActive: "bg-pink-600 text-white",
+      textActive: "text-pink-600"
+    },
+    emerald: {
+      active: "border-emerald-500 ring-emerald-50 bg-white",
+      iconActive: "bg-emerald-600 text-white",
+      textActive: "text-emerald-600"
+    },
+    orange: {
+      active: "border-orange-500 ring-orange-50 bg-white",
+      iconActive: "bg-orange-600 text-white",
+      textActive: "text-orange-600"
+    }
   };
-  const currentStyle = styles[color] || styles.pink;
+  const currentStyle = styles[color];
 
   return (
-    <button onClick={onClick} className={`group p-4 rounded-xl border transition-all duration-300 flex items-center gap-4 ${isActive ? `ring-4 shadow-xl scale-[1.02] ${currentStyle.active}` : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}>
-      <div className={`p-3 rounded-lg ${isActive ? currentStyle.iconActive : 'bg-gray-100 text-gray-600'}`}>{icon}</div>
+    <button onClick={onClick} className={`group p-4 rounded-xl border transition-all duration-300 flex items-center gap-4 cursor-pointer ${isActive ? `ring-4 shadow-xl scale-[1.02] z-10 ${currentStyle.active}` : 'bg-white border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-95'}`}>
+      <div className={`p-3 rounded-lg transition-all duration-300 ${isActive ? `${currentStyle.iconActive} rotate-3` : 'bg-gray-100 text-gray-600 group-hover:rotate-3'}`}>
+        {icon}
+      </div>
       <div className="text-left">
         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{title}</p>
-        <p className={`text-2xl font-black ${isActive ? currentStyle.textActive : 'text-gray-800'}`}>{value}</p>
+        <p className={`text-2xl font-black tracking-tight ${isActive ? currentStyle.textActive : 'text-gray-800'}`}>{value}</p>
       </div>
     </button>
   );

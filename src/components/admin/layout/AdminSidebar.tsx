@@ -7,11 +7,14 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Menu, X,
   LogOut, Boxes, Truck, FileText, Scissors, Building,
-  DollarSign, Bell, Grid3x3, ChevronDown, Shield, User
+  DollarSign, Bell, Grid3x3, ChevronDown, Shield, User,
+  BarChart3,
+  Crown
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import type { Usuario } from '@/types/supabase.types';
 import { LucideIcon } from 'lucide-react';
+import { usePermissions } from '@/lib/hooks/usePermissions';
 
 type SubMenuItem = {
   title: string;
@@ -35,6 +38,12 @@ const navItems: NavItem[] = [
     roles: ['administrador', 'recepcionista', 'diseñador', 'cortador', 'ayudante', 'representante_taller'],
   },
   {
+    title: 'Reportes',
+    href: '/admin/Panel-Administrativo/reportes',
+    icon: BarChart3,
+    roles: ['administrador'],
+  },
+  {
     title: 'Catálogo',
     icon: Package,
     roles: ['administrador', 'diseñador'],
@@ -46,7 +55,7 @@ const navItems: NavItem[] = [
   {
     title: 'Ventas y Pedidos',
     icon: ShoppingCart,
-    roles: ['administrador', 'recepcionista'],
+    roles: ['administrador', 'recepcionista', 'diseñador'],
     subItems: [
       { title: 'Ventas', href: '/admin/Panel-Administrativo/ventas', icon: DollarSign },
       { title: 'Pedidos', href: '/admin/Panel-Administrativo/pedidos', icon: ShoppingCart },
@@ -97,19 +106,47 @@ const navItems: NavItem[] = [
 
 export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname(); 
+  const { can, isAdmin } = usePermissions();
+
   const [openMenus, setOpenMenus] = useState<string[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+ 
+const filteredNavItems = useMemo(() => {
+    return navItems
+      .map(item => {
+        // 1. Filtrar Sub-ítems individualmente
+        if (item.subItems) {
+          const allowedSubItems = item.subItems.filter(sub => {
+            const resourceName = sub.title.toLowerCase().trim();
+            const resourceKey = resourceName.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return can('view', resourceKey);
+          });
 
-  const filteredNavItems = useMemo(() => {
-    return navItems.filter(item => item.roles.includes(usuario.rol));
-  }, [usuario.rol]);
+          // Si el padre no tiene sub-ítems permitidos, no lo mostramos (a menos que tenga su propio href)
+          if (allowedSubItems.length === 0 && !item.href) return null;
+          
+          return { ...item, subItems: allowedSubItems };
+        }
+
+        // 2. Filtrar items directos (como Dashboard o Notificaciones)
+        const resourceName = item.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        // El Dashboard suele ser visible para todos, si no, check permiso
+        if (resourceName === 'dashboard' || can('view', resourceName)) {
+           return item;
+        }
+
+        return null;
+      })
+      .filter((item): item is NavItem => item !== null);
+  }, [can, isAdmin]);
 
   const handleLogout = async () => {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
-    router.replace('/admin/login'); // Redirección instantánea sin recarga
+    router.replace('/admin/login');
   };
 
   const toggleMenu = (title: string) => {
@@ -119,11 +156,6 @@ export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
         ? prev.filter(item => item !== title)
         : [...prev, title]
     );
-  };
-
-  const isSubItemActive = (subItems?: SubMenuItem[]) => {
-    if (!subItems) return false;
-    return subItems.some(subItem => pathname === subItem.href);
   };
 
   return (
@@ -181,7 +213,7 @@ export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
           )}
         </div>
 
-        {/* PERFIL: Inicial + Nombre + Icono Ámbar */}
+        {/* PERFIL: Inicial + Nombre + Icono de Corona */}
         {!isCollapsed && usuario.nombre_completo && (
           <div className="px-4 mb-3 animate-in fade-in duration-500 overflow-hidden">
             <Link 
@@ -189,24 +221,36 @@ export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
               onClick={() => setIsMobileOpen(false)}
               className="group block"
             >
-              <div className="bg-white/60 p-2 rounded-2xl border border-amber-100/40 flex items-center gap-3 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-rose-200 cursor-pointer">
+              <div className="bg-white/60 p-2.5 pr-3 rounded-2xl border border-amber-100/40 flex items-center gap-3 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-rose-200 cursor-pointer">
                 
-                {/* Contenedor de la Inicial (Avatar) */}
-                <div className="w-10 h-10 shrink-0 rounded-xl bg-linear-to-tr from-rose-500 to-rose-600 text-white flex items-center justify-center text-lg font-bold shadow-sm group-hover:scale-105 transition-transform uppercase">
+                {/* Avatar */}
+                <div className="w-10 h-10 rounded-full bg-rose-500 flex items-center justify-center text-white font-bold shrink-0 shadow-sm transition-transform group-hover:scale-105">
                   {usuario.nombre_completo.charAt(0)}
                 </div>
 
-                {/* Contenedor de Textos: Aquí eliminamos los ml-4.5 para alinear desde el origen */}
-                <div className="min-w-0 flex flex-col justify-center">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <User size={12} className="text-rose-500 shrink-0" strokeWidth={3} /> 
-                    <p className="text-sm font-bold text-gray-800 truncate group-hover:text-rose-600 transition-colors">
-                      {usuario.nombre_completo.split(' ')[0]}
-                    </p>
+                {/* Contenedor de Textos */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <User size={12} className="text-rose-500 shrink-0" strokeWidth={3} /> 
+                      <p className="text-sm font-bold text-gray-800 truncate">
+                        {usuario.nombre_completo.split(' ')[0]}
+                      </p>
+                    </div>
+
+                    {/* Corona con margen derecho para no tocar el borde */}
+                    {isAdmin && (
+                      <div className="flex items-center justify-center bg-amber-100 p-1 rounded-lg shadow-xs border border-amber-200/50 mr-1 ml-2">
+                        <Crown 
+                          size={12} 
+                          className="text-amber-600 fill-amber-500/20" 
+                          strokeWidth={2.5} 
+                        />
+                      </div>
+                    )}
                   </div>
-                  
-                  {/* El texto "Mi Cuenta" ahora hereda la alineación del contenedor flex padre */}
-                  <p className="text-[10px] text-amber-700/60 font-bold uppercase tracking-widest leading-none ml-4.5">
+
+                  <p className="text-[10px] text-rose-400 font-bold uppercase tracking-tight mt-0.5">
                     Mi Cuenta
                   </p>
                 </div>

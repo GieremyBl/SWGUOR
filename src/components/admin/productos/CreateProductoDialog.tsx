@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { Categoria } from "@/types/supabase.types";
+import { generateSKU } from "@/lib/utils/producto-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -65,8 +66,15 @@ export default function CreateProductoDialog({
     e.preventDefault();
     setLoading(true);
 
-    const categoriaNombre = categorias.find((c: any) => c.id.toString() === formData.categoria_id)?. nombre || "CAT";
-    const skuGenerado = `${formData.nombre.substring(0,3)}-${categoriaNombre.substring(0,3)}`.toUpperCase();
+    const categoriaSeleccionada = categorias.find(
+      (c: any) => c.id.toString() === formData.categoria_id
+    );
+
+    const categoriaNombre = categoriaSeleccionada?.nombre || "CAT";
+
+    // Generamos un SKU temporal usando el timestamp para evitar colisiones antes de la DB
+    const tempId = Date.now().toString().slice(-4);
+    const skuGenerado = generateSKU(formData.nombre, categoriaNombre, tempId);
 
     try {
       const response = await fetch('/api/admin/productos', {
@@ -79,8 +87,7 @@ export default function CreateProductoDialog({
 
       if (!response.ok) throw new Error(result.error || "Error al crear");
 
-      toast.success("Producto creado exitosamente");
-      setFormData({ nombre: "", descripcion: "", sku: "", precio: "", stock: "0", stock_minimo: "10", categoria_id: "", estado: "activo", imagen_url: "" });
+      toast.success(`Producto ${skuGenerado} creado correctamente`);
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -113,7 +120,7 @@ export default function CreateProductoDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">SKU (Auto)</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400">SKU (Sistema)</Label>
               <Input className="rounded-xl bg-gray-50 cursor-not-allowed" placeholder="Generado por sistema" disabled />
             </div>
             <div className="space-y-2">

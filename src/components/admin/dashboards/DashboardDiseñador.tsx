@@ -1,380 +1,325 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Palette, Package, FileText, TrendingUp, Clock, CheckCircle, Eye, Edit3, ShoppingCart } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
+import { 
+  Palette, Package, FileText, CheckCircle, 
+  ShoppingCart, Upload, Eye, AlertCircle, 
+  ArrowRight, Search, Plus
+} from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { usePermissions } from '@/lib/hooks/usePermissions';
+import { Usuario } from '@/types/supabase.types';
+import { useRouter } from 'next/navigation';
 
-// 1. Interfaz para el estado 'activeProducts'
+// Interfaces
+interface DBProducto {
+  id: number;
+  nombre: string | null;
+  categoria: string | null;
+  ficha_url: string | null;
+  created_at: string;
+}
+
+interface DBPedido {
+  id: number;
+  descripcion: string | null;
+  cantidad: number | null;
+  fecha_entrega: string | null;
+  prioridad: string | null;
+}
+
 interface ProductoActivo {
-    id: number;
-    name: string;
-    client: string;
-    status: string;
-    progress: number;
-    priority: string; 
+  id: number;
+  name: string;
+  client: string;
+  status: string;
+  progress: number;
+  priority: string; 
 }
 
-// 2. Interfaz para el estado 'assignedOrders'
 interface PedidoAsignado {
-    id: number;
-    product: string;
-    quantity: number;
-    deadline: string;
-    status: string;
+  id: number;
+  product: string;
+  quantity: number;
+  deadline: string;
+  status: string;
 }
-
-// 3. Interfaz para el estado 'recentProducts'
-interface ProductoReciente {
-    name: string;
-    category: string;
-    colors: number;
-    sizes: string;
-    price: string;
-}
-
-type Usuario = {
-  id: string | number;
-  nombre_completo: string;
-  rol: string;
-  estado: string;
-};
 
 export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
-  const { can, isLoading } = usePermissions();
+  const router = useRouter();
+  const { can, isLoading: permissionsLoading } = usePermissions();
   const [stats, setStats] = useState({
     productosActivos: 0,
-    diseñosEnProceso: 0,
+    fichasPendientes: 0,
     pedidosAsignados: 0,
     diseñosCompletados: 0
   });
   const [activeProducts, setActiveProducts] = useState<ProductoActivo[]>([]);
-  const [assignedOrders, setAssignedOrders] = useState<PedidoAsignado[]>([]);
-  const [recentProducts, setRecentProducts] = useState<ProductoReciente[]>([]);
-
+  const [assignedOrders, setAssignedOrders] = useState<PedidoAsignado[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchDashboardData();
+  const calculateDeadline = useCallback((fechaEntrega: string | null): string => {
+    if (!fechaEntrega) return 'Sin fecha';
+    const diff = Math.floor((new Date(fechaEntrega).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return diff < 0 ? 'Vencido' : diff === 0 ? 'Hoy' : `${diff} días`;
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const supabase = getSupabaseBrowserClient();
       
-      // Productos activos
-      const { data: productosData, count: productosCount } = await supabase
-        .from('productos')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [productosRes, pedidosRes] = await Promise.all([
+        supabase.from('productos').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
+        supabase.from('pedidos').select('*').in('estado', ['pendiente', 'en_proceso']).order('created_at', { ascending: false }).limit(4)
+      ]);
 
-      // Pedidos asignados (ajusta según tu estructura)
-      const { data: pedidosData, count: pedidosCount } = await supabase
-        .from('pedidos')
-        .select('*')
-        .in('estado', ['pendiente', 'en_proceso'])
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      // Productos recientes (últimos 3)
-      const { data: recentProductsData } = await supabase
-        .from('productos')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(3);
+      const productosData = (productosRes.data as DBProducto[]) || [];
+      const productosCount = productosRes.count || 0;
+      const productosSinFicha = productosData.filter((p: DBProducto) => !p.ficha_url).length;
 
       setStats({
-        productosActivos: productosCount || 0,
-        diseñosEnProceso: Math.floor((productosCount || 0) * 0.2), // Estimado 20%
-        pedidosAsignados: pedidosCount || 0,
-        diseñosCompletados: productosCount || 0
+        productosActivos: productosCount,
+        fichasPendientes: productosSinFicha,
+        pedidosAsignados: pedidosRes.data?.length || 0,
+        diseñosCompletados: Math.max(0, productosCount - productosSinFicha)
       });
 
-      // Formatear productos activos
-      if (productosData && productosData.length > 0) {
-        const formatted = (productosData as any[]).slice(0, 4).map(producto => ({
-          id: producto.id,
-          name: producto.nombre || 'Producto sin nombre',
-          client: producto.categoria || 'General',
-          status: producto.estado || 'Activo',
-          progress: Math.floor(Math.random() * 100), // Simular progreso
-          priority: 'medium'
-        }));
-        setActiveProducts(formatted);
-      }
+      setActiveProducts(productosData.slice(0, 6).map((p: DBProducto) => ({
+        id: p.id,
+        name: p.nombre || 'Sin nombre',
+        client: p.categoria || 'General',
+        status: p.ficha_url ? 'Aprobado' : 'Pendiente',
+        progress: p.ficha_url ? 100 : 30,
+        priority: p.ficha_url ? 'low' : 'high'
+      })));
 
-      // Formatear pedidos asignados
-      if (pedidosData) {
-        const formatted = (pedidosData as any[]).map(pedido => ({
-          id: pedido.id,
-          product: pedido.descripcion || 'Sin descripción',
-          quantity: pedido.cantidad || 0,
-          deadline: calculateDeadline(pedido.fecha_entrega),
-          status: pedido.prioridad === 'alta' ? 'Urgente' : 'Normal'
-        }));
-        setAssignedOrders(formatted);
-      }
-
-      // Formatear productos recientes
-      if (recentProductsData) {
-        const formatted = (recentProductsData as any[]).map(producto => ({
-          name: producto.nombre || 'Producto sin nombre',
-          category: producto.categoria || 'Sin categoría',
-          colors: Math.floor(Math.random() * 5) + 1,
-          sizes: 'S-XXL',
-          price: `S/ ${producto.precio || 0}`
-        }));
-        setRecentProducts(formatted);
-      }
+      const pedidosData = (pedidosRes.data as DBPedido[]) || [];
+      setAssignedOrders(pedidosData.map((pedido: DBPedido) => ({
+        id: pedido.id,
+        product: pedido.descripcion || 'Sin descripción',
+        quantity: pedido.cantidad || 0,
+        deadline: calculateDeadline(pedido.fecha_entrega),
+        status: pedido.prioridad === 'alta' ? 'Urgente' : 'Normal'
+      })));
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [calculateDeadline]);
 
-  const calculateDeadline = (fechaEntrega: string | null): string => {
-    if (!fechaEntrega) return 'Sin fecha';
-    const diff = Math.floor((new Date(fechaEntrega).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    if (diff < 0) return 'Vencido';
-    if (diff === 0) return 'Hoy';
-    if (diff === 1) return '1 día';
-    return `${diff} días`;
-  };
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-  const getStatusColor = (status: string): string => {
-    switch(status) {
-      case 'Urgente': return 'text-red-600 bg-red-100';
-      case 'En revisión': return 'text-yellow-600 bg-yellow-100';
-      case 'Aprobado': return 'text-green-600 bg-green-100';
-      case 'Activo': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, productoId: number) => {
+    if (!can('edit', 'productos')) {
+      toast.error("Acceso denegado", { description: "No tienes permisos para editar productos." });
+      return;
     }
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingId(productoId);
+    const uploadPromise = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${productoId}-${Date.now()}.${fileExt}`;
+      const filePath = `fichas/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage.from('productos').upload(filePath, file);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('productos').getPublicUrl(filePath);
+      const { error: updateError } = await supabase.from('productos').update({ ficha_url: publicUrl }).eq('id', productoId);
+      if (updateError) throw updateError;
+
+      await fetchDashboardData();
+    };
+
+    toast.promise(uploadPromise(), {
+      loading: 'Subiendo ficha...',
+      success: 'Ficha actualizada',
+      error: (err) => { setUploadingId(null); return `Error: ${err.message}`; },
+      finally: () => setUploadingId(null)
+    });
   };
 
-  const quickActions = [
-    { icon: Palette, label: 'Nuevo Diseño', color: 'bg-purple-500', show: can('create', 'productos') },
-    { icon: Edit3, label: 'Editar Producto', color: 'bg-blue-500', show: can('edit', 'productos') },
-    { icon: Eye, label: 'Ver Pedidos', color: 'bg-green-500', show: can('view', 'pedidos') },
-    { icon: FileText, label: 'Exportar Catálogo', color: 'bg-orange-500', show: can('export', 'productos') },
-  ].filter(action => action.show);
+  const handleViewFile = async (productoId: number) => {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase.from('productos').select('ficha_url').eq('id', productoId).single();
+    if (data?.ficha_url) window.open(data.ficha_url, '_blank');
+  };
 
-  if (isLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando dashboard...</p>
-        </div>
+  if (permissionsLoading || loading) return <LoadingDashboard />;
+
+return (
+    <div className="space-y-8 animate-in fade-in duration-500 p-4 bg-slate-50/50">
+      
+      {/* Botones de Acción Superior - CORREGIDO: Más anchos y altos */}
+      <div className="flex flex-wrap gap-4">
+        <QuickActionBtn 
+          icon={Plus} 
+          label="Nuevo Producto" 
+          color="bg-white border-slate-200 text-slate-900 hover:border-pink-500 hover:text-pink-600 shadow-sm" 
+          onClick={() => router.push('/admin/Panel-Administrativo/productos')} 
+        />
+        <QuickActionBtn 
+          icon={Search} 
+          label="Buscar Ficha Técnica" 
+          color="bg-slate-900 text-white hover:bg-slate-800 shadow-md" 
+          onClick={() => router.push('/admin/Panel-Administrativo/productos')} 
+        />
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Diseñador</h1>
-          <p className="text-gray-600">Gestión de diseños y catálogo de productos</p>
-        </div>
+      {/* Cards de Estadísticas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <StatCard label="Catálogo" value={stats.productosActivos} icon={<Package />} color="text-blue-600" bgColor="bg-blue-50" />
+  <StatCard label="Pendientes" value={stats.fichasPendientes} icon={<FileText />} color="text-rose-600" bgColor="bg-rose-50" />
+  <StatCard label="En Cola" value={stats.pedidosAsignados} icon={<ShoppingCart />} color="text-amber-600" bgColor="bg-amber-50" />
+  <StatCard label="Listos" value={stats.diseñosCompletados} icon={<CheckCircle />} color="text-emerald-600" bgColor="bg-emerald-50" />
+      </div>
 
-        {/* Quick Actions */}
-        {quickActions.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {quickActions.map((action, idx) => (
-              <button
-                key={idx}
-                className={`${action.color} text-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all hover:scale-105 flex items-center gap-3`}
-              >
-                <action.icon className="w-6 h-6" />
-                <span className="font-semibold">{action.label}</span>
-              </button>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Bandeja de Producción */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-4xl border border-slate-100 shadow-sm">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-xl font-black text-slate-900 uppercase italic flex items-center gap-3">
+              <Palette className="text-pink-600" size={24} />
+              Bandeja de Producción
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {activeProducts.map((product) => (
+              <div key={product.id} className="p-6 rounded-3xl bg-white border border-slate-100 hover:border-pink-200 transition-all hover:shadow-md group">
+                <div className="flex justify-between items-start mb-4">
+                  <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                    product.status === 'Aprobado' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                  }`}>
+                    {product.status}
+                  </span>
+                  <span className="text-[10px] font-black text-slate-300">#{product.id}</span>
+                </div>
+                
+                <h4 className="font-bold text-slate-800 uppercase text-xs mb-1">{product.name}</h4>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-6">{product.client}</p>
+                
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    id={`file-${product.id}`}
+                    className="hidden"
+                    accept=".pdf,.jpg,.png"
+                    onChange={(e) => handleFileUpload(e, product.id)}
+                    disabled={uploadingId === product.id}
+                  />
+                  <label 
+                    htmlFor={`file-${product.id}`}
+                    className={`flex-1 py-4 rounded-xl text-[10px] font-bold uppercase flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 ${
+                      product.status === 'Aprobado' 
+                        ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200' 
+                        : 'bg-pink-600 text-white hover:bg-pink-700 shadow-sm shadow-pink-200'
+                    }`}
+                  >
+                    {uploadingId === product.id ? (
+                      <div className="animate-spin h-3 w-3 border-2 border-current border-t-transparent rounded-full" />
+                    ) : (
+                      <><Upload size={14} /> {product.status === 'Aprobado' ? 'Reemplazar' : 'Subir Ficha Técnica'}</>
+                    )}
+                  </label>
+
+                  {product.status === 'Aprobado' && (
+                    <button 
+                      onClick={() => handleViewFile(product.id)}
+                      className="px-4 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-pink-600 hover:border-pink-200 transition-all cursor-pointer shadow-sm active:scale-95"
+                    >
+                      <Eye size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
-        )}
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Package className="w-6 h-6 text-purple-600" />
-              </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Productos Activos</h3>
-            <p className="text-3xl font-bold text-gray-900">{stats.productosActivos}</p>
-            <p className="text-sm text-green-600 mt-2">En catálogo</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Palette className="w-6 h-6 text-blue-600" />
-              </div>
-              <Clock className="w-5 h-5 text-blue-500" />
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">En Proceso</h3>
-            <p className="text-3xl font-bold text-gray-900">{stats.diseñosEnProceso}</p>
-            <p className="text-sm text-blue-600 mt-2">Diseños activos</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className="bg-green-100 p-3 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-green-600" />
-              </div>
-              <CheckCircle className="w-5 h-5 text-green-500" />
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Pedidos Asignados</h3>
-            <p className="text-3xl font-bold text-gray-900">{stats.pedidosAsignados}</p>
-            <p className="text-sm text-green-600 mt-2">Requieren diseño</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between mb-4">
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-orange-600" />
-              </div>
-              <TrendingUp className="w-5 h-5 text-green-500" />
-            </div>
-            <h3 className="text-gray-600 text-sm font-medium mb-1">Completados</h3>
-            <p className="text-3xl font-bold text-gray-900">{stats.diseñosCompletados}</p>
-            <p className="text-sm text-gray-600 mt-2">Total histórico</p>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Active Products */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Productos Activos</h2>
-              <Palette className="w-5 h-5 text-purple-600" />
+        {/* Sidebar Prioridad */}
+        <div className="space-y-6">
+          <div className="bg-slate-900 p-8 rounded-4xl text-white shadow-xl">
+            <div className="flex items-center gap-2 mb-8">
+              <AlertCircle size={18} className="text-pink-500" />
+              <h3 className="text-md font-black uppercase italic tracking-tighter">Prioridad Taller</h3>
             </div>
-            {activeProducts.length > 0 ? (
-              <div className="space-y-4">
-                {activeProducts.map((product, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-600">{product.client}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(product.status)}`}>
-                        {product.status}
-                      </span>
-                    </div>
-                    <div className="mt-3">
-                      <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Progreso</span>
-                        <span className="font-semibold">{product.progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full transition-all"
-                          style={{width: `${product.progress}%`}}
-                        />
-                      </div>
-                    </div>
-                    <button className="w-full mt-3 bg-purple-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-600 transition-colors">
-                      Editar producto
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">No hay productos activos</p>
-            )}
-          </div>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            {/* Assigned Orders */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Pedidos Asignados</h2>
-                <span className="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs font-semibold">
-                  {assignedOrders.length}
-                </span>
-              </div>
-              {assignedOrders.length > 0 ? (
-                <div className="space-y-3">
-                  {assignedOrders.map((order, idx) => (
-                    <div key={idx} className="border border-gray-200 rounded-lg p-3">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-semibold text-sm text-gray-900">#{order.id}</p>
-                          <p className="text-xs text-gray-600">{order.product}</p>
-                        </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>Cantidad: {order.quantity}</span>
-                        <span>Entrega: {order.deadline}</span>
-                      </div>
-                    </div>
-                  ))}
+            
+            <div className="space-y-6">
+              {assignedOrders.length > 0 ? assignedOrders.map((o) => (
+                <div key={o.id} className="border-l border-slate-700 pl-4">
+                  <p className="text-[9px] font-bold text-pink-500 uppercase tracking-widest mb-1">{o.deadline}</p>
+                  <p className="font-bold text-xs uppercase leading-tight text-slate-200">{o.product}</p>
                 </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No hay pedidos asignados</p>
+              )) : (
+                <p className="text-[10px] text-slate-500 uppercase font-bold">No hay pedidos pendientes</p>
               )}
             </div>
 
-            {/* Recent Products */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-900">Productos Recientes</h2>
-                <button className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
-                  Ver catálogo
-                </button>
-              </div>
-              {recentProducts.length > 0 ? (
-                <div className="space-y-3">
-                  {recentProducts.map((product, idx) => (
-                    <div key={idx} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-semibold text-sm text-gray-900">{product.name}</p>
-                          <p className="text-xs text-gray-600">{product.category}</p>
-                        </div>
-                        <span className="text-sm font-bold text-purple-600">{product.price}</span>
-                      </div>
-                      <div className="flex gap-3 text-xs text-gray-600">
-                        <span>{product.colors} colores</span>
-                        <span>•</span>
-                        <span>Tallas {product.sizes}</span>
-                      </div>
-                      <button className="w-full mt-2 bg-blue-500 text-white py-1.5 rounded text-xs font-semibold hover:bg-blue-600 transition-colors">
-                        Editar
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">No hay productos recientes</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Creative Tips */}
-        <div className="mt-6 bg-linear-to-r from-purple-500 to-purple-600 p-6 rounded-lg shadow-md text-white">
-          <div className="flex items-start gap-4">
-            <div className="bg-white/20 p-3 rounded-lg">
-              <Palette className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold mb-2">🎨 Inspiración del día</h3>
-              <p className="text-purple-100">Los mejores diseños nacen de entender las necesidades del cliente. Revisa los comentarios de los pedidos para crear productos que superen las expectativas.</p>
-            </div>
+            {/* Botón de Hoja de Ruta - CORREGIDO: py-4 para mayor cuerpo */}
+            <button 
+              onClick={() => router.push('/admin/Panel-Administrativo/pedidos')}
+              className="w-full mt-10 py-4 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shadow-lg shadow-black/20"
+            >
+              Ver hoja de ruta <ArrowRight size={14} />
+            </button>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+// --- SUB-COMPONENTES AUXILIARES ---
+
+function StatCard({ label, value, icon, color, bgColor }: any) {
+  return (
+    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all cursor-default">
+      {/* Icono contenido en un cuadro fijo para evitar deformación */}
+      <div className={`${bgColor} shrink-0 w-12 h-12 rounded-xl flex items-center justify-center`}>
+        <div className={color}>{icon}</div>
+      </div>
+      
+      {/* Información alineada */}
+      <div className="flex flex-col justify-center overflow-hidden">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5 truncate">
+          {label}
+        </p>
+        <p className="text-2xl font-black text-slate-900 tracking-tighter leading-none">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuickActionBtn({ icon: Icon, label, color, onClick }: any) {
+  return (
+    <button
+      onClick={onClick}
+      className={`${color} min-w-50 px-6 py-4 rounded-xl flex items-center justify-center gap-3 transition-all hover:-translate-y-0.5 cursor-pointer border active:scale-95`}
+    >
+      <Icon className="w-4 h-4" />
+      <span className="font-bold text-[10px] uppercase tracking-wider">{label}</span>
+    </button>
+  );
+}
+
+function LoadingDashboard() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
+      <div className="h-12 w-12 border-4 border-pink-100 border-t-pink-600 rounded-full animate-spin" />
+      <p className="font-black text-slate-900 text-sm uppercase tracking-widest italic animate-pulse">Cargando Studio...</p>
     </div>
   );
 }

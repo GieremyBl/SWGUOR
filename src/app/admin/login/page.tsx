@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image"; // Importar para optimizar fondo
-import { LogIn, AlertCircle, Mail, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
+import { LogIn, AlertCircle, Mail, Eye, EyeOff, Loader2 } from "lucide-react";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { ESTADOS_USUARIO, ERROR_MESSAGES } from "@/lib/auth/constants";
 import { ADMIN_ROUTES } from "@/lib/constants/admin";
@@ -16,9 +16,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Optimización: Pre-carga la ruta del dashboard para que el acceso sea instantáneo
+  useEffect(() => {
+    router.prefetch(ADMIN_ROUTES.DASHBOARD);
+  }, [router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // Evitar múltiples clics
+    if (isLoading) return;
 
     setIsLoading(true);
     setError("");
@@ -26,23 +31,22 @@ export default function LoginPage() {
     try {
       const supabase = getSupabaseBrowserClient();
 
-      // 1. Autenticación
+      // 1. Autenticación rápida
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
 
       if (authError) {
-        // Mensaje más específico si es error de red o credenciales
         setError(authError.status === 400 ? ERROR_MESSAGES.INVALID_CREDENTIALS : "Error de conexión");
         setIsLoading(false);
         return;
       }
 
-      // 2. Validar usuario en BD
+      // 2. Validación de usuario y estado optimizada
       const { data: usuario, error: usuarioError } = await supabase
         .from('usuarios')
-        .select('id, rol, estado')
+        .select('rol, estado')
         .eq('auth_id', authData.user?.id)
         .maybeSingle();
 
@@ -53,7 +57,7 @@ export default function LoginPage() {
         return;
       }
 
-      // 3. Validar estado
+      // 3. Validación de estado (Inmune a tildes o espacios)
       const estadoNormalizado = usuario.estado?.toString().toUpperCase().trim();
       if (estadoNormalizado !== ESTADOS_USUARIO.ACTIVO) {
         await supabase.auth.signOut();
@@ -62,7 +66,7 @@ export default function LoginPage() {
         return;
       }
 
-      // 4. Redirección suave (Next.js Way)
+      // 4. Salto directo al Panel
       router.replace(ADMIN_ROUTES.DASHBOARD);
 
     } catch (err: any) {
@@ -73,38 +77,42 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative bg-gray-50 flex flex-col items-center justify-center p-4">
-      {/* Fondo optimizado con Next Image */}
+      {/* Fondo original */}
       <div className="absolute inset-0 z-0">
         <Image 
           src="/costura.webp"
           alt="Background"
           fill
-          priority // Carga prioritaria
+          priority
           className="object-cover opacity-15 pointer-events-none"
         />
       </div>
       
       <div className="relative z-10 w-full max-w-md">
-        {/* Header */}
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-linear-to-r from-red-500 to-pink-600 mb-4 shadow-lg">
-            <LogIn className="text-white w-8 h-8" />
+        {/* Header con tu diseño original */}
+        <div className="mb-8 text-center flex flex-col items-center">
+          <div className="flex items-center gap-3">
+             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-r from-red-500 to-pink-600 shadow-lg">
+                {isLoading ? <Loader2 className="text-white w-6 h-6 animate-spin" /> : <LogIn className="text-white w-6 h-6" />}
+             </div>
+             <div className="text-left">
+                <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+                  Modas y Estilos <span className="text-pink-600">GUOR</span>
+                </h1>
+                <p className="text-gray-500 text-xs font-medium uppercase tracking-tighter">S.A.C. - Gestión Textil</p>
+             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Modas y Estilos GUOR
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium">S.A.C. - Gestión Textil</p>
         </div>
 
-        {/* Card de Login */}
+        {/* Card de Login con bordes suaves originales */}
         <div className="bg-white shadow-2xl rounded-2xl border border-gray-100 overflow-hidden">
           <div className="p-8">
             <div className="mb-6">
               <h2 className="text-xl font-bold text-gray-800">Bienvenido</h2>
               <p className="text-sm text-gray-500">Ingresa tus credenciales para continuar</p>
             </div>
-           <form onSubmit={handleLogin} className="space-y-5">
 
+            <form onSubmit={handleLogin} className="space-y-5">
               {/* Email */}
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-gray-700 ml-1">Email Corporativo</label>
@@ -120,7 +128,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* Contraseña con toggle de visibilidad */}
+              {/* Contraseña */}
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-gray-700 ml-1">Contraseña</label>
                 <div className="relative">
@@ -132,7 +140,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     disabled={isLoading}
                     required
-                    className="w-full h-12 px-4 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all disabled:bg-gray-50"
+                    className="w-full h-12 px-4 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -144,23 +152,29 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {/* Botón con tu gradiente original */}
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="w-full h-12 bg-linear-to-r from-red-500 to-pink-600 text-white rounded-xl font-bold shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-70"
+                className="w-full h-12 bg-linear-to-r from-red-500 to-pink-600 text-white rounded-xl font-bold shadow-lg hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-70 flex items-center justify-center"
               >
-                {isLoading ? "Validando..." : "Ingresar al Sistema"}
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Validando...
+                  </span>
+                ) : "Ingresar al Sistema"}
               </button>
             </form>
 
-            {/* Mensaje de error */}
+            {/* Error */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mt-4 flex items-center gap-3">
-                <AlertCircle className="w-5 h-5" />
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mt-4 flex items-center gap-3 animate-in fade-in duration-300">
+                <AlertCircle className="w-5 h-5 shrink-0" />
                 <p className="text-sm">{error}</p>
               </div>
             )}
 
+            {/* Soporte */}
             <div className="mt-8 pt-6 border-t border-gray-50 text-center">
               <div className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors cursor-help">
                 <Mail size={16} />

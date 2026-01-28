@@ -1,27 +1,28 @@
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase'; 
 import { Usuario } from '@/types/supabase.types';
 
-// 1. Definimos nuestra propia interfaz para evitar conflictos con la de TS
 interface AppPermissions {
-  [resource: string]: string[]; // Esto permite usar 'usuarios', 'productos', etc.
+  [resource: string]: string[];
 }
 
 const ROLE_PERMISSIONS: { [role: string]: AppPermissions } = {
   administrador: {
-    usuarios: ['view', 'create', 'edit', 'delete'],
+    usuarios: ['view', 'create', 'edit', 'delete', 'export'],
     clientes: ['view', 'export'],
-    productos: ['view', 'export'],
+    productos: ['view', 'create', 'edit', 'delete', 'export'],
     pedidos: ['view', 'export'],
     inventario: ['view', 'export'],
     talleres: ['view', 'create','export'],
+    ventas: ['view', 'export'],
     reportes: ['view', 'export'],
   },
- representante_taller: {
-    productos: ['view'],
+  representante_taller: {
+    productos: ['view', 'export'], 
     talleres: ['view', 'edit'],
     confecciones: ['view', 'create', 'edit'],
-    inventario: ['view', 'edit'],
+    inventario: ['view', 'edit', 'export'], 
   },
   recepcionista: {
     productos: ['view', 'export'],
@@ -31,7 +32,7 @@ const ROLE_PERMISSIONS: { [role: string]: AppPermissions } = {
     cotizaciones: ['view', 'create'],
   },
   diseñador: {
-    productos: ['view'], 
+    productos: ['view', 'create', 'edit'], 
     confecciones: ['view', 'create', 'edit'], 
     pedidos: ['view'],
   },
@@ -52,14 +53,14 @@ export function usePermissions() {
   const [isLoading, setIsLoading] = useState(true);
   const [permissions, setPermissions] = useState<AppPermissions>({});
 
-  // 1. Memorizamos la carga de datos para que no se dispare mil veces
   const fetchUserPermissions = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    
     try {
-      setIsLoading(true);
-      const supabase = getSupabaseBrowserClient();
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      // getSession es mucho más rápido que getUser porque usa la caché local
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (!authUser) {
+      if (!session?.user) {
         setUsuario(null);
         setPermissions({});
         return;
@@ -68,55 +69,65 @@ export function usePermissions() {
       const { data: userData, error } = await supabase
         .from('usuarios')
         .select('id, nombre_completo, rol, estado')
-        .eq('auth_id', authUser.id)
-        .single();
+        .eq('auth_id', session.user.id)
+        .maybeSingle();
 
-      if (error || !userData) {
+      if (error || !userData || userData.estado?.toLowerCase() !== 'activo') {
         setUsuario(null);
         setPermissions({});
         return;
       }
 
       setUsuario(userData as Usuario);
-      const roleKey = (userData as any).rol?.toLowerCase() || '';
+      // Normalizamos el rol para evitar errores de tildes o mayúsculas
+      const roleKey = userData.rol?.toLowerCase().trim() || '';
       setPermissions(ROLE_PERMISSIONS[roleKey] || {});
 
     } catch (error) {
-      console.error("Error permissions:", error);
+      console.error("Error en sincronización de permisos:", error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // Escuchamos cambios de sesión (login/logout) para actualizar permisos al instante
+    const supabase = getSupabaseBrowserClient();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchUserPermissions();
+    });
+
     fetchUserPermissions();
+    return () => subscription.unsubscribe();
   }, [fetchUserPermissions]);
 
-  // 2. can debe estar envuelto en useCallback
+  // Funciones de validación memorizadas
   const can = useCallback((action: string, resource: string): boolean => {
-    if (!usuario) return false;
     const resourcePermissions = permissions[resource] || [];
     return resourcePermissions.includes(action);
-  }, [usuario, permissions]);
+  }, [permissions]);
 
-  const cannot = useCallback((action: string, resource: string): boolean => !can(action, resource), [can]);
-
-  const hasRole = useCallback((role: string | string[]): boolean => {
-    if (!usuario) return false;
-    const currentRol = usuario.rol?.toLowerCase() || '';
-    if (Array.isArray(role)) {
-      return role.some(r => r.toLowerCase() === currentRol);
+  const hasRole = useCallback((roleName: string | string[]): boolean => {
+    if (!usuario?.rol) return false;
+    const currentRol = usuario.rol.toLowerCase().trim();
+    if (Array.isArray(roleName)) {
+      return roleName.some(r => r.toLowerCase().trim() === currentRol);
     }
-    return currentRol === role.toLowerCase();
+    return currentRol === roleName.toLowerCase().trim();
   }, [usuario]);
 
-  // 3. Retornamos valores estables
+  // Nueva utilidad rápida: isAdmin
+  const isAdmin = useMemo(() => 
+    usuario?.rol?.toLowerCase().trim() === 'administrador', 
+  [usuario]);
+
   return useMemo(() => ({ 
-    usuario, 
+    usuario,
+    role: usuario?.rol?.toLowerCase().trim() || null,
+    isAdmin,
     isLoading, 
     permissions, 
     can, 
-    cannot, 
     hasRole 
-  }), [usuario, isLoading, permissions, can, cannot, hasRole]);
+  }), [usuario, isAdmin, isLoading, permissions, can, hasRole]);
 }

@@ -63,9 +63,7 @@ export default function DashboardPage() {
           </div>
           
           <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter uppercase">
-            Bienvenido, <span className="text-transparent bg-clip-text bg-linear-to-r from-slate-900 via-pink-600 to-slate-900">
-              {usuario.nombre_completo || "Usuario"}
-            </span>
+            Bienvenido, <span> {usuario.nombre_completo || "Usuario"} </span>
           </h1>
           
           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-2 flex items-center gap-2">

@@ -14,7 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Minus, Loader2, Package } from "lucide-react";
+import { Plus, Minus, Loader2 } from "lucide-react";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 
 interface StockDialogProps {
@@ -88,22 +88,19 @@ export default function StockDialog({ isOpen, onClose, onSuccess, producto }: St
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm rounded-[2.5rem] border-none p-0 overflow-hidden shadow-2xl">
-        {/* Cabecera con estilo visual */}
-        <div className="bg-gray-900 p-6 text-white text-center">
-          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <Package className="w-6 h-6 text-pink-400" />
-          </div>
-          <DialogTitle className="text-xl font-black uppercase tracking-tight">
-            Movimiento de Stock
-          </DialogTitle>
-          <DialogDescription className="text-gray-400 font-medium">
-            {producto.nombre}
-          </DialogDescription>
-        </div>
+      <DialogContent className="max-w-sm rounded-[2.5rem] border-none p-0 bg-white overflow-hidden">
+        <div className="p-6 space-y-6 bg-white">
+          {/* Header */}
+          <DialogHeader className="text-left space-y-1">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight text-gray-900 border-none p-0 leading-none">
+              Movimiento de Stock
+            </DialogTitle>
+            <DialogDescription className="text-gray-400 font-medium text-sm">
+              {producto.nombre}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="p-6 bg-white space-y-6">
-          {/* Visualizador de Stock Actual */}
+          {/* Visualizador de Stock Actual vs Stock Nuevo*/}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-3xl p-4 text-center border border-gray-100">
               <p className="text-[10px] font-black uppercase text-gray-400">Actual</p>

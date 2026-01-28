@@ -112,12 +112,15 @@ export const exportToPDF = async (
   const startY = await drawHeaderWithLogo(doc, config.title, config.subtitle);
 
   autoTable(doc, {
-    head: headers,
-    body: body,
-    startY: startY,
-    styles: { fontSize: 8, cellPadding: 3 },
-    headStyles: { fillColor: [219, 39, 119], textColor: 255 },
-    alternateRowStyles: { fillColor: [250, 250, 250] },
+  head: headers,
+  body: body,
+  startY: startY,
+  styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak' },
+  headStyles: { fillColor: [219, 39, 119], textColor: 255 },
+  alternateRowStyles: { fillColor: [250, 250, 250] },
+  rowPageBreak: 'auto',
+  showHead: 'everyPage',
+  margin: { top: 40, bottom: 20 }
   });
 
   const totalPages = doc.getNumberOfPages();
@@ -148,22 +151,29 @@ export const exportToPDFWithImages = async (
 
   // Función para convertir URL a Base64 asegurando la carga [cite: 11, 14]
   const getImageData = (imageUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-      if (!imageUrl) return resolve("NO_IMAGE");
-      const img = new Image();
-      img.crossOrigin = "anonymous"; // Vital para evitar errores de CORS [cite: 11]
-      img.src = imageUrl;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
-      };
-      img.onerror = () => resolve("NO_IMAGE");
-    });
-  };
+  return new Promise((resolve) => {
+    if (!imageUrl) return resolve("NO_IMAGE");
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    // Forzamos un tamaño pequeño para el canvas, no necesitamos 4K para una celda de 20mm
+    img.src = imageUrl;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      // Redimensionamos la imagen al cargarla para ahorrar memoria
+      const MAX_WIDTH = 100; 
+      const scale = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scale;
+      
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.6)); // Calidad 0.6 es suficiente
+    };
+    img.onerror = () => resolve("NO_IMAGE");
+    // Timeout de seguridad: si una imagen no carga en 2s, seguimos adelante
+    setTimeout(() => resolve("NO_IMAGE"), 2000);
+  });
+};
 
   const displayKeys = Object.keys(data[0]).filter(key => !excludeFields.includes(key));
   
@@ -221,7 +231,7 @@ export const exportProductosToPDFWithImages = async (productos: any[]) => {
     throw new Error("No hay productos con stock superior a 400 unidades.");
   }
   
-  const data = productos.map(p => ({
+  const data = productosFiltrados.map(p => ({
     imagen: p.imagen_url,
     sku: p.sku,
     nombre: p.nombre,
