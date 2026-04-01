@@ -19,7 +19,10 @@ export const ROLES_USUARIO = {
   DISEÑADOR: 'disenador',
   CORTADOR: 'cortador',
   AYUDANTE: 'ayudante',
-  REPRESENTANTE_TALLER: 'representante_taller'
+  REPRESENTANTE_TALLER: 'representante_taller',
+  CLIENTE: 'cliente',
+  GERENTE: 'gerente',
+
 } as const;
 
 export type RolUsuario = typeof ROLES_USUARIO[keyof typeof ROLES_USUARIO];

@@ -1,7 +1,8 @@
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-// GET: Obtener todos los usuarios
+// GET: Obtener todos los usuarios (Se mantiene igual)
 export async function GET() {
   const supabase = await createClient();
   try {
@@ -10,122 +11,70 @@ export async function GET() {
       .select('*')
       .order('nombre_completo', { ascending: true });
 
-    if (error) {
-      console.error('Error obteniendo usuarios:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     return NextResponse.json(data || []);
   } catch (error: any) {
-    console.error('Error en GET /api/usuarios:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error al obtener usuarios' }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// POST: Crear nuevo usuario
+// POST: Crear nuevo usuario en AUTH y en la TABLA
 export async function POST(req: Request) {
-  const supabase = await createClient();
   try {
     const body = await req.json();
+    const { email, password, nombre_completo, telefono, rol, estado } = body;
 
-    // Validaciones
-    if (!body.nombre_completo || !body.email) {
-      return NextResponse.json(
-        { error: 'nombre_completo y email son requeridos' }, 
-        { status: 400 }
-      );
+    // 1. Validaciones básicas
+    if (!nombre_completo || !email || !password) {
+      return NextResponse.json({ error: 'Nombre, email y contraseña son requeridos' }, { status: 400 });
     }
 
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Formato de email inválido' }, 
-        { status: 400 }
-      );
+    // 2. Crear Cliente de Administración (Service Role)
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+
+    // 3. Crear el usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password: password,
+      email_confirm: true, // Para que el usuario no tenga que verificar su correo y pueda entrar ya
+      user_metadata: { nombre_completo } // Opcional: guardar nombre en metadata de auth
+    });
+
+    if (authError) {
+      console.error('Error en Auth:', authError.message);
+      return NextResponse.json({ error: `Error en Autenticación: ${authError.message}` }, { status: 400 });
     }
 
-    // Normalizar estado a minúsculas
-    const estadoNormalizado = body.estado 
-      ? body.estado.toLowerCase().trim() 
-      : 'activo';
-
-    // Validar que el estado sea válido
-    const estadosValidos = ['activo', 'inactivo', 'suspendido'];
-    if (!estadosValidos.includes(estadoNormalizado)) {
-      return NextResponse.json(
-        { error: `Estado debe ser uno de: ${estadosValidos.join(', ')}` }, 
-        { status: 400 }
-      );
-    }
-
-    // Normalizar rol a minúsculas
-    const rolNormalizado = body.rol 
-      ? body.rol.toLowerCase().trim() 
-      : 'ayudante';
-
-    // Validar que el rol sea válido
-    const rolesValidos = [
-      'administrador', 
-      'cortador', 
-      'diseñador', 
-      'recepcionista', 
-      'ayudante', 
-      'representante_taller'
-    ];
-    if (!rolesValidos.includes(rolNormalizado)) {
-      return NextResponse.json(
-        { error: `Rol debe ser uno de: ${rolesValidos.join(', ')}` }, 
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
+    // 4. Insertar en tu tabla pública 'usuarios' usando el ID generado
+    const { data: userData, error: dbError } = await supabaseAdmin
       .from('usuarios')
       .insert([{
-        nombre_completo: body.nombre_completo.trim(),
-        email: body.email.trim().toLowerCase(),
-        telefono: body.telefono?.trim() || null,
-        rol: rolNormalizado,
-        estado: estadoNormalizado,
-        auth_id: body.auth_id || null,
-        created_by: body.created_by || null
+        auth_id: authData.user.id, // VÍNCULO CRUCIAL
+        nombre_completo: nombre_completo.trim(),
+        email: email.trim().toLowerCase(),
+        telefono: telefono?.trim() || null,
+        rol: rol?.toLowerCase() || 'ayudante',
+        estado: estado?.toLowerCase() || 'activo',
       }])
       .select()
       .single();
 
-    if (error) {
-      console.error('Error creando usuario:', error);
-      
-      // Manejar errores específicos
-      if (error.code === '23505') { // Duplicate key
-        if (error.message.includes('email')) {
-          return NextResponse.json(
-            { error: 'Este email ya está registrado' }, 
-            { status: 409 }
-          );
-        }
-        if (error.message.includes('auth_id')) {
-          return NextResponse.json(
-            { error: 'Este usuario ya está vinculado' }, 
-            { status: 409 }
-          );
-        }
-      }
-      
-      throw error;
+    if (dbError) {
+      // Limpieza: si falla la tabla, borramos el usuario de Auth para no dejar basura
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      console.error('Error en DB:', dbError.message);
+      return NextResponse.json({ error: `Error en Tabla Usuarios: ${dbError.message}` }, { status: 500 });
     }
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(userData, { status: 201 });
+
   } catch (error: any) {
-    console.error('Error en POST /api/usuarios:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error al crear usuario' }, 
-      { status: 500 }
-    );
+    console.error('Error fatal:', error);
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 

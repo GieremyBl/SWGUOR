@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"; // Usamos Textarea para descripción
 import { toast } from "sonner";
-import { Edit3 } from "lucide-react";
+import { PenLine } from "lucide-react";
 
 export default function EditCategoriaDialog({ isOpen, categoria, onClose, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ export default function EditCategoriaDialog({ isOpen, categoria, onClose, onSucc
       <DialogContent className="sm:max-w-106.25 rounded-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-            <Edit3 className="text-pink-600 w-5 h-5" /> Editar Categoría
+            <PenLine className="text-pink-600 w-5 h-5" /> Editar Categoría
           </DialogTitle>
         </DialogHeader>
 

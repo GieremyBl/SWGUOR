@@ -1,8 +1,14 @@
 "use client";
 
-import { Edit2, Trash2, Mail, Phone, User, ShieldCheck, ShieldAlert, Hash, Ban, Star } from "lucide-react";
+import { Edit2, Trash2, Mail, Phone, User, Hash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ClientesTableProps {
   data: any[];
@@ -14,11 +20,10 @@ interface ClientesTableProps {
 export default function ClientesTable({ 
   data, 
   onEdit, 
-  onDelete, 
-  onToggleStatus 
+  onDelete 
 }: ClientesTableProps) {
 
-  const showActions = !!onEdit || !!onDelete || !!onToggleStatus;
+  const showActions = !!onEdit || !!onDelete;
 
   // Función auxiliar para determinar el estilo del Badge según el Enum de tu DB
   const getStatusStyles = (status: string) => {
@@ -113,43 +118,47 @@ export default function ClientesTable({
                   {showActions && (
                     <td className="bg-white border-y border-r border-slate-100 px-6 rounded-r-2xl text-right shadow-sm group-hover:shadow-md transition-all">
                       <div className="flex justify-end items-center gap-2">
-                        {onToggleStatus && (
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => onToggleStatus(c)}
-                            className={`h-9 w-9 rounded-xl border-slate-200 transition-all ${
-                              c.activo === 'activo' 
-                                ? 'text-slate-400 hover:text-orange-600 hover:bg-orange-50 hover:border-orange-200' 
-                                : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200'
-                            }`}
-                            title={c.activo === 'activo' ? "Desactivar" : "Activar"}
-                          >
-                            {c.activo === 'activo' ? <ShieldAlert size={16} /> : <ShieldCheck size={16} />}
-                          </Button>
-                        )}
-                        
-                        {onEdit && (
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => onEdit(c)}
-                            className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
-                          >
-                            <Edit2 size={16} />
-                          </Button>
-                        )}
+                        <TooltipProvider delayDuration={200}>
+                          
+                          {/* BOTÓN EDITAR */}
+                          {onEdit && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => onEdit(c)}
+                                  className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
+                                >
+                                  <Edit2 size={16} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-gray-900 text-white text-xs border-none">
+                                <p>Editar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
 
-                        {onDelete && (
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => onDelete(c)}
-                            className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        )}
+                          {/* BOTÓN ELIMINAR */}
+                          {onDelete && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => onDelete(c)}
+                                  className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all"
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-rose-600 text-white text-xs border-none">
+                                <p>Eliminar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                        </TooltipProvider>
                       </div>
                     </td>
                   )}

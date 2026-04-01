@@ -22,7 +22,7 @@ const ROLE_PERMISSIONS: { [role: string]: AppPermissions } = {
   administrador: {
     usuarios: ['view', 'create', 'edit', 'delete', 'export'],
     categorias: ['view', 'create', 'edit', 'delete', 'export'],
-    clientes: ['view', 'export'],
+    clientes: ['view', 'create', 'edit', 'delete', 'export'],
     productos: ['view', 'create', 'edit', 'delete', 'export'],
     pedidos: ['view', 'export'],
     inventario: ['view', 'export'],

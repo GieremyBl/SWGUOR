@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Download, RefreshCw, Eye, Edit3, FileText } from 'lucide-react';
+import { Plus, Download, RefreshCw, Eye, PenLine, FileText } from 'lucide-react';
 import { usePortal } from '../_contexts/PortalContext';
 import { EstadoBadge } from '@/components/portal/EstadoBadge';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -162,7 +162,7 @@ export default function HistorialCotizacionesPage() {
                           href={`/portal/cotizaciones/${c.id}/editar`}
                           className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-md transition-all"
                         >
-                          <Edit3 size={18} />
+                          <PenLine size={18} />
                         </Link>
                       )}
 

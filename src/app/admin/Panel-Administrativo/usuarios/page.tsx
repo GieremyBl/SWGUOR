@@ -13,13 +13,17 @@ import { EstadoUsuario } from "@/types";
 const UsuariosTable = dynamic(() => import("@/components/admin/usuarios/UsuarioTable"));
 const EditUsuarioDialog = dynamic(() => import("@/components/admin/usuarios/EditUsuarioDialog"));
 const CreateUsuarioDialog = dynamic(() => import("@/components/admin/usuarios/CreateUsuarioDialog"));
+const DeleteUsuarioDialog = dynamic(() => import("@/components/admin/usuarios/DeleteUsuarioDialog")); // <-- Importación añadida
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsuario, setSelectedUsuario] = useState<any | null>(null);
-  const [dialogMode, setDialogMode] = useState<"edit" | "new" | null>(null);
+  
+  // <-- Añadimos "delete" a los tipos permitidos
+  const [dialogMode, setDialogMode] = useState<"edit" | "new" | "delete" | null>(null); 
+  
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<EstadoUsuario | null>(null);
   const pageSize = 10;
@@ -100,6 +104,12 @@ export default function UsuariosPage() {
     setDialogMode("edit");
   };
 
+  // <-- Nuevo manejador para el botón de eliminar de la tabla
+  const handleDelete = (usuario: any) => {
+    setSelectedUsuario(usuario);
+    setDialogMode("delete");
+  };
+
   const filteredUsuarios = useMemo(() => {
     return usuarios.filter(u => 
       u.nombre_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -153,7 +163,7 @@ export default function UsuariosPage() {
           </div>
         </div>
 
-        {/* Cartas de Stats (5 Columnas como en Clientes) */}
+        {/* Cartas de Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <StatCard title="TOTAL" value={stats.total} icon={<Users className="w-5 h-5" />} isActive={statusFilter === null} color="pink" onClick={() => {setStatusFilter(null); setCurrentPage(0);}} />
           <StatCard title="ACTIVOS" value={stats.activo} icon={<UserCheck className="w-5 h-5" />} isActive={statusFilter === 'activo'} color="emerald" onClick={() => {setStatusFilter('activo'); setCurrentPage(0);}} />
@@ -181,7 +191,7 @@ export default function UsuariosPage() {
             usuarios={filteredUsuarios} 
             onEdit={handleEdit}
             onToggleStatus={handleToggleStatus}
-            onDelete={(u: any) => console.log("Delete", u)}
+            onDelete={handleDelete} // <-- Pasamos la función handleDelete
           />
         )}
 
@@ -203,7 +213,7 @@ export default function UsuariosPage() {
         </div>
       </div>
 
-      {/* Diálogos Dinámico */}
+      {/* Diálogos Dinámicos */}
       <CreateUsuarioDialog 
         isOpen={dialogMode === "new"} 
         onClose={() => setDialogMode(null)} 
@@ -215,6 +225,19 @@ export default function UsuariosPage() {
           isOpen={true} 
           onClose={() => {setDialogMode(null); setSelectedUsuario(null);}} 
           onSuccess={fetchUsuarios} 
+          usuario={selectedUsuario} 
+        />
+      )}
+
+      {selectedUsuario && dialogMode === "delete" && (
+        <DeleteUsuarioDialog 
+          isOpen={true} 
+          onClose={() => {setDialogMode(null); setSelectedUsuario(null);}} 
+          onSuccess={() => {
+            fetchUsuarios();
+            setDialogMode(null);
+            setSelectedUsuario(null);
+          }} 
           usuario={selectedUsuario} 
         />
       )}

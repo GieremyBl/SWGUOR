@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { AlertTriangle, Trash2, Building2, Hash, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Trash2, AlertCircle } from "lucide-react"; // Trash2 es más semántico para eliminar
 
 export default function DeleteClienteDialog({ isOpen, onClose, cliente, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -12,8 +12,7 @@ export default function DeleteClienteDialog({ isOpen, onClose, cliente, onSucces
   const handleDelete = async () => {
     setLoading(true);
     try {
-      // LLAMADA A TU API USANDO EL MÉTODO DELETE Y PASANDO EL ID EN LA URL
-      const response = await fetch(`/api/admin/clientes?id=${cliente.id}`, {
+      const response = await fetch(`/api/admin/clientes?id=${cliente?.id}`, {
         method: 'DELETE',
       });
 
@@ -21,7 +20,7 @@ export default function DeleteClienteDialog({ isOpen, onClose, cliente, onSucces
 
       if (!response.ok) throw new Error(result.error || "No se pudo eliminar");
 
-      toast.success("Cliente eliminado del sistema");
+      toast.success("Cliente eliminado exitosamente");
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -31,50 +30,69 @@ export default function DeleteClienteDialog({ isOpen, onClose, cliente, onSucces
     }
   };
 
+  if (!cliente) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-100 rounded-3xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <Trash2 className="w-5 h-5" /> Eliminar Cliente
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none rounded-2xl shadow-2xl outline-none">
+        {/* Borde superior decorativo ROJO */}
+        <div className="h-2 w-full bg-red-600" />
         
-        <div className="py-6 flex flex-col items-center text-center gap-4">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-10 h-10 text-red-500" />
+        <div className="p-6">
+          {/* Encabezado */}
+          <div className="flex items-start gap-4 mb-5">
+            <div className="p-3 bg-red-50 text-red-600 rounded-2xl shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-black text-gray-900 uppercase tracking-tight">
+                Eliminar Cliente
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500 leading-tight mt-1">
+                Esta acción es irreversible y podría afectar el historial de pedidos asociados a esta empresa.
+              </DialogDescription>
+            </div>
           </div>
-          <div className="space-y-2">
-            <p className="text-gray-600">
-              ¿Estás seguro de que deseas eliminar a:
-            </p>
-            <p className="text-lg font-bold text-gray-900">
-              {cliente?.razon_social || "este cliente"}
-            </p>
-            <p className="text-xs text-gray-400 bg-gray-50 p-2 rounded-lg border border-dashed">
-              Esta acción es permanente y podría afectar el historial de pedidos asociados.
-            </p>
+
+          {/* Tarjeta de resumen del cliente a eliminar */}
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-gray-700">
+                <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="font-semibold text-sm line-clamp-1">
+                  {cliente.razon_social}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-500">
+                <Hash className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-sm">
+                  {cliente.ruc || "Sin documento registrado"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Botones */}
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-2">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={onClose} 
+              className="w-full sm:w-auto rounded-xl font-medium"
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleDelete}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white rounded-xl gap-2 shadow-sm hover:shadow-md transition-all font-medium"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Sí, eliminar cliente
+            </Button>
           </div>
         </div>
-
-        <DialogFooter className="flex gap-2 sm:gap-0">
-          <Button 
-            variant="ghost" 
-            onClick={onClose} 
-            disabled={loading}
-            className="flex-1 rounded-xl"
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleDelete} 
-            disabled={loading}
-            className="flex-1 rounded-xl bg-red-600 hover:bg-red-700 shadow-lg shadow-red-100"
-          >
-            {loading ? 'Eliminando...' : 'Sí, Eliminar'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

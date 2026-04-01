@@ -79,6 +79,7 @@ export const ROLES_USUARIO = {
   cortador: 'Cortador',
   ayudante: 'Ayudante',
   recepcionista: 'Recepcionista',
+  gerente: 'Gerente',
 };
 
 // ─── REGLAS DE NEGOCIO B2B ───────────────────────────────────────────────────
