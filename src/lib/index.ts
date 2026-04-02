@@ -27,5 +27,5 @@ export type * from './helpers/ordenes-helpers';
 export type * from './helpers/usuarios-helpers';
 
 // ==================== UTILIDADES ====================
-export * from './supabase';
+export * from './supabase/client';
 export * from './cache';

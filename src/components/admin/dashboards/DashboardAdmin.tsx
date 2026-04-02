@@ -489,7 +489,7 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-2.5 px-2 bg-slate-50 group-hover:bg-slate-100 transition-colors">
                         <span className="text-xs font-black text-slate-800">
-                          S/ {Number(o.total ?? 0).toLocaleString('es-PE')}
+                          S/ {Number(o.total_pagado ?? 0).toLocaleString('es-PE')}
                         </span>
                       </td>
                       <td className="py-2.5 px-2 bg-slate-50 group-hover:bg-slate-100 transition-colors">

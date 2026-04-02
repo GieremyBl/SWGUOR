@@ -11,10 +11,10 @@ import { UserCog, ShieldCheck, User, Mail, Fingerprint } from "lucide-react";
 import { RolUsuario } from "@/types";
 
 const ROLES_SISTEMA: { value: RolUsuario; label: string }[] = [
-  { value: "gerente_general", label: "Gerente General" },
+  { value: "gerente", label: "Gerente General" },
   { value: "administrador", label: "Administrador" },
   { value: "recepcionista", label: "Recepcionista" },
-  { value: "diseñador", label: "Diseñador" },
+  { value: "disenador", label: "Diseñador" },
   { value: "cortador", label: "Cortador" },
   { value: "ayudante", label: "Ayudante" },
   { value: "representante_taller", label: "Representante de Taller" },

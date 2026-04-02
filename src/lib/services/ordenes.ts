@@ -1,6 +1,6 @@
 // src/services/ordenes.service.ts
 import { supabase } from '@/lib/supabase/client';
-import { OrdenesHelper } from '@/lib/helpers/ordenes-helpers';
+import { calcularTotalVenta, crearOrden } from '@/lib/helpers/ordenes-helpers';
 
 export const OrdenesService = {
   /**
@@ -9,22 +9,18 @@ export const OrdenesService = {
   crearOrdenDeProduccion: async (datosForm: any, productos: any[]) => {
     try {
       // 1. Calculamos el total
-      const total = OrdenesHelper.calcularTotalVenta(productos);
+      const total = calcularTotalVenta(productos);
       
       // 2. Preparamos el objeto según el esquema de la tabla public.ordenes
-      const insertData = OrdenesHelper.prepararParaInsertar(datosForm, total);
+      const insertData = {...datosForm,
+        total_venta: total,
+        created_at: new Date().toISOString(),
+      };
 
       // 3. Insertar en Supabase
-      const { data: orden, error: errorOrden } = await supabase
-        .from('ordenes')
-        .insert([insertData])
-        .select()
-        .single();
+      const { data: orden, error } = await crearOrden(insertData);
 
-      if (errorOrden) throw errorOrden;
-
-      // 4. (Opcional) Si tienes una tabla de items de fabricación, regístralos aquí
-      // usando orden.id (que será el bigint generado)
+      if (error) throw new Error(error);
 
       return { success: true, data: orden };
     } catch (error: any) {

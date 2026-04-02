@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createClient as supabase } from "@/lib/supabase/client/client"; // Ajusta a tu import real
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { XCircle, Loader2, AlertTriangle } from "lucide-react";
@@ -34,8 +34,6 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
   const [error, setError] = useState<string | null>(null);
   
   // Inicializamos el cliente fuera de las funciones para mayor limpieza
-  const supabase = supabase();
-
   const loadDetalle = useCallback(async () => {
     if (!venta?.orden_id) return;
 
@@ -43,7 +41,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
     setError(null);
     try {
       const { data, error: queryError } = await supabase
-        .from("detalles_orden")
+        .from("pedido_items")
         .select("*, productos(nombre)")
         .eq("orden_id", venta.orden_id);
 
@@ -78,7 +76,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
       // 1. Devolver stock (Ejecución en paralelo para mayor velocidad)
       const stockUpdates = detalles.map(item => 
         supabase.rpc('increment_stock', {
-          row_id: item.producto_id,
+          row_id: String(item.producto_id),
           quantity: item.cantidad
         })
       );
@@ -92,7 +90,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
       const { error: errorVenta } = await supabase
         .from("ventas")
         .delete()
-        .eq("id", venta.id);
+        .eq("id", String(venta.id));
 
       if (errorVenta) throw errorVenta;
 

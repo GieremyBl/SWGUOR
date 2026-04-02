@@ -87,7 +87,7 @@ export default function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
                   </td>
                   <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">
                     <span className="font-black text-slate-900 text-xs">
-                      S/ {order.total?.toLocaleString('es-PE')}
+                      S/ {order.total_pagado?.toLocaleString('es-PE')}
                     </span>
                   </td>
                   <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">

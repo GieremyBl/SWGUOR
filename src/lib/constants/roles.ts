@@ -60,7 +60,7 @@ export const ROLES_INFO: Record<
     nivel: number;
   }
 > = {
-  gerente_general: {
+  gerente: {
     label: 'Gerente General',
     descripcion: 'Acceso total al sistema',
     color: 'bg-red-100 text-red-800',
@@ -78,7 +78,7 @@ export const ROLES_INFO: Record<
     color: 'bg-orange-100 text-orange-800',
     nivel: 2
   },
-  diseñador: {
+  disenador: {
     label: 'Diseñador',
     descripcion: 'Responsable del diseño de prendas',
     color: 'bg-purple-100 text-purple-800',
@@ -116,7 +116,7 @@ export const ROLES_INFO: Record<
  * Matriz de permisos por rol
  */
 export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
-  gerente_general: [
+  gerente: [
     // Dashboard
     'ver_dashboard',
     // Órdenes
@@ -197,7 +197,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'cambiar_estado_pedido',
     'ver_inventario'
   ],
-  diseñador: [
+  disenador: [
     'ver_dashboard',
     'ver_pedidos',
     'cambiar_estado_pedido',

@@ -9,7 +9,7 @@ export type EstadoOrden = 'solicitado' | 'cotizado' | 'aprobado' | 'pagado' | 'e
 
 export type EstadoProducto = 'activo' | 'inactivo' | 'sin_stock';
 
-export type MetodoPago = 'efectivo' | 'transferencia_bcp' | 'yape' | 'plin' | 'tarjeta';
+export type MetodoPago = 'efectivo' | 'transferencia_bcp' | 'yape' | 'plin';
 
 export type EstadoCotizacion = 'borrador' | 'enviada' | 'aprobada' | 'rechazada' | 'convertida';
 

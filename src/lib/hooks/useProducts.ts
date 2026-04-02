@@ -22,7 +22,6 @@ export function useProducts(options?: UseProductsOptions) {
       setLoading(true);
       setError(null);
 
-      const supabase = supabase();
 
       // Seleccionar todos los campos (podría optimizarse)
       let query = supabase

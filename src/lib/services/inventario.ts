@@ -1,5 +1,5 @@
 // src/lib/services/inventario.ts (o la ruta donde lo tengas)
-import { supabase } from "@/lib/supabase/client/client"; // IMPORTANTE: Que apunte al client.ts tipado
+import { supabase } from "@/lib/supabase/client"; // IMPORTANTE: Que apunte al client.ts tipado
 
 export async function registrarFabricacion(
   productoId: number, 

@@ -28,7 +28,6 @@ export default function EditClienteDialog({ isOpen, onClose, cliente, onSuccess 
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const supabase = supabase();
     
     const updatedData = {
       razon_social: formData.get("razon_social"),
