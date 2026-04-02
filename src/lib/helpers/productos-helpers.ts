@@ -20,6 +20,10 @@ export async function obtenerProductos(supabase: SupabaseClient, filtros?: any) 
   return await query.order('created_at', { ascending: false });
 }
 
+/**
+ * CREAR PRODUCTO (Panel Administrativo & API)
+ */
+
 export async function crearProducto(supabase: SupabaseClient, datos: any) {
   return await supabase
     .from('productos')
@@ -29,8 +33,29 @@ export async function crearProducto(supabase: SupabaseClient, datos: any) {
 }
 
 /**
+ * ACTUALIZAR PRODUCTO (Panel Administrativo & API)
+ */
+export async function actualizarProducto(supabase: SupabaseClient, id: number, datos: any) {
+  return await supabase
+    .from('productos')
+    .update(datos)
+    .eq('id', id)
+    .select()
+    .single();
+}
+
+/*
+  * ELIMINAR PRODUCTO (Panel Administrativo & API)
+  */
+export async function eliminarProducto(supabase: SupabaseClient, id: number) {
+  return await supabase
+    .from('productos')
+    .delete()
+    .eq('id', id);
+}
+
+/**
  * PRODUCTOS DEL PORTAL (Venta B2B)
- * Ajustado a los nombres de columna de tu SQL: 'precio' y 'stock'
  */
 export const obtenerProductosPortal = async (supabase: SupabaseClient): Promise<ProductoPortal[]> => {
   const { data, error } = await supabase
@@ -43,7 +68,7 @@ export const obtenerProductosPortal = async (supabase: SupabaseClient): Promise<
       stock,
       categorias (nombre)
     `)
-    .eq('estado', 'activo' as EstadoProducto); // En tu SQL usas 'estado' no 'activo' (boolean)
+    .eq('estado', 'activo' as EstadoProducto);
 
   if (error) {
     console.error('Error al obtener productos portal:', error);
@@ -62,11 +87,10 @@ export const obtenerProductosPortal = async (supabase: SupabaseClient): Promise<
 
 /**
  * INSUMOS (Materia Prima / Taller)
- * IMPORTANTE: Tu tabla SQL se llama 'insumo' (singular)
  */
 export const obtenerInsumos = async (supabase: SupabaseClient): Promise<Insumo[]> => {
   const { data, error } = await supabase
-    .from('insumo') // Corregido a singular según tu esquema
+    .from('insumo')
     .select('*')
     .order('nombre', { ascending: true });
 
@@ -76,7 +100,7 @@ export const obtenerInsumos = async (supabase: SupabaseClient): Promise<Insumo[]
 
 export const crearInsumo = async (supabase: SupabaseClient, insumo: InsumoInsert) => {
   const { data, error } = await supabase
-    .from('insumo') // Corregido a singular
+    .from('insumo')
     .insert([insumo])
     .select()
     .single();
@@ -87,29 +111,26 @@ export const crearInsumo = async (supabase: SupabaseClient, insumo: InsumoInsert
 
 /**
  * ACTUALIZAR STOCK FÍSICO (Insumos)
- * Corregido para usar la columna 'stock_actual' de tu tabla 'insumo'
  */
 export const actualizarStockFisicoInsumo = async (
   supabase: SupabaseClient, 
   id: number, 
-  cantidad: number, 
-  operacion: 'sumar' | 'restar'
+  valor: number,
+  operacion: 'set' | 'sumar' | 'restar' = 'set'
 ) => {
-  // 1. Obtenemos el stock actual
-  const { data: insumo, error: fetchError } = await supabase
-    .from('insumo')
-    .select('stock_actual')
-    .eq('id', id)
-    .single();
+  let nuevoStock = valor;
 
-  if (fetchError || !insumo) throw new Error("Insumo no encontrado");
+  if (operacion !== 'set') {
+    const { data: insumo } = await supabase
+      .from('insumo')
+      .select('stock_actual')
+      .eq('id', id)
+      .single();
+    
+    if (!insumo) throw new Error("Insumo no encontrado");
+    nuevoStock = operacion === 'sumar' ? insumo.stock_actual + valor : insumo.stock_actual - valor;
+  }
 
-  // 2. Calculamos nuevo stock
-  const nuevoStock = operacion === 'sumar' 
-    ? insumo.stock_actual + cantidad 
-    : insumo.stock_actual - cantidad;
-
-  // 3. Actualizamos
   const { data, error } = await supabase
     .from('insumo')
     .update({ stock_actual: nuevoStock })
@@ -117,8 +138,7 @@ export const actualizarStockFisicoInsumo = async (
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  return { success: !error, data, error: error?.message || null };
 };
 
 /**

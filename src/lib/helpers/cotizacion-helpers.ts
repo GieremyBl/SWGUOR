@@ -1,5 +1,4 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { CotizacionInsert, CotizacionItemInsert } from '@/types';
 
 /**
  * Obtiene una cotización completa con sus ítems

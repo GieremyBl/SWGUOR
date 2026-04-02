@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase/client';
 import {
   obtenerInsumos,
   crearInsumo,
-  actualizarStockFisico,
+  actualizarStockFisicoInsumo,
 } from '@/lib/helpers/productos-helpers';
 import type { Insumo, InsumoInsert, TipoInsumo } from '@/types';
 
@@ -65,24 +65,32 @@ export function useInventario() {
   }, [supabase]);
 
   const actualizarStock = useCallback(async (id: number, cantidad: number, operacion: 'sumar' | 'restar') => {
-    setState(prev => ({ ...prev, cargando: true, error: null }));
-    try {
-      const data = await actualizarStockFisico(supabase, id, cantidad, operacion);
+  setState(prev => ({ ...prev, cargando: true, error: null }));
+  try {
+    // 1. Llamamos al helper y guardamos la respuesta completa
+    const respuesta = await actualizarStockFisicoInsumo(supabase, id, cantidad, operacion);
 
-      if (!data) throw new Error("No se pudo actualizar el stock");
-
-      // Actualizar estado local
-      setState(prev => ({
-        ...prev,
-        insumos: prev.insumos.map(i => i.id === id ? data : i),
-        cargando: false
-      }));
-      return true;
-    } catch (err: any) {
-      setState(prev => ({ ...prev, error: err.message, cargando: false }));
-      return false;
+    // 2. Verificamos si hubo error
+    if (respuesta.error || !respuesta.success) {
+      throw new Error(respuesta.error || "No se pudo actualizar el stock");
     }
-  }, [supabase]);
+
+    // 3. Extraemos el insumo de la propiedad 'data'
+    const insumoActualizado = respuesta.data as Insumo;
+
+    // 4. Actualizamos el estado local comparando el ID
+    setState(prev => ({
+      ...prev,
+      insumos: prev.insumos.map(i => (i.id === id ? insumoActualizado : i)),
+      cargando: false
+    }));
+    
+    return true;
+  } catch (err: any) {
+    setState(prev => ({ ...prev, error: err.message, cargando: false }));
+    return false;
+  }
+}, [supabase]);
 
   const obtenerBajoStock = useCallback(async () => {
     setState(prev => ({ ...prev, cargando: true, error: null }));

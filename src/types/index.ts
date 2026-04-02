@@ -76,10 +76,13 @@ export interface Categoria {
 export interface Insumo {
   id: number;
   nombre: string;
+  tipo: string;
   stock_actual: number;
   stock_minimo: number;
-  precio_unitario?: number;
+  precio_unitario?: number | null;
   unidad_medida: string;
+  proveedor?: string | null;
+  created_at?: string;
 }
 
 export interface Cotizacion {

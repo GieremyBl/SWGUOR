@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { obtenerInsumos, crearInsumo, actualizarStockInsumo } from '@/lib/helpers/productos-helpers';
+import { obtenerInsumos, crearInsumo, actualizarStockFisicoInsumo } from '@/lib/helpers/productos-helpers';
 import { NextResponse } from 'next/server';
 
 export async function GET(req: Request) {
@@ -74,7 +74,7 @@ export async function PATCH(req: Request) {
     const body = await req.json();
 
     // Ahora pasamos supabase al helper
-    const { success, error } = await actualizarStockInsumo(supabase, parseInt(id), body.stock_actual);
+    const { success, error } = await actualizarStockFisicoInsumo(supabase, parseInt(id), body.stock_actual);
 
     if (error) throw new Error(error);
     if (!success) return NextResponse.json({ error: 'Error al actualizar stock' }, { status: 400 });
