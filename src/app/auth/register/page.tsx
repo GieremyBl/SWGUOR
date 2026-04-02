@@ -81,10 +81,14 @@ export default function RegisterPage() {
       {/* ── Columna izquierda: imagen + branding ── */}
       <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden">
         {/* Imagen de fondo */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/auth-bg.jpg')" }}
+        <Image 
+          src="/blurred-background-woman-looking-clothes.jpg" 
+          alt="Fondo Textil Guor"
+          fill
+          priority
+          className="object-cover z-0"
         />
+
         {/* Overlay oscuro */}
         <div className="absolute inset-0 bg-black/60" />
 
