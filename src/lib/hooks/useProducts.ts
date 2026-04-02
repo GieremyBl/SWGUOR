@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import type { Producto } from '@/types';
 
 interface UseProductsOptions {
@@ -22,7 +22,7 @@ export function useProducts(options?: UseProductsOptions) {
       setLoading(true);
       setError(null);
 
-      const supabase = getSupabaseBrowserClient();
+      const supabase = supabase();
 
       // Seleccionar todos los campos (podría optimizarse)
       let query = supabase

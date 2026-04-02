@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { usePortal } from '../_contexts/PortalContext';
 import { EstadoBadge } from '@/components/portal/EstadoBadge';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { formatCurrency, formatDateLong } from '@/lib/helpers/format-helpers';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +29,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!cliente) return;
     const fetch = async () => {
-      const { data } = await getSupabaseBrowserClient()
+      const { data } = await supabase
         .from('cotizaciones')
         .select('id, numero, total, estado, created_at, cotizacion_items(count)')
         .eq('cliente_id', cliente.id)

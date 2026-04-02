@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client/client';
 import type { Orden, OrdenInsert, EstadoOrden, MetodoPago } from '@/types';
 
 /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import AdminSidebar from './Sidebar';
 import AdminHeader from './Header';
 import type { Usuario } from '@/types';
@@ -14,7 +14,6 @@ export default function RealtimeLayoutWrapper({
   children: React.ReactNode 
 }) {
   const [usuario, setUsuario] = useState<Usuario>(initialUsuario);
-  const supabase = getSupabaseBrowserClient();
   
   // Usamos ref para mantener la referencia del usuario sin disparar efectos
   const usuarioRef = useRef(usuario);

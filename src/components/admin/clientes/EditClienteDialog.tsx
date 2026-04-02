@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Building2, Hash, Phone, Mail, MapPin, Activity } from "lucide-react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 export default function EditClienteDialog({ isOpen, onClose, cliente, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ export default function EditClienteDialog({ isOpen, onClose, cliente, onSuccess 
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const supabase = getSupabaseBrowserClient();
+    const supabase = supabase();
     
     const updatedData = {
       razon_social: formData.get("razon_social"),

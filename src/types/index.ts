@@ -145,14 +145,14 @@ export interface Producto {
   id: number;
   nombre: string;
   sku: string;
-  descripcion?: string;
-  precio_base: number;      // Usamos snake_case para que coincida con la DB
-  stock_actual: number;     // Usamos snake_case para que coincida con la DB
+  precio: number;
+  stock: number;
+  descripcion: string | null;
   categoria_id: number | null;
-  estado: EstadoProducto;
-  imagen_url?: string;
+  imagen: string | null;
+  estado: "activo" | "agotado" | string;
+  updated_at: string;
   created_at: string;
-  updated_at?: string;
 }
 
 export type OrdenConCliente = Orden & {

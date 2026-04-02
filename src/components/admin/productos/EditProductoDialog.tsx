@@ -56,8 +56,8 @@ export default function EditProductoDialog({
         nombre: producto.nombre || "",
         descripcion: producto.descripcion || "",
         sku: producto.sku || "",
-        precio: producto.precio_base?.toString() || "0",
-        stock: producto.stock_actual?.toString() || "0",
+        precio: producto.precio?.toString() || "0", // Antes precio_base
+        stock: producto.stock?.toString() || "0",   // Antes stock_actual
         categoria_id: producto.categoria_id?.toString() || "",
         estado: producto.estado || "activo",
       });
@@ -76,7 +76,6 @@ export default function EditProductoDialog({
         precio: parseFloat(formData.precio),
         categoria_id: parseInt(formData.categoria_id),
         sku: formData.sku,
-        stock: parseInt(formData.stock),
         estado: formData.estado,
         updated_at: new Date().toISOString(),
       };
@@ -181,27 +180,6 @@ export default function EditProductoDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* STOCK (LECTURA) */}
-          <div className="grid grid-cols-2 gap-4 items-end">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5" /> Stock Físico
-              </Label>
-              <div className="h-11 flex items-center px-4 rounded-xl bg-slate-50 text-slate-600 font-bold border border-dashed border-slate-200">
-                {formData.stock} und.
-              </div>
-            </div>
-            
-            <div className={`h-11 flex items-center justify-center px-4 rounded-xl text-[10px] font-black uppercase border mb-[2px] ${
-                parseInt(formData.stock) === 0 ? "bg-red-50 text-red-600 border-red-100" : 
-                parseInt(formData.stock) <= 5 ? "bg-orange-50 text-orange-600 border-orange-100" : 
-                "bg-emerald-50 text-emerald-600 border-emerald-100"
-              }`}>
-                {parseInt(formData.stock) === 0 ? "Agotado" : 
-                parseInt(formData.stock) <= 5 ? "Bajo Stock" : "Suficiente"}
-            </div>
           </div>
 
           <div className="space-y-1.5">

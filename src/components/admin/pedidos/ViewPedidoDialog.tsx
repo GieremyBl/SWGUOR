@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,7 @@ export default function ViewPedidoDialog({ isOpen, pedido, onClose }: any) {
       const loadDetalles = async () => {
         setLoading(true);
         try {
-          const supabase = getSupabaseBrowserClient();
+          const supabase = supabase();
           const { data, error } = await supabase
             .from("detalles_orden")
             .select("*, productos(nombre, sku)")

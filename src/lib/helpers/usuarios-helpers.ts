@@ -1,12 +1,12 @@
-import { createClient } from '@/lib/supabase/client';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client/client';
+import { supabase } from '@/lib/supabase/client';
 import type { Usuario, ClienteB2B } from '@/types';
 
 /**
  * Obtiene los datos detallados de un usuario para el panel administrativo
  */
 export const getUsuarioData = async (userId: string) => {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = supabase();
 
   try {
     const { data, error } = await supabase
@@ -37,7 +37,7 @@ export const getUsuarioData = async (userId: string) => {
  * Actualiza la información del perfil del usuario (nombre, teléfono, avatar)
  */
 export const updateUsuario = async (userId: string, updates: Partial<Usuario>) => {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = supabase();
 
   try {
     const { data, error } = await (supabase.from("usuarios") as any)
@@ -60,7 +60,7 @@ export const updateUsuario = async (userId: string, updates: Partial<Usuario>) =
  * (Útil si quieres centralizar la lógica de carga de imágenes)
  */
 export const uploadAvatar = async (userId: string, file: File) => {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = supabase();
   const fileExt = file.name.split('.').pop();
   const fileName = `${userId}-${Math.random()}.${fileExt}`;
   const filePath = `avatars/${fileName}`;

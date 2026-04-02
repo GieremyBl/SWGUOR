@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createClient as getSupabaseBrowserClient } from "@/lib/supabase/client"; // Ajusta a tu import real
+import { createClient as supabase } from "@/lib/supabase/client/client"; // Ajusta a tu import real
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { XCircle, Loader2, AlertTriangle } from "lucide-react";
@@ -34,7 +34,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
   const [error, setError] = useState<string | null>(null);
   
   // Inicializamos el cliente fuera de las funciones para mayor limpieza
-  const supabase = getSupabaseBrowserClient();
+  const supabase = supabase();
 
   const loadDetalle = useCallback(async () => {
     if (!venta?.orden_id) return;

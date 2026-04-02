@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from 'react';
-import { createClient } from '@/lib/supabase/client'; // IMPORTANTE: Cliente de navegador
+import { supabase } from '@/lib/supabase/client';
 import {
   obtenerInsumos,
   crearInsumo,
@@ -30,8 +30,6 @@ export function useInventario() {
     cargando: false,
     error: null
   });
-
-  const supabase = createClient(); // Inicializamos el cliente una vez
 
   const obtenerInsumosList = useCallback(async (tipo?: TipoInsumo) => {
     setState(prev => ({ ...prev, cargando: true, error: null }));

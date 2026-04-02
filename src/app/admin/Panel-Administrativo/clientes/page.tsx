@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -48,7 +48,6 @@ export default function ClientesPage() {
     if (!canView) return;
 
     try {
-      const supabase = getSupabaseBrowserClient();
       const [resTotal, resActivos, resInactivos, resSusp, resPot] = await Promise.all([
         supabase.from("clientes").select("*", { count: 'exact', head: true }),
         supabase.from("clientes").select("*", { count: 'exact', head: true }).eq("activo", "activo"),
@@ -77,7 +76,6 @@ export default function ClientesPage() {
 
     setLoading(true);
     try {
-      const supabase = getSupabaseBrowserClient();
       let query = supabase.from("clientes").select("*", { count: 'exact' });
       
       if (statusFilter) query = query.eq("activo", statusFilter);
@@ -110,7 +108,6 @@ export default function ClientesPage() {
     }
 
     try {
-      const supabase = getSupabaseBrowserClient();
       const nuevoEstado = cliente.activo === 'activo' ? 'inactivo' : 'activo';
      
       const { error } = await (supabase.from("clientes") as any)

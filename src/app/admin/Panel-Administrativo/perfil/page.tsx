@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useReducer, useCallback, useRef } from "react";
 import { User, Lock, Save, AlertCircle, CheckCircle2, Shield, Calendar, Camera, Eye, EyeOff, Mail, Phone, Loader2 } from "lucide-react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { updateUsuario, getUsuarioData } from "@/lib/helpers/usuarios-helpers";
 
@@ -245,7 +245,6 @@ export default function PerfilPage() {
       dispatch({ type: 'SET_UPLOADING', uploading: true });
       dispatch({ type: 'CLEAR_FEEDBACK' });
       
-      const supabase = getSupabaseBrowserClient();
       const fileExt = file.name.split('.').pop();
       const fileName = `${usuario.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
@@ -303,7 +302,6 @@ export default function PerfilPage() {
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
       const isAdmin = usuario.rol?.toLowerCase() === 'administrador';
       const emailChanged = state.email.trim().toLowerCase() !== usuario.email?.toLowerCase();
 
@@ -377,8 +375,6 @@ export default function PerfilPage() {
         dispatch({ type: 'SET_ERROR', message: 'Las contraseñas no coinciden' });
         return;
       }
-
-      const supabase = getSupabaseBrowserClient();
 
       // Verify current password by trying to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({

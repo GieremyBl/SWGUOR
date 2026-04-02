@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client"; // Asegúrate de tener configurado tu cliente
+import { createClient } from "@/lib/supabase/client/client"; // Asegúrate de tener configurado tu cliente
 const supabase = createClient();
 
 /**

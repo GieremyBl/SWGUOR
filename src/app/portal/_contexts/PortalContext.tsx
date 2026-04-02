@@ -4,7 +4,7 @@ import {
   createContext, useContext, useEffect, useState,
   useCallback, useMemo, ReactNode,
 } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 // ── Tipos ────────────────────────────────────────────────────────
 export interface ClientePortal {
@@ -24,7 +24,7 @@ export interface ItemCotizacion {
   sku: string;
   imagen: string | null;
   precio_unitario: number;
-  cantidad: number;        // mínimo MOQ_MINIMO
+  cantidad: number;
   talla: string;
   color: string;
   subtotal: number;
@@ -92,7 +92,6 @@ export function PortalProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const init = async () => {
-      const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
@@ -107,9 +106,9 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         // Cargar stats del portal
         const [cotRes, ordRes, dspRes] = await Promise.all([
           supabase.from('cotizaciones').select('id', { count: 'exact', head: true })
-            .eq('cliente_id', data).in('estado', ['borrador', 'enviada', 'aprobada']),
+            .eq('cliente_id', data.id).in('estado', ['borrador', 'enviada', 'aprobada']),
           supabase.from('ordenes').select('id', { count: 'exact', head: true })
-            .eq('cliente_id', data).not('estado', 'in', '(finalizado,cancelado)'),
+            .eq('cliente_id', data.id).not('estado', 'in', '(finalizado,cancelado)'),
           supabase.from('despachos').select('id', { count: 'exact', head: true })
             .eq('estado', 'en_ruta'),
         ]);

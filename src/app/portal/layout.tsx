@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 import { PortalProvider, usePortal } from './_contexts/PortalContext';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { AsistenteIA } from '@/components/portal/AsistenteIA';
 
@@ -45,7 +45,7 @@ function PortalSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
   const router = useRouter();
 
   const handleLogout = async () => {
-    await getSupabaseBrowserClient().auth.signOut();
+    await supabase.auth.signOut();
     router.replace('/auth/login');
   };
 

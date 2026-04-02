@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase'; 
+import { supabase } from '@/lib/supabase/client'; 
 import { Usuario, RolUsuario, EstadoUsuario } from '@/types';
 
 interface AppPermissions {
@@ -72,7 +72,6 @@ export function usePermissions() {
   const [permissions, setPermissions] = useState<AppPermissions>({});
 
   const fetchUserPermissions = useCallback(async () => {
-    const supabase = getSupabaseBrowserClient();
 
     const standardize = (text: string) => 
       text.toLowerCase()
@@ -125,7 +124,6 @@ export function usePermissions() {
 
   useEffect(() => {
     // Escuchamos cambios de sesión (login/logout) para actualizar permisos al instante
-    const supabase = getSupabaseBrowserClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       fetchUserPermissions();
     });

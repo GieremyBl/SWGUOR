@@ -8,19 +8,20 @@ import { Input } from "@/components/ui/input";
 import { 
   FileSpreadsheet, Plus, Search, Package, RefreshCw, 
   AlertTriangle, XCircle, BarChart3, ChevronLeft, ChevronRight, 
-  FileText, ShieldAlert
+  FileText, ShieldAlert, History 
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { exportToExcel, exportToPDF } from "@/lib/utils/export-utils";
+import { exportInventarioGeneralExcel, exportProductosToPDFWithImages } from "@/lib/utils/export-utils";
 
 // Lazy loading de componentes
 const ProductosTable = dynamic(() => import("@/components/admin/productos/ProductosTable"));
 const CreateProductoDialog = dynamic(() => import("@/components/admin/productos/CreateProductoDialog"));
 const EditProductoDialog = dynamic(() => import("@/components/admin/productos/EditProductoDialog"));
 const DeleteProductoDialog = dynamic(() => import("@/components/admin/productos/DeleteProductoDialog"));
-const StockDialog = dynamic(() => import("@/components/admin/productos/StockDialog"));
+// Este sería el nuevo diálogo para registrar entradas de fabricación
+const StockMovimientosDialog = dynamic(() => import("@/components/admin/productos/StockMovimientosDialog"));
 
 export default function ProductosPage() {
   const { can, isLoading: authLoading, usuario } = usePermissions();
@@ -38,14 +39,7 @@ export default function ProductosPage() {
   const pageSize = 10;
   const [stats, setStats] = useState({ total: 0, bajoStock: 0, agotados: 0, lineas: 0 });
 
-  const canManageFichas = useMemo(() => {
-    if (!usuario?.rol) return false;
-    const rolActual = usuario.rol.toLowerCase().trim()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    return rolActual === 'disenador' || rolActual === 'administrador';
-  }, [usuario]);
-
+  // Carga de categorías
   const loadCategorias = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/categorias');
@@ -61,9 +55,9 @@ export default function ProductosPage() {
       loadCategorias();
       refetch();
     }
-  }, [authLoading]);
+  }, [authLoading, can, loadCategorias, refetch]);
 
-  // Calcular stats cuando cambien los datos
+  // Actualizar estadísticas (El stock aquí es de solo lectura)
   useEffect(() => { 
     if (productos.length > 0) {
       setStats({
@@ -75,34 +69,27 @@ export default function ProductosPage() {
     }
   }, [productos, categorias]);
 
-  // Handlers memorizados para la tabla (Mejora técnica invisible)
+  // Handlers para la tabla
   const handleEdit = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("edit"); }, []);
   const handleDelete = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("delete"); }, []);
+  // Ahora "Stock" abre el diálogo de movimientos/fabricación, no edición directa
   const handleStock = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("stock"); }, []);
   const handleFicha = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("ficha"); }, []);
-
+  
   const handleExportExcel = () => {
-    if (filteredProducts.length === 0) return toast.error("No hay datos para exportar");
-    const dataToExport = filteredProducts.map(p => ({
-      "SKU": p.sku,
-      "Producto": p.nombre,
-      "Categoría": categorias.find(c => c.id === p.categoria_id)?.nombre || "Sin categoría",
-      "Stock": p.stock_actual,
-      "Precio": p.precio_base,
-      "Estado": p.stock_actual === 0 ? "Agotado" : p.stock_actual <= 5 ? "Bajo Stock" : "Disponible"
-    }));
-    exportToExcel(dataToExport as any, { filename: `Inventario_GUOR_${new Date().toISOString().split('T')[0]}` });
+    if (productos.length === 0) return toast.error("No hay productos para exportar");
+    exportInventarioGeneralExcel(productos);
     toast.success("Excel generado correctamente");
   };
 
-  const handleExportPDF = () => {
-    if (filteredProducts.length === 0) return toast.error("No hay datos para exportar");
-    exportToPDF(filteredProducts as any, categorias, { 
-      title: "REPORTE DE INVENTARIO - Modas y Estilos GUOR", 
-      filename: `Inventario_GUOR_${new Date().toISOString().split('T')[0]}`
-    });
-    toast.success("PDF generado correctamente"); 
-  };
+  const handleExportPDF = async () => {
+  try {
+    toast.info("Generando catálogo...");
+    await exportProductosToPDFWithImages(productos);
+  } catch (err: any) {
+    toast.error(err.message);
+  }
+};
 
   const filteredProducts = useMemo(() => {
     const search = searchTerm.toLowerCase().trim();
@@ -125,31 +112,34 @@ export default function ProductosPage() {
   if (authLoading) return <LoadingInventory />;
   if (!can('view', 'productos')) return <AccessDenied />;
 
+  const dataForTable = useMemo(() => {
+  return paginatedData.map(p => ({
+    ...p,
+    precio: p.precio || 0,
+    stock: p.stock || 0,
+    imagen: p.imagen || '',
+    categoria_id: p.categoria_id || 0,
+    estado: p.stock > 0 ? 'activo' : 'agotado',
+  }));
+}, [paginatedData]);
+
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* Header - Diseño Original */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Inventario de Productos
-            </h1>
-            <p className="text-gray-500 text-sm">Gestión unificada del catálogo Modas y Estilos GUOR</p>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Inventario de Productos</h1>
+            <p className="text-gray-500 text-sm font-medium">Control de existencias basado en producción y ventas</p>
           </div>
           
           <div className="flex items-center gap-3">
             {can('export', 'productos') && (
-              <>
-                <Button onClick={handleExportPDF} variant="outline" className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 transition-all">
-                  <FileText className="w-5 h-5" />
-                  <span className="hidden sm:inline">Exportar PDF</span>
-                </Button>
-                <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all">
-                  <FileSpreadsheet className="w-5 h-5" />
-                  <span className="hidden sm:inline">Exportar Excel</span>
-                </Button>
-              </>
+              <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all">
+                <FileSpreadsheet className="w-5 h-5" />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </Button>
             )}
 
             {can('create', 'productos') && (
@@ -160,20 +150,19 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Stats Grid - Diseño Original */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="TOTAL PRODUCTOS" value={stats.total} icon={<Package className="w-6 h-6" />} isActive={quickFilter === "todos"} color="pink" onClick={() => {setQuickFilter("todos"); setCurrentPage(0);}} />
-          <StatCard title="BAJO STOCK" value={stats.bajoStock} icon={<AlertTriangle className="w-6 h-6" />} isActive={quickFilter === "bajo_stock"} color="orange" onClick={() => {setQuickFilter("bajo_stock"); setCurrentPage(0);}} />
-          <StatCard title="AGOTADOS" value={stats.agotados} icon={<XCircle className="w-6 h-6" />} isActive={quickFilter === "agotados"} color="red" onClick={() => {setQuickFilter("agotados"); setCurrentPage(0);}} />
-          <StatCard title="CATEGORÍAS" value={stats.lineas} icon={<BarChart3 className="w-6 h-6" />} isActive={false} color="blue" onClick={() => {}} />
+          <StatCard title="TOTAL PRODUCTOS" value={stats.total} icon={<Package />} isActive={quickFilter === "todos"} color="pink" onClick={() => {setQuickFilter("todos"); setCurrentPage(0);}} />
+          <StatCard title="BAJO STOCK" value={stats.bajoStock} icon={<AlertTriangle />} isActive={quickFilter === "bajo_stock"} color="orange" onClick={() => {setQuickFilter("bajo_stock"); setCurrentPage(0);}} />
+          <StatCard title="AGOTADOS" value={stats.agotados} icon={<XCircle />} isActive={quickFilter === "agotados"} color="red" onClick={() => {setQuickFilter("agotados"); setCurrentPage(0);}} />
+          <StatCard title="LÍNEAS/CATEGORÍAS" value={stats.lineas} icon={<BarChart3 />} isActive={false} color="blue" onClick={() => {}} />
         </div>
 
-        {/* Filtros - Diseño Original */}
+        {/* Filtros */}
         <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
             <Input
-              type="text"
               placeholder="Buscar por nombre o SKU..."
               className="pl-10 h-11 border-gray-200 focus:ring-pink-500"
               value={searchTerm}
@@ -198,28 +187,26 @@ export default function ProductosPage() {
           </Button>
         </div>
 
-        {/* Tabla y Paginación */}
+        {/* Tabla */}
         {productosLoading ? (
-          <div className="h-64 flex flex-col items-center justify-center bg-white rounded-xl border animate-pulse">
-            <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-400 text-sm font-bold uppercase">Sincronizando...</p>
-          </div>
+          <LoadingInventory />
         ) : (
           <div className="space-y-4">
             <ProductosTable 
-              data={paginatedData} 
+              data={dataForTable} 
               categorias={categorias} 
               canEdit={can('edit', 'productos')}
               canDelete={can('delete', 'productos')}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              onStock={handleStock}
+              onStock={handleStock} // Abre movimientos
               onFicha={handleFicha}
             />
             
+            {/* Paginación */}
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
-              <p className="text-xs text-gray-500">
-                Mostrando <span className="font-bold text-gray-900">{paginatedData.length}</span> de <span className="font-bold text-gray-900">{filteredProducts.length}</span>
+              <p className="text-xs text-gray-500 font-medium">
+                Mostrando <span className="text-gray-900 font-bold">{paginatedData.length}</span> unidades de catálogo
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0}>
@@ -237,23 +224,31 @@ export default function ProductosPage() {
         )}
       </div>
 
-      {/* Modales */}
+      {/* Modales Lógicos */}
       {isCreateOpen && (
         <CreateProductoDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={refetch} categorias={categorias} />
       )}
 
       {selectedProducto && (
         <>
+          {/* El EditProductoDialog NO debe tener el campo stock editable */}
           {dialogMode === "edit" && (
             <EditProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} categorias={categorias} />
           )}
+          
+          {/* Este diálogo es el importante ahora: registra ingresos por fabricación */}
+          {dialogMode === "stock" && (
+            <StockMovimientosDialog 
+              isOpen={true} 
+              producto={selectedProducto} 
+              onClose={() => {setDialogMode(null); setSelectedProducto(null);}} 
+              onSuccess={refetch} 
+            />
+          )}
+
           {dialogMode === "delete" && (
             <DeleteProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
           )}
-          {dialogMode === "stock" && (
-            <StockDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
-          )}
-          
         </>
       )}
     </div>

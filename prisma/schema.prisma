@@ -1,16 +1,12 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  previewFeatures = ["multiSchema", "partialIndexes"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  schemas   = ["auth", "public"]
+  provider = "postgresql"
+  schemas  = ["auth", "public"]
 }
-
-// ==========================================
-// ESQUEMA: auth
-// ==========================================
 
 model audit_log_entries {
   instance_id String?   @db.Uuid
@@ -57,23 +53,23 @@ model custom_oauth_providers {
 }
 
 model flow_state {
-  id                     String                @id @db.Uuid
-  user_id                String?               @db.Uuid
+  id                     String                 @id @db.Uuid
+  user_id                String?                @db.Uuid
   auth_code              String?
   code_challenge_method  code_challenge_method?
   code_challenge         String?
   provider_type          String
   provider_access_token  String?
   provider_refresh_token String?
-  created_at             DateTime?             @db.Timestamptz(6)
-  updated_at             DateTime?             @db.Timestamptz(6)
+  created_at             DateTime?              @db.Timestamptz(6)
+  updated_at             DateTime?              @db.Timestamptz(6)
   authentication_method  String
-  auth_code_issued_at    DateTime?             @db.Timestamptz(6)
+  auth_code_issued_at    DateTime?              @db.Timestamptz(6)
   invite_token           String?
   referrer               String?
-  oauth_client_state_id  String?               @db.Uuid
-  linking_target_id      String?               @db.Uuid
-  email_optional         Boolean               @default(false)
+  oauth_client_state_id  String?                @db.Uuid
+  linking_target_id      String?                @db.Uuid
+  email_optional         Boolean                @default(false)
   saml_relay_states      saml_relay_states[]
 
   @@index([created_at(sort: Desc)])
@@ -154,6 +150,7 @@ model mfa_factors {
   users                        users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, phone], map: "unique_phone_factor_per_user")
+  @@unique([friendly_name, user_id], map: "mfa_factors_user_friendly_name_unique", where: raw("(TRIM(BOTH FROM friendly_name) <> ''::text)"))
   @@index([user_id, created_at], map: "factor_id_created_at_idx")
   @@index([user_id])
   @@schema("auth")
@@ -180,6 +177,7 @@ model oauth_authorizations {
   oauth_clients         oauth_clients              @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users                 users?                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([expires_at], map: "oauth_auth_pending_exp_idx", where: raw("(status = 'pending'::auth.oauth_authorization_status)"))
   @@schema("auth")
 }
 
@@ -216,17 +214,19 @@ model oauth_clients {
 }
 
 model oauth_consents {
-  id         String        @id @db.Uuid
-  user_id    String        @db.Uuid
-  client_id  String        @db.Uuid
-  scopes     String
-  granted_at DateTime      @default(now()) @db.Timestamptz(6)
-  revoked_at DateTime?     @db.Timestamptz(6)
+  id            String        @id @db.Uuid
+  user_id       String        @db.Uuid
+  client_id     String        @db.Uuid
+  scopes        String
+  granted_at    DateTime      @default(now()) @db.Timestamptz(6)
+  revoked_at    DateTime?     @db.Timestamptz(6)
   oauth_clients oauth_clients @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users      users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users         users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, client_id], map: "oauth_consents_user_client_unique")
   @@index([user_id, granted_at(sort: Desc)], map: "oauth_consents_user_order_idx")
+  @@index([client_id], map: "oauth_consents_active_client_idx", where: raw("(revoked_at IS NULL)"))
+  @@index([user_id, client_id], map: "oauth_consents_active_user_client_idx", where: raw("(revoked_at IS NULL)"))
   @@schema("auth")
 }
 
@@ -267,16 +267,16 @@ model refresh_tokens {
 }
 
 model saml_providers {
-  id              String        @id @db.Uuid
-  sso_provider_id String        @db.Uuid
-  entity_id       String        @unique
-  metadata_xml    String
-  metadata_url    String?
+  id                String        @id @db.Uuid
+  sso_provider_id   String        @db.Uuid
+  entity_id         String        @unique
+  metadata_xml      String
+  metadata_url      String?
   attribute_mapping Json?
-  created_at      DateTime?     @db.Timestamptz(6)
-  updated_at      DateTime?     @db.Timestamptz(6)
-  name_id_format  String?
-  sso_providers   sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  created_at        DateTime?     @db.Timestamptz(6)
+  updated_at        DateTime?     @db.Timestamptz(6)
+  name_id_format    String?
+  sso_providers     sso_providers @relation(fields: [sso_provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([sso_provider_id])
   @@schema("auth")
@@ -334,6 +334,7 @@ model sessions {
   @@schema("auth")
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model sso_domains {
   id              String        @id @db.Uuid
   sso_provider_id String        @db.Uuid
@@ -346,6 +347,7 @@ model sso_domains {
   @@schema("auth")
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model sso_providers {
   id                String              @id @db.Uuid
   resource_id       String?
@@ -360,20 +362,21 @@ model sso_providers {
   @@schema("auth")
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model users {
   instance_id                 String?                @db.Uuid
   id                          String                 @id @db.Uuid
   aud                         String?                @db.VarChar(255)
   role                        String?                @db.VarChar(255)
-  email                       String?                @db.VarChar(255)
+  email                       String?                @unique(map: "users_email_partial_key", where: raw("(is_sso_user = false)")) @db.VarChar(255)
   encrypted_password          String?                @db.VarChar(255)
   email_confirmed_at          DateTime?              @db.Timestamptz(6)
   invited_at                  DateTime?              @db.Timestamptz(6)
-  confirmation_token          String?                @db.VarChar(255)
+  confirmation_token          String?                @unique(map: "confirmation_token_idx", where: raw("((confirmation_token)::text !~ '^[0-9 ]*$'::text)")) @db.VarChar(255)
   confirmation_sent_at        DateTime?              @db.Timestamptz(6)
-  recovery_token              String?                @db.VarChar(255)
+  recovery_token              String?                @unique(map: "recovery_token_idx", where: raw("((recovery_token)::text !~ '^[0-9 ]*$'::text)")) @db.VarChar(255)
   recovery_sent_at            DateTime?              @db.Timestamptz(6)
-  email_change_token_new      String?                @db.VarChar(255)
+  email_change_token_new      String?                @unique(map: "email_change_token_new_idx", where: raw("((email_change_token_new)::text !~ '^[0-9 ]*$'::text)")) @db.VarChar(255)
   email_change                String?                @db.VarChar(255)
   email_change_sent_at        DateTime?              @db.Timestamptz(6)
   last_sign_in_at             DateTime?              @db.Timestamptz(6)
@@ -388,10 +391,10 @@ model users {
   phone_change_token          String?                @default("") @db.VarChar(255)
   phone_change_sent_at        DateTime?              @db.Timestamptz(6)
   confirmed_at                DateTime?              @default(dbgenerated("LEAST(email_confirmed_at, phone_confirmed_at)")) @db.Timestamptz(6)
-  email_change_token_current  String?                @default("") @db.VarChar(255)
+  email_change_token_current  String?                @unique(map: "email_change_token_current_idx", where: raw("((email_change_token_current)::text !~ '^[0-9 ]*$'::text)")) @default("") @db.VarChar(255)
   email_change_confirm_status Int?                   @default(0) @db.SmallInt
   banned_until                DateTime?              @db.Timestamptz(6)
-  reauthentication_token      String?                @default("") @db.VarChar(255)
+  reauthentication_token      String?                @unique(map: "reauthentication_token_idx", where: raw("((reauthentication_token)::text !~ '^[0-9 ]*$'::text)")) @default("") @db.VarChar(255)
   reauthentication_sent_at    DateTime?              @db.Timestamptz(6)
   is_sso_user                 Boolean                @default(false)
   deleted_at                  DateTime?              @db.Timestamptz(6)
@@ -404,9 +407,12 @@ model users {
   sessions                    sessions[]
   webauthn_challenges         webauthn_challenges[]
   webauthn_credentials        webauthn_credentials[]
+  clientes                    clientes?
+  ordenes                     ordenes[]
+  pedidos                     pedidos[]
   precio_historico            precio_historico[]
   usuarios                    usuarios?
-  clientes                    clientes[]
+  ventas                      ventas[]
 
   @@index([instance_id])
   @@index([is_anonymous])
@@ -448,26 +454,22 @@ model webauthn_credentials {
   @@schema("auth")
 }
 
-// ==========================================
-// ESQUEMA: public
-// ==========================================
-
 model categorias {
   id          BigInt      @id @default(autoincrement())
   nombre      String      @unique
   descripcion String?
-  created_at  DateTime    @default(now())
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
   orden       BigInt?
   activo      Boolean?
   imagen      String?
-  updated_at  DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?   @default(now()) @db.Timestamptz(6)
   productos   productos[]
 
   @@schema("public")
 }
 
 model clientes {
-  id                  String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                  BigInt                @id(map: "Clientes_pkey") @default(autoincrement())
   ruc                 BigInt
   razon_social        String?               @db.VarChar
   email               String?               @db.VarChar
@@ -482,6 +484,7 @@ model clientes {
   cotizaciones        cotizaciones[]
   direcciones_cliente direcciones_cliente[]
   ordenes             ordenes[]
+  pedidos             pedidos[]
   usuarios            usuarios[]
 
   @@index([auth_id], map: "idx_clientes_auth_id")
@@ -497,7 +500,6 @@ model comprobantes {
   pdf_url     String?
   xml_url     String?
   emitido_en  DateTime? @default(now()) @db.Timestamptz(6)
-  ordenes     ordenes   @relation(fields: [orden_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -507,57 +509,53 @@ model confecciones {
   pedido_id     BigInt
   taller_id     BigInt
   estado        EstadoConfeccion @default(corte)
-  fecha_inicio  DateTime
-  fecha_fin     DateTime?
+  fecha_inicio  DateTime         @db.Timestamptz(6)
+  fecha_fin     DateTime?        @db.Timestamptz(6)
   observaciones String?
-  created_at    DateTime         @default(now())
-  updated_at    DateTime
+  created_at    DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime         @db.Timestamptz(6)
   talleres      talleres         @relation(fields: [taller_id], references: [id])
 
   @@schema("public")
 }
 
 model cotizacion_items {
-  id                 BigInt              @id @default(autoincrement())
-  cotizacion_id      BigInt
-  producto_id        BigInt
-  variante_id        BigInt?
-  precio_snapshot    Decimal             @db.Decimal(10, 2)
-  cantidad           Int
-  talla              String?
-  color              String?
-  subtotal           Decimal             @db.Decimal(12, 2)
-  moq_aplicado       Int                 @default(400)
-  cotizaciones       cotizaciones        @relation(fields: [cotizacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  productos          productos           @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  variantes_producto variantes_producto? @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                       BigInt              @id @default(autoincrement())
+  cotizacion_id            BigInt?
+  producto_id              BigInt?
+  variante_id              BigInt?
+  cantidad                 Int
+  precio_unitario_snapshot Decimal             @db.Decimal(12, 2)
+  subtotal                 Decimal             @db.Decimal(12, 2)
+  cotizaciones             cotizaciones?       @relation(fields: [cotizacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  productos                productos?          @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variantes_producto       variantes_producto? @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model cotizaciones {
-  id                   BigInt             @id @default(autoincrement())
-  numero               String             @unique
-  cliente_id           String?            @db.Uuid
-  estado               String             @default("borrador")
-  subtotal             Decimal            @default(0) @db.Decimal(12, 2)
-  descuento_pct        Decimal            @default(0) @db.Decimal(5, 2)
-  descuento_monto      Decimal            @default(0) @db.Decimal(12, 2)
-  igv                  Decimal            @default(0) @db.Decimal(12, 2)
-  total                Decimal            @default(0) @db.Decimal(12, 2)
-  notas                String?
-  valida_hasta         DateTime           @db.Date
-  pdf_url              String?
-  convertida_en        BigInt?
-  origen_cotizacion_id BigInt?
-  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime?          @default(now()) @db.Timestamptz(6)
-  cotizacion_items     cotizacion_items[]
-  clientes             clientes?          @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  ordenes              ordenes?           @relation(fields: [convertida_en], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cotizaciones         cotizaciones?      @relation("cotizacionesTocotizaciones", fields: [origen_cotizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_cotizaciones   cotizaciones[]     @relation("cotizacionesTocotizaciones")
-  reservas_stock       reservas_stock[]
+  id                 BigInt             @id @default(autoincrement())
+  numero             String             @unique
+  pedido_id          BigInt?
+  cliente_id         BigInt?
+  estado             String?            @default("borrador")
+  subtotal           Decimal?           @default(0) @db.Decimal(12, 2)
+  igv                Decimal?           @default(0) @db.Decimal(12, 2)
+  total              Decimal?           @default(0) @db.Decimal(12, 2)
+  valida_hasta       DateTime           @db.Date
+  created_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  metodo_pago        MetodoPago?
+  direccion_despacho String?
+  id_regla_descuento BigInt?
+  monto_descuento    Decimal?           @default(0) @db.Decimal(12, 2)
+  costo_envio        Decimal?           @default(0) @db.Decimal(12, 2)
+  cotizacion_items   cotizacion_items[]
+  clientes           clientes?          @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reglas_descuento   reglas_descuento?  @relation(fields: [id_regla_descuento], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pedidos            pedidos?           @relation(fields: [pedido_id], references: [id], onUpdate: NoAction)
+  ordenes            ordenes[]
 
   @@schema("public")
 }
@@ -572,37 +570,21 @@ model despachos {
   updated_at        DateTime
   usuario_id        BigInt
   estado            EstadoDespacho @default(pendiente)
-  pedidos           pedidos        @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   usuarios          usuarios       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model detalles_orden {
-  id              BigInt          @id @default(autoincrement())
-  orden_id        BigInt
-  producto_id     BigInt
-  cantidad        Int
-  precio_unitario Decimal         @db.Decimal(12, 2)
-  subtotal        Decimal         @db.Decimal(12, 2)
-  talla           TallaProductos?
-  color           String?
-  ordenes         ordenes         @relation(fields: [orden_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  productos       productos       @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detalles_orden_producto_fkey")
 
   @@schema("public")
 }
 
 model direcciones_cliente {
   id           BigInt    @id @default(autoincrement())
-  cliente_id   String?   @db.Uuid
+  cliente_id   BigInt
   alias        String
   direccion    String
   ciudad       String?
   departamento String?
   es_principal Boolean?  @default(false)
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  clientes     clientes? @relation(fields: [cliente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  clientes     clientes  @relation(fields: [cliente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -617,6 +599,7 @@ model insumo {
   precio_unitario        Decimal?                 @db.Decimal(10, 2)
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   proveedor              String?
+  detalle_ficha_insumos  detalle_ficha_insumos[]
   movimientos_inventario movimientos_inventario[]
 
   @@schema("public")
@@ -639,49 +622,39 @@ model movimientos_inventario {
 }
 
 model ordenes {
-  id             BigInt           @id @default(autoincrement())
-  user_id        BigInt?
-  cliente_id     String?          @db.Uuid
-  subtotal       Decimal          @default(0) @db.Decimal(12, 2)
-  impuestos      Decimal          @default(0) @db.Decimal(12, 2)
-  total          Decimal          @default(0) @db.Decimal(12, 2)
-  estado         EstadoOrden?     @default(solicitado)
-  metodo_pago    MetodoPago?
-  payment_id     String?
-  notas_internas String?
-  created_at     DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  comprobantes   comprobantes[]
-  cotizaciones   cotizaciones[]
-  detalles_orden detalles_orden[]
-  cliente        clientes?        @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users          usuarios?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  pedidos        pedidos[]
-  reservas_stock reservas_stock[]
-  ventas         ventas[]
+  id                      BigInt        @id @default(autoincrement())
+  cotizacion_id           BigInt?
+  cliente_id              BigInt?
+  user_id                 String?       @db.Uuid
+  estado                  EstadoOrden?  @default(solicitado)
+  metodo_pago             MetodoPago?
+  total_pagado            Decimal?      @default(0) @db.Decimal(12, 2)
+  created_at              DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?     @default(now()) @db.Timestamptz(6)
+  fecha_prometida_entrega DateTime?     @db.Date
+  estado_pago             String?       @default("pendiente")
+  cliente                 clientes?     @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cotizaciones            cotizaciones? @relation(fields: [cotizacion_id], references: [id], onUpdate: NoAction)
+  users                   users?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
 
 model pedidos {
-  id                       BigInt           @id @default(autoincrement())
-  fecha_pedido             DateTime?        @default(now()) @db.Timestamptz(6)
-  estado                   EstadoPedido?    @default(pendiente)
-  prioridad                PrioridadPedido? @default(normal)
-  created_by               String?          @default(dbgenerated("auth.uid()")) @db.Uuid
-  created_at               DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at               DateTime?        @db.Timestamptz(6)
-  updated_by               String?          @default(dbgenerated("auth.uid()")) @db.Uuid
-  orden_id                 BigInt?
-  producto_id              BigInt?
-  talla                    TallaProductos?
-  cantidad                 Int?             @default(1)
-  precio_unitario          Decimal?         @default(0) @db.Decimal(12, 2)
-  nombre_producto_snapshot String?
-  especificaciones         Json?
-  despachos                despachos[]
-  ordenes                  ordenes?         @relation(fields: [orden_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  productos                productos?       @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id             BigInt           @id @default(autoincrement())
+  cliente_id     BigInt?
+  estado         EstadoPedido?    @default(pendiente)
+  prioridad      PrioridadPedido? @default(normal)
+  notas_cliente  String?
+  created_by     String?          @default(dbgenerated("auth.uid()")) @db.Uuid
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  notas_pedido   String?
+  total_estimado Decimal?         @default(0) @db.Decimal(12, 2)
+  cotizaciones   cotizaciones[]
+  pedido_items   pedido_items[]
+  clientes       clientes?        @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users          users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -704,19 +677,19 @@ model productos {
   id                     BigInt                   @id @default(autoincrement())
   nombre                 String
   descripcion            String?
-  created_at             DateTime                 @default(now())
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   imagen                 String?
   precio                 Float
   stock                  Int                      @default(0)
-  updated_at             DateTime
+  updated_at             DateTime                 @db.Timestamptz(6)
   estado                 EstadoProducto           @default(activo)
   sku                    String                   @unique
   destacado              Boolean?                 @default(false)
   categoria_id           BigInt?
   cotizacion_items       cotizacion_items[]
-  detalles_orden         detalles_orden[]
+  fichas_tecnicas        fichas_tecnicas[]
   movimientos_inventario movimientos_inventario[]
-  pedidos                pedidos[]
+  pedido_items           pedido_items[]
   precio_historico       precio_historico[]
   categorias             categorias?              @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variantes_producto     variantes_producto[]
@@ -727,12 +700,13 @@ model productos {
 }
 
 model reglas_descuento {
-  id            BigInt  @id @default(autoincrement())
+  id            BigInt         @id @default(autoincrement())
   nombre        String
   cantidad_min  Int
   cantidad_max  Int?
-  descuento_pct Decimal @db.Decimal(5, 2)
-  aplica_a      String? @default("global")
+  descuento_pct Decimal        @db.Decimal(5, 2)
+  aplica_a      String?        @default("global")
+  cotizaciones  cotizaciones[]
 
   @@schema("public")
 }
@@ -745,8 +719,6 @@ model reservas_stock {
   cantidad           Int
   expira_en          DateTime           @default(dbgenerated("(now() + '00:30:00'::interval)")) @db.Timestamptz(6)
   estado             String             @default("activa")
-  cotizaciones       cotizaciones?      @relation(fields: [cotizacion_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  ordenes            ordenes?           @relation(fields: [orden_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variantes_producto variantes_producto @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@schema("public")
@@ -758,8 +730,8 @@ model talleres {
   direccion    String
   telefono     String
   email        String?             @unique
-  created_at   DateTime            @default(now())
-  updated_at   DateTime
+  created_at   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime            @db.Timestamptz(6)
   ruc          String              @unique
   contacto     String
   especialidad EspecialidadTaller?
@@ -781,21 +753,20 @@ model usuarios {
   auth_id                String?                  @unique @db.Uuid
   ultimo_acceso          DateTime?                @db.Timestamptz(6)
   created_by             String?                  @db.Uuid
-  cliente_id             String?                  @db.Uuid
   avatar_url             String?
-  cliente                clientes?                @relation(fields: [cliente_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  users                  users?                   @relation(fields: [auth_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  movimientos_inventario movimientos_inventario[]
-  ventas                 ventas[]
-  ordenes                ordenes[]
+  cliente_id             BigInt?
   despachos              despachos[]
+  movimientos_inventario movimientos_inventario[]
+  users                  users?                   @relation(fields: [auth_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cliente                clientes?                @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([cliente_id], map: "idx_usuarios_cliente_id")
   @@schema("public")
 }
 
 model variantes_producto {
-  id               BigInt             @id @default(autoincrement())
-  producto_id      BigInt
+  id               Int                @id @default(autoincrement())
+  producto_id      Int
   nombre           String             @db.VarChar(100)
   color            ColorPrenda
   talla            TallaProductos
@@ -807,18 +778,20 @@ model variantes_producto {
   created_at       DateTime?          @default(now()) @db.Timestamptz(6)
   updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
   cotizacion_items cotizacion_items[]
+  pedido_items     pedido_items[]
   reservas_stock   reservas_stock[]
   productos        productos          @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([producto_id, talla, color], map: "unique_producto_talla_color")
   @@index([producto_id], map: "idx_variantes_producto_id")
+  @@index([talla, color], map: "idx_variantes_busqueda_cliente", where: raw("(estado = 'activo'::\"EstadoProducto\")"))
   @@schema("public")
 }
 
 model ventas {
   id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orden_id           BigInt
-  vendedor_id        BigInt?
+  vendedor_id        String?          @default(dbgenerated("auth.uid()")) @db.Uuid
   subtotal           Decimal          @default(0) @db.Decimal(12, 2)
   impuestos          Decimal          @default(0) @db.Decimal(12, 2)
   total              Decimal          @default(0) @db.Decimal(12, 2)
@@ -827,34 +800,95 @@ model ventas {
   created_at         DateTime?        @default(now()) @db.Timestamptz(6)
   updated_at         DateTime?        @default(now()) @db.Timestamptz(6)
   tipo_comprobante   TipoComprobante?
-  vendedor           usuarios?        @relation(fields: [vendedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  ordenes            ordenes          @relation(fields: [orden_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendedor           users?           @relation(fields: [vendedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)], map: "idx_ventas_fecha_pago")
   @@index([orden_id], map: "idx_ventas_orden_link")
   @@schema("public")
 }
 
-// ==========================================
-// ENUMS
-// ==========================================
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model detalle_ficha_insumos {
+  id               BigInt           @id @default(autoincrement())
+  id_ficha         BigInt?
+  id_insumo        BigInt?
+  consumo_unitario Float?           @db.Real
+  merma_permitida  Float?           @db.Real
+  created_at       DateTime         @default(now()) @db.Timestamptz(6)
+  fichas_tecnicas  fichas_tecnicas? @relation(fields: [id_ficha], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  insumo           insumo?          @relation(fields: [id_insumo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ficha_medidas {
+  id              BigInt           @id @default(autoincrement())
+  id_ficha        BigInt?
+  punto_medida    String?          @db.VarChar
+  talla           String?          @db.VarChar
+  valor_cm        Float?           @db.Real
+  tolerancia      Float?           @db.Real
+  created_at      DateTime         @default(now()) @db.Timestamptz(6)
+  fichas_tecnicas fichas_tecnicas? @relation(fields: [id_ficha], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model fichas_tecnicas {
+  id                    BigInt                  @id @default(autoincrement())
+  id_producto           BigInt?
+  version               String?                 @db.VarChar
+  descripcion_detallada String?
+  sam_total             Float?                  @db.Real
+  costo_estimado        Float?                  @db.Real
+  imagen_geometral      String?                 @db.VarChar
+  estado                estado_ficha?
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  detalle_ficha_insumos detalle_ficha_insumos[]
+  ficha_medidas         ficha_medidas[]
+  productos             productos?              @relation(fields: [id_producto], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("fichas-tecnicas")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pedido_items {
+  id                 BigInt              @id @default(autoincrement())
+  pedido_id          BigInt?
+  producto_id        BigInt?
+  variante_id        BigInt?
+  cantidad           Int
+  especificaciones   Json?
+  pedidos            pedidos?            @relation(fields: [pedido_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  productos          productos?          @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variantes_producto variantes_producto? @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
 
 enum aal_level {
   aal1
   aal2
   aal3
+
   @@schema("auth")
 }
 
 enum code_challenge_method {
   s256
   plain
+
   @@schema("auth")
 }
 
 enum factor_status {
   unverified
   verified
+
   @@schema("auth")
 }
 
@@ -862,6 +896,7 @@ enum factor_type {
   totp
   webauthn
   phone
+
   @@schema("auth")
 }
 
@@ -870,23 +905,27 @@ enum oauth_authorization_status {
   approved
   denied
   expired
+
   @@schema("auth")
 }
 
 enum oauth_client_type {
   public
   confidential
+
   @@schema("auth")
 }
 
 enum oauth_registration_type {
   dynamic
   manual
+
   @@schema("auth")
 }
 
 enum oauth_response_type {
   code
+
   @@schema("auth")
 }
 
@@ -897,6 +936,7 @@ enum one_time_token_type {
   email_change_token_new
   email_change_token_current
   phone_change_token
+
   @@schema("auth")
 }
 
@@ -921,6 +961,7 @@ enum ColorPrenda {
   Crema
   Celeste
   Amarillo_lim_n @map("Amarillo limón")
+
   @@schema("public")
 }
 
@@ -932,12 +973,14 @@ enum EspecialidadTaller {
   costura
   acabados
   otro
+
   @@schema("public")
 }
 
 enum EstadoCategoria {
   activo
   inactivo
+
   @@schema("public")
 }
 
@@ -946,6 +989,7 @@ enum EstadoCliente {
   inactivo
   suspendido
   potencial
+
   @@schema("public")
 }
 
@@ -954,14 +998,18 @@ enum EstadoConfeccion {
   confeccionando
   remallado
   terminado
+
   @@schema("public")
 }
 
 enum EstadoCotizacion {
-  pendiente
-  aceptada
+  borrador
+  enviada
+  aprobada
   rechazada
   expirada
+  convertida
+
   @@schema("public")
 }
 
@@ -969,6 +1017,9 @@ enum EstadoDespacho {
   pendiente
   en_ruta
   entregado
+  preparando
+  incidencia
+
   @@schema("public")
 }
 
@@ -980,6 +1031,7 @@ enum EstadoOrden {
   en_proceso
   finalizado
   cancelado
+
   @@schema("public")
 }
 
@@ -988,6 +1040,7 @@ enum EstadoPago {
   pagado_parcial
   pagado
   vencido
+
   @@schema("public")
 }
 
@@ -995,9 +1048,10 @@ enum EstadoPedido {
   pendiente
   corte
   costura
-   acabado
+  acabado
   completado
   cancelado
+
   @@schema("public")
 }
 
@@ -1006,6 +1060,7 @@ enum EstadoProducto {
   inactivo
   agotado
   descontinuado
+
   @@schema("public")
 }
 
@@ -1013,6 +1068,7 @@ enum EstadoTaller {
   activo
   inactivo
   suspendido
+
   @@schema("public")
 }
 
@@ -1020,6 +1076,7 @@ enum EstadoUsuario {
   activo
   inactivo
   suspendido
+
   @@schema("public")
 }
 
@@ -1030,6 +1087,7 @@ enum MetodoPago {
   plin
   visa
   mastercard
+
   @@schema("public")
 }
 
@@ -1038,6 +1096,7 @@ enum PrioridadPedido {
   normal
   alta
   urgente
+
   @@schema("public")
 }
 
@@ -1048,12 +1107,18 @@ enum TallaProductos {
   L
   XL
   XXL
+
+  // 28 @map("28")
+  // 30 @map("30")
+  // 32 @map("32")
+  // 34 @map("34")
   @@schema("public")
 }
 
 enum TipoCategoria {
   producto
   insumo
+
   @@schema("public")
 }
 
@@ -1061,6 +1126,7 @@ enum TipoCliente {
   corporativo
   minorista
   distribuidor
+
   @@schema("public")
 }
 
@@ -1068,6 +1134,7 @@ enum TipoComprobante {
   boleta
   factura
   nota_venta
+
   @@schema("public")
 }
 
@@ -1077,6 +1144,7 @@ enum TipoInsumo {
   avio
   boton
   cierre
+
   @@schema("public")
 }
 
@@ -1084,6 +1152,7 @@ enum TipoMovimiento {
   entrada
   salida
   ajuste
+
   @@schema("public")
 }
 
@@ -1094,16 +1163,28 @@ enum UnidadMedida {
   docenas
   kilogramos
   set
+
   @@schema("public")
 }
 
 enum rol {
-  gerente_general
   administrador
   cortador
   dise_ador            @map("diseñador")
   recepcionista
   ayudante
   representante_taller
+  cliente
+  gerente
+
+  @@schema("public")
+}
+
+enum estado_ficha {
+  borrador
+  en_revision
+  aprobada
+  obsoleta
+
   @@schema("public")
 }

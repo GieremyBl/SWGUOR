@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  AreaChart, Area, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   TrendingUp, Users, AlertTriangle, ShoppingCart,
   RefreshCw, Package, Clock, CheckCircle2,
   AlertCircle, ArrowRight, Eye,
 } from 'lucide-react';
-import { Insumo, EstadoOrden, Orden, OrdenConCliente } from '@/types';
+import { Insumo, EstadoOrden, OrdenConCliente } from '@/types';
 import { ESTADOS_ORDEN, ESTADOS_PAGO, PRIORIDADES_PEDIDO, ROLES_USUARIO, TIPOS_CLIENTE, UNIDADES_MEDIDA } from '@/lib/constants/estados';
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { EstadoBadge } from '@/components/portal/EstadoBadge';
 import { formatCurrency, formatDateLong } from '@/lib/helpers/format-helpers';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
 export default function DetalleCotizacionPage() {
@@ -25,7 +25,7 @@ export default function DetalleCotizacionPage() {
 
     const fetchDetalle = async () => {
       try {
-        const { data, error } = await getSupabaseBrowserClient()
+        const { data, error } = await supabase
           .from('cotizaciones')
           .select(`
             *,
@@ -34,7 +34,7 @@ export default function DetalleCotizacionPage() {
               producto:productos(nombre, sku, imagen_url)
             )
           `)
-          .eq('id', id) // Ahora TS sabe que 'id' es un string
+          .eq('id', Number(id))
           .single();
 
         if (error) throw error;

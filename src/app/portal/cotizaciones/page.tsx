@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Download, RefreshCw, Eye, PenLine, FileText } from 'lucide-react';
 import { usePortal } from '../_contexts/PortalContext';
 import { EstadoBadge } from '@/components/portal/EstadoBadge';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 // Importación actualizada según los nuevos helpers
 import { formatCurrency, formatDateLong, formatDocumentNumber } from '@/lib/helpers/format-helpers';
 import { toast } from 'sonner';
@@ -43,7 +43,7 @@ export default function HistorialCotizacionesPage() {
     if (!cliente) return;
     const fetchCotizaciones = async () => {
       setLoading(true);
-      let query = getSupabaseBrowserClient()
+      let query = supabase
         .from('cotizaciones')
         .select('id, numero, total, estado, created_at, valida_hasta')
         .eq('cliente_id', cliente.id)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Search, Users, RefreshCw, UserCheck, UserMinus, ChevronLeft, ChevronRight, ShieldCheck, Plus, ShieldAlert } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -39,7 +39,6 @@ export default function UsuariosPage() {
 
   const loadStats = useCallback(async () => {
     try {
-      const supabase = getSupabaseBrowserClient();
       const [resTotal, resActivos, resInactivos, resAdmins, resTaller] = await Promise.all([
         supabase.from("usuarios").select("*", { count: 'exact', head: true }),
         supabase.from("usuarios").select("*", { count: 'exact', head: true }).eq("estado", "activo"),
@@ -61,7 +60,6 @@ export default function UsuariosPage() {
   const fetchUsuarios = useCallback(async () => {
     setLoading(true);
     try {
-      const supabase = getSupabaseBrowserClient();
       let query = supabase.from("usuarios").select("*", { count: 'exact' });
       
       // Filtro de estado (activo/inactivo)
@@ -87,7 +85,6 @@ export default function UsuariosPage() {
   // Manejadores de acciones
   const handleToggleStatus = async (usuario: any) => {
     try {
-      const supabase = getSupabaseBrowserClient();
       const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
       const { error } = await (supabase.from("usuarios") as any)
         .update({ estado: nuevoEstado })

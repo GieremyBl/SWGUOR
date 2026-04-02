@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { Usuario } from '@/types';
 import { useRouter } from 'next/navigation';
@@ -69,7 +69,6 @@ export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const supabase = getSupabaseBrowserClient();
       
       const [productosRes, pedidosRes] = await Promise.all([
         supabase
@@ -78,43 +77,50 @@ export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
           .order('created_at', { ascending: false }),
         supabase
           .from('pedidos')
-          .select('*')
+          .select('id, nombre_producto_snapshot, cantidad, updated_at, prioridad, estado, created_at') // Seleccionamos campos específicos
           .in('estado', ['pendiente', 'corte', 'costura'])
           .order('created_at', { ascending: false })
           .limit(4)
       ]);
 
-      const productosData = (productosRes.data as DBProducto[]) || [];
+      if (productosRes.error) throw productosRes.error;
+      if (pedidosRes.error) throw pedidosRes.error;
+
+      // Conversión segura: primero a unknown, luego a nuestro tipo
+      const productosData = (productosRes.data as unknown as DBProducto[]) || [];
       const productosCount = productosRes.count || 0;
 
-      // Usamos productosCount como base para diseñosCompletados
       setStats({
         productosActivos: productosCount,
-        fichasPendientes: 0,          // ajusta según tu lógica real
+        fichasPendientes: 0,
         pedidosAsignados: pedidosRes.data?.length || 0,
         diseñosCompletados: productosCount
       });
 
-      setActiveProducts(productosData.slice(0, 6).map((p: DBProducto) => ({
+      setActiveProducts(productosData.slice(0, 6).map((p) => ({
         id: p.id,
         name: p.nombre || 'Sin nombre',
-        client: p.categoria_id ? `Cat. ${p.categoria_id}` : 'General', // categoria_id en lugar de categoria
+        client: p.categoria_id ? `Cat. ${p.categoria_id}` : 'General',
         status: 'Activo',
         progress: 50,
         priority: 'normal'
       })));
 
-      const pedidosData = (pedidosRes.data as DBPedido[]) || [];
-      setAssignedOrders(pedidosData.map((pedido: DBPedido) => ({
+      // Aquí aplicamos la corrección del error 2352
+      const pedidosDataRaw = pedidosRes.data || [];
+      const pedidosData = (pedidosDataRaw as unknown as DBPedido[]);
+
+      setAssignedOrders(pedidosData.map((pedido) => ({
         id: pedido.id,
-        product: pedido.nombre_producto_snapshot || 'Sin descripción', // campo correcto
+        product: pedido.nombre_producto_snapshot || 'Sin descripción',
         quantity: pedido.cantidad || 0,
-        deadline: calculateDeadline(pedido.updated_at),                // campo correcto
+        deadline: calculateDeadline(pedido.updated_at),
         status: pedido.prioridad === 'alta' ? 'Urgente' : 'Normal'
       })));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
+      toast.error("Error de conexión", { description: error.message });
     } finally {
       setLoading(false);
     }
@@ -135,7 +141,6 @@ export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
     setUploadingId(productoId);
     const uploadPromise = async () => {
       try {
-        const supabase = getSupabaseBrowserClient();
         const fileExt = file.name.split('.').pop();
         const fileName = `${productoId}-${Date.now()}.${fileExt}`;
         const filePath = `fichas/${fileName}`;
@@ -162,7 +167,6 @@ export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
 
   const handleViewFile = async (productoId: number) => {
     try {
-      const supabase = getSupabaseBrowserClient();
       
       const { data, error } = await supabase
       .from('productos')

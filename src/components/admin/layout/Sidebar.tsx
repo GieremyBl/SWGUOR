@@ -10,7 +10,7 @@ import {
   DollarSign, Bell, Grid3x3, ChevronDown, Settings, User,
   BarChart3, Crown
 } from 'lucide-react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 import type { Usuario } from '@/types';
 import { LucideIcon } from 'lucide-react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
@@ -128,7 +128,6 @@ export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
   }, [can]);
 
   const handleLogout = async () => {
-    const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.replace('/auth/login');
   };
