@@ -188,7 +188,7 @@ export default function RegisterPage() {
               </div>
               <div className="relative group">
                 <Phone
-                  size={17}
+                  size={9}
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
                 />
                 <input
