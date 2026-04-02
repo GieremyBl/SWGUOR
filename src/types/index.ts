@@ -29,10 +29,10 @@ export type MetodoPago = | 'efectivo' | 'yape' | 'plin' | 'transferencia_bcp' | 
 export type TipoInsumo = 'materia_prima' | 'producto_terminado' | 'empaque' | string;
 
 export type RolUsuario = 
-  | 'gerente_general'
+  | 'gerente'
   | 'administrador' 
   | 'cortador' 
-  | 'diseñador' 
+  | 'disenador' 
   | 'recepcionista' 
   | 'ayudante' 
   | 'representante_taller' 
@@ -46,12 +46,15 @@ export type EstadoUsuario = 'activo' | 'inactivo' | 'suspendido';
 
 export interface Usuario {
   id: number;
-  auth_id: string; // El UUID de Supabase Auth
+  auth_id: string;
   nombre_completo: string;
+  email: string;
+  telefono?: string;
+  avatar_url?: string;
   rol: RolUsuario;
   estado: EstadoUsuario;
-  email?: string;
-  avatar_url?: string;
+  created_at: string;
+  ultimo_acceso?: string;
 }
 
 // Basada en tu esquema de tabla public.ordenes
@@ -91,11 +94,11 @@ export interface Insumo {
 }
 
 export interface ClienteB2B {
- id: string;
-  razon_social: string;
-  ruc: string;
+  id: number;
+  razon_social: string | null;
+  ruc: number;
   email?: string;
-  telefono?: string;
+  telefono?: number;
   direccion?: string;
   activo: EstadoCliente; 
   created_at: string;

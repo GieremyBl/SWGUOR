@@ -1170,7 +1170,7 @@ enum UnidadMedida {
 enum rol {
   administrador
   cortador
-  dise_ador            @map("diseñador")
+  disenador
   recepcionista
   ayudante
   representante_taller

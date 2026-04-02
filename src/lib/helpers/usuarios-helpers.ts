@@ -1,120 +1,73 @@
-import { createClient } from '@/lib/supabase/client/client';
 import { supabase } from '@/lib/supabase/client';
 import type { Usuario, ClienteB2B } from '@/types';
 
 /**
- * Obtiene los datos detallados de un usuario para el panel administrativo
+ * Obtiene los datos detallados de un usuario
+ * El ID de la tabla usuarios es numérico.
  */
 export const getUsuarioData = async (userId: string) => {
-  const supabase = supabase();
-
   try {
     const { data, error } = await supabase
       .from("usuarios")
-      .select(`
-        id,
-        nombre_completo,
-        email,
-        telefono,
-        avatar_url,
-        rol,
-        estado,
-        created_at,
-        ultimo_acceso
-      `)
-      .eq("id", userId)
+      .select(`*`)
+      .eq("id", Number(userId))
       .single();
 
     if (error) throw error;
-    return { data, error: null };
+    // Retornamos data casteado a Usuario para asegurar el tipado en el componente
+    return { data: data as Usuario, error: null };
   } catch (error: any) {
-    console.error("Error en getUsuarioData:", error.message);
     return { data: null, error };
   }
 };
 
 /**
- * Actualiza la información del perfil del usuario (nombre, teléfono, avatar)
+ * Actualiza la información del perfil del usuario
  */
 export const updateUsuario = async (userId: string, updates: Partial<Usuario>) => {
-  const supabase = supabase();
-
   try {
-    const { data, error } = await (supabase.from("usuarios") as any)
+    const { data, error } = await supabase
       .from("usuarios")
-      .update(updates as any)
-      .eq("id", userId)
+      .update(updates)
+      .eq("id", Number(userId))
       .select()
       .single();
 
     if (error) throw error;
-    return { data, error: null };
+    return { data: data as Usuario, error: null };
   } catch (error: any) {
-    console.error("Error en updateUsuario:", error.message);
     return { data: null, error };
   }
 };
 
 /**
- * Función auxiliar para subir el avatar al bucket de storage
- * (Útil si quieres centralizar la lógica de carga de imágenes)
- */
-export const uploadAvatar = async (userId: string, file: File) => {
-  const supabase = supabase();
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}-${Math.random()}.${fileExt}`;
-  const filePath = `avatars/${fileName}`;
-
-  try {
-    // 1. Subir imagen
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    // 2. Obtener URL pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    // 3. Actualizar tabla usuarios
-    await updateUsuario(userId, { avatar_url: publicUrl });
-
-    return { publicUrl, error: null };
-  } catch (error: any) {
-    return { publicUrl: null, error };
-  }
-};
-
-/**
- * Obtiene el perfil del usuario actual desde la sesión de Supabase
+ * Obtiene el perfil vinculado al Auth ID (UUID de Supabase)
  */
 export const obtenerPerfilUsuario = async () => {
-  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return null;
 
-  const { data: perfil } = await supabase
+  const { data: perfil, error } = await supabase
     .from('usuarios')
     .select('*')
-    .eq('id', user.id)
+    .eq('auth_id', user.id) // Buscamos por el UUID de la sesión
     .single();
 
+  if (error) return null;
   return perfil as Usuario;
 };
 
 /**
  * Vincula un usuario de Auth con su entidad de Cliente B2B
  */
-export const obtenerClienteAsociado = async (userId: string) => {
-  const supabase = await createClient();
-  const { data } = await supabase
+export const obtenerClienteAsociado = async (userId: string): Promise<ClienteB2B | null> => {
+  const { data, error } = await supabase
     .from('clientes')
     .select('*')
-    .eq('auth_id', userId) // Usando el campo auth_id que vimos en tu Prisma
+    .eq('auth_id', userId) 
     .single();
+
+  if (error || !data) return null;
 
   return data as ClienteB2B;
 };
