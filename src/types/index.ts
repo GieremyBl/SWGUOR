@@ -24,7 +24,7 @@ export type EstadoDespacho = 'pendiente' | 'preparando' | 'en_ruta' | 'entregado
 
 export type EstadoConfeccion = 'corte' | 'confeccionando' | 'remallado' | 'terminado';
 
-export type MetodoPago = 'transferencia' | 'efectivo' | 'tarjeta' | 'credito';
+export type MetodoPago = | 'efectivo' | 'yape' | 'plin' | 'transferencia_bcp' | 'visa' | 'mastercard';
 
 export type TipoInsumo = 'materia_prima' | 'producto_terminado' | 'empaque' | string;
 
@@ -59,13 +59,12 @@ export interface Orden {
   id: number;
   user_id: string; // UUID (auth.users)
   cliente_id: number | null;
-  subtotal: number;
-  impuestos: number;
-  total: number;
+  cotizacion_id: number | null;
+  total_pagado: number;
   estado: EstadoOrden;
   metodo_pago: MetodoPago | null;
-  payment_id: string | null;
-  notas_internas: string | null;
+  estado_pago: 'pendiente' | 'parcial' | 'pagado';
+  fecha_prometida_entrega: string | null;
   created_at: string;
   updated_at: string | null;
 }

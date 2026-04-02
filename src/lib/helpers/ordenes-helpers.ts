@@ -1,78 +1,33 @@
-import { createClient } from '@/lib/supabase/client/client';
-import type { Orden, OrdenInsert, EstadoOrden, MetodoPago } from '@/types';
+import { EstadoOrden, MetodoPago } from "@/types";
 
-/**
- * Obtiene órdenes con filtros opcionales y relación con clientes
- */
-export const obtenerOrdenes = async (filtros?: { estado?: EstadoOrden }) => {
-  const supabase = await createClient();
-  let query = supabase
-    .from('ordenes')
-    .select('*, clientes(razon_social, ruc)');
+export const OrdenesHelper = {
+  /**
+   * Calcula el total de fabricación basado en los productos seleccionados
+   */
+  calcularTotalVenta: (items: Array<{ precio_unitario: number; cantidad: number }>) => {
+    const total = items.reduce((acc, item) => acc + (item.precio_unitario * item.cantidad), 0);
+    return parseFloat(total.toFixed(2));
+  },
 
-  if (filtros?.estado) {
-    query = query.eq('estado', filtros.estado);
+  /**
+   * Ajusta los datos para que coincidan EXACTAMENTE con tu esquema SQL
+   * Resuelve el error de "transferencia" vs "transferencia_bcp"
+   */
+prepararParaInsertar: (formData: any, totalCalculado: number) => {
+    // Definimos el método de pago asegurando que sea del tipo MetodoPago o null
+    const metodo: MetodoPago = formData.metodo_pago === 'transferencia' 
+      ? 'transferencia_bcp' 
+      : (formData.metodo_pago as MetodoPago);
+
+    return {
+      cliente_id: formData.cliente_id ? Number(formData.cliente_id) : null,
+      cotizacion_id: formData.cotizacion_id ? Number(formData.cotizacion_id) : null,
+      user_id: formData.user_id,
+      estado: (formData.estado as EstadoOrden) || 'solicitado',
+      metodo_pago: metodo, // Ahora TypeScript sabe que es un MetodoPago válido
+      total_pagado: totalCalculado,
+      fecha_prometida_entrega: formData.fecha_entrega || null,
+      estado_pago: 'pendiente'
+    };
   }
-
-  const { data, error } = await query.order('created_at', { ascending: false });
-  
-  return { 
-    data: data as any[], 
-    error: error ? error.message : null 
-  };
-};
-
-/**
- * Crea una orden y sus detalles (Lógica simplificada)
- */
-export const crearOrden = async (
-  ordenData: Omit<OrdenInsert, 'subtotal' | 'impuestos' | 'total'>,
-  detalles: any[]
-) => {
-  const supabase = await createClient();
-  
-  // Aquí normalmente calcularías totales antes de insertar
-  const { data, error } = await supabase
-    .from('ordenes')
-    .insert([{ ...ordenData, total: 0 }]) // Ajustar según lógica de negocio
-    .select()
-    .single();
-
-  return { data, error: error ? error.message : null };
-};
-
-/**
- * Cambia el estado y actualiza datos de pago
- */
-export const cambiarEstadoOrden = async (
-  ordenId: string,
-  nuevoEstado: EstadoOrden,
-  dataExtra?: { metodo_pago?: MetodoPago; payment_id?: string }
-) => {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from('ordenes')
-    .update({ 
-      estado: nuevoEstado,
-      ...dataExtra 
-    })
-    .eq('id', Number(ordenId));
-
-  return { 
-    success: !error, 
-    error: error ? error.message : null 
-  };
-};
-
-/**
- * Verifica stock disponible para una lista de productos
- */
-export const verificarStock = async (items: Array<{ producto_id: number; cantidad: number }>) => {
-  const supabase = await createClient();
-  
-  // Simulación de verificación (debes implementar la lógica según tu tabla productos)
-  return {
-    disponible: true,
-    faltantes: []
-  };
 };
