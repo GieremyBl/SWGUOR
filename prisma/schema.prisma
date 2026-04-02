@@ -692,7 +692,7 @@ model productos {
   pedido_items           pedido_items[]
   precio_historico       precio_historico[]
   categorias             categorias?              @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  variantes_producto     variantes_producto[]
+  variantes              variantes_producto[]
 
   @@index([estado], map: "idx_productos_estado")
   @@index([nombre], map: "idx_productos_nombre")
