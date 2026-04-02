@@ -5,26 +5,19 @@
 
 export type EstadoCliente = 'activo' | 'inactivo' | 'suspendido' | 'potencial';
 
-export type EstadoCotizacion = 'borrador' | 'pendiente' | 'aceptada' | 'rechazada' | 'expirada' | 'convertida';
+export type EstadoOrden = 'solicitado' | 'cotizado' | 'aprobado' | 'pagado' | 'en_proceso' | 'finalizado' | 'cancelado';
 
-export type EstadoOrden = 
-  | 'solicitado' 
-  | 'cotizado' 
-  | 'aprobado' 
-  | 'pagado' 
-  | 'en_proceso' 
-  | 'finalizado' 
-  | 'cancelado';
+export type EstadoProducto = 'activo' | 'inactivo' | 'sin_stock';
+
+export type MetodoPago = 'efectivo' | 'transferencia_bcp' | 'yape' | 'plin' | 'tarjeta';
+
+export type EstadoCotizacion = 'borrador' | 'enviada' | 'aprobada' | 'rechazada' | 'convertida';
 
 export type UnidadMedida = 'unidades' | 'metros' | 'rollos' | 'kilogramos' | 'conos' | string;
-
-export type EstadoProducto = 'activo' | 'inactivo' | 'agotado' | 'descontinuado';
 
 export type EstadoDespacho = 'pendiente' | 'preparando' | 'en_ruta' | 'entregado' | 'incidencia';
 
 export type EstadoConfeccion = 'corte' | 'confeccionando' | 'remallado' | 'terminado';
-
-export type MetodoPago = | 'efectivo' | 'yape' | 'plin' | 'transferencia_bcp' | 'visa' | 'mastercard';
 
 export type TipoInsumo = 'materia_prima' | 'producto_terminado' | 'empaque' | string;
 
@@ -60,16 +53,15 @@ export interface Usuario {
 // Basada en tu esquema de tabla public.ordenes
 export interface Orden {
   id: number;
-  user_id: string; // UUID (auth.users)
-  cliente_id: number | null;
   cotizacion_id: number | null;
-  total_pagado: number;
+  cliente_id: number | null;
+  user_id: string;
   estado: EstadoOrden;
   metodo_pago: MetodoPago | null;
-  estado_pago: 'pendiente' | 'parcial' | 'pagado';
+  total_pagado: number;
   fecha_prometida_entrega: string | null;
+  estado_pago: 'pendiente' | 'parcial' | 'pagado';
   created_at: string;
-  updated_at: string | null;
 }
 
 export interface Categoria {
@@ -84,13 +76,31 @@ export interface Categoria {
 export interface Insumo {
   id: number;
   nombre: string;
-  tipo: TipoInsumo;
-  unidad_medida: UnidadMedida;
   stock_actual: number;
   stock_minimo: number;
-  precio_unitario: number | null;
-  proveedor: string | null;       
+  precio_unitario?: number;
+  unidad_medida: string;
+}
+
+export interface Cotizacion {
+  id: number;
+  numero: string;
+  cliente_id: number;
+  estado: EstadoCotizacion;
+  total: number;
+  subtotal: number;
+  igv: number;
   created_at: string;
+}
+
+export interface CotizacionItem {
+  id: number;
+  cotizacion_id: number;
+  producto_id: number;
+  variante_id?: number | null;
+  cantidad: number;
+  precio_unitario_snapshot: number;
+  subtotal: number;
 }
 
 export interface ClienteB2B {
@@ -107,9 +117,11 @@ export interface ClienteB2B {
 /**
  * TIPOS PARA OPERACIONES (Omitiendo IDs generados y fechas)
  */
-export type OrdenInsert = Omit<Orden, 'id' | 'created_at' | 'updated_at'>;
+export type OrdenInsert = Omit<Orden, 'id' | 'created_at'>;
 export type InsumoInsert = Omit<Insumo, 'id' | 'created_at'>;
 export type InsumoUpdate = Partial<InsumoInsert>;
+export type CotizacionInsert = Omit<Cotizacion, 'id' | 'created_at' | 'updated_at'>;
+export type CotizacionItemInsert = Omit<CotizacionItem, 'id'>;
 
 /**
  * TIPOS ADICIONALES PARA COMPONENTES
@@ -136,7 +148,6 @@ export interface Venta {
   total: number;
   fecha_emision: string;
   created_at: string;
-  // Opcional: si sueles traer los datos del cliente unidos
   clientes?: {
     razon_social: string;
     ruc?: string | null;

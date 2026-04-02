@@ -6,10 +6,10 @@
 import { useCallback, useState } from 'react';
 // CORRECCIÓN: Se importan todas las funciones necesarias del helper correcto
 import { 
-  obtenerOrdenes, 
-  crearOrden, 
-  cambiarEstadoOrden, 
-  verificarStock 
+  obtenerOrdenes,
+  crearOrden,
+  cambiarEstadoOrden,
+  verificarStock
 } from '@/lib/helpers/ordenes-helpers';
 import type { Orden, OrdenInsert, EstadoOrden, MetodoPago } from '@/types';
 
@@ -92,14 +92,10 @@ export function useOrdenes(): UseOrdenesState & UseOrdenesActions {
     }
   }, []);
 
-  const crear = useCallback(
-    async (
-      ordenData: Omit<OrdenInsert, 'subtotal' | 'impuestos' | 'total'>,
-      detalles: any[]
-    ) => {
+  const crear = useCallback(async (ordenData: OrdenInsert) => {
       setState(prev => ({ ...prev, cargando: true, error: null }));
       try {
-        const { error } = await crearOrden(ordenData, detalles);
+        const { error } = await crearOrden(ordenData);
 
         if (error) {
           setState(prev => ({ ...prev, error, cargando: false }));

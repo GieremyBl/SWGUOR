@@ -1,9 +1,10 @@
-import type { ProductoPortal, Insumo, InsumoInsert } from '@/types';
+import { SupabaseClient } from '@supabase/supabase-js';
+import type { ProductoPortal, Insumo, InsumoInsert, EstadoProducto } from '@/types';
 
 /**
  * PRODUCTOS (Panel Administrativo & API)
  */
-export async function obtenerProductos(supabase: any, filtros?: any) {
+export async function obtenerProductos(supabase: SupabaseClient, filtros?: any) {
   let query = supabase
     .from('productos')
     .select(`
@@ -11,14 +12,15 @@ export async function obtenerProductos(supabase: any, filtros?: any) {
       categorias (nombre)
     `);
 
+  // Uso de casteo para evitar errores de tipos en Enums
   if (filtros?.categoria_id) query = query.eq('categoria_id', filtros.categoria_id);
-  if (filtros?.estado) query = query.eq('estado', filtros.estado);
+  if (filtros?.estado) query = query.eq('estado', filtros.estado as EstadoProducto);
   if (filtros?.busqueda) query = query.ilike('nombre', `%${filtros.busqueda}%`);
 
   return await query.order('created_at', { ascending: false });
 }
 
-export async function crearProducto(supabase: any, datos: any) {
+export async function crearProducto(supabase: SupabaseClient, datos: any) {
   return await supabase
     .from('productos')
     .insert([datos])
@@ -26,37 +28,22 @@ export async function crearProducto(supabase: any, datos: any) {
     .single();
 }
 
-export async function actualizarProducto(supabase: any, id: number, datos: any) {
-  return await supabase
-    .from('productos')
-    .update(datos)
-    .eq('id', id)
-    .select()
-    .single();
-}
-
-export async function eliminarProducto(supabase: any, id: number) {
-  return await supabase
-    .from('productos')
-    .delete()
-    .eq('id', id);
-}
-
 /**
  * PRODUCTOS DEL PORTAL (Venta B2B)
+ * Ajustado a los nombres de columna de tu SQL: 'precio' y 'stock'
  */
-export const obtenerProductosPortal = async (supabase: any): Promise<ProductoPortal[]> => {
+export const obtenerProductosPortal = async (supabase: SupabaseClient): Promise<ProductoPortal[]> => {
   const { data, error } = await supabase
     .from('productos')
     .select(`
       id,
       nombre,
       sku,
-      precio_base,
-      stock_actual,
+      precio,
+      stock,
       categorias (nombre)
     `)
-    .eq('activo', true);
+    .eq('estado', 'activo' as EstadoProducto); // En tu SQL usas 'estado' no 'activo' (boolean)
 
   if (error) {
     console.error('Error al obtener productos portal:', error);
@@ -67,18 +54,19 @@ export const obtenerProductosPortal = async (supabase: any): Promise<ProductoPor
     id: p.id.toString(),
     nombre: p.nombre,
     sku: p.sku,
-    precioBase: p.precio_base,
-    stockActual: p.stock_actual,
+    precioBase: p.precio,
+    stockActual: p.stock,
     categoria: p.categorias?.nombre || 'General'
   }));
 };
 
 /**
  * INSUMOS (Materia Prima / Taller)
+ * IMPORTANTE: Tu tabla SQL se llama 'insumo' (singular)
  */
-export const obtenerInsumos = async (supabase: any): Promise<Insumo[]> => {
+export const obtenerInsumos = async (supabase: SupabaseClient): Promise<Insumo[]> => {
   const { data, error } = await supabase
-    .from('insumos')
+    .from('insumo') // Corregido a singular según tu esquema
     .select('*')
     .order('nombre', { ascending: true });
 
@@ -86,9 +74,9 @@ export const obtenerInsumos = async (supabase: any): Promise<Insumo[]> => {
   return data as Insumo[];
 };
 
-export const crearInsumo = async (supabase: any, insumo: InsumoInsert) => {
+export const crearInsumo = async (supabase: SupabaseClient, insumo: InsumoInsert) => {
   const { data, error } = await supabase
-    .from('insumos')
+    .from('insumo') // Corregido a singular
     .insert([insumo])
     .select()
     .single();
@@ -98,40 +86,32 @@ export const crearInsumo = async (supabase: any, insumo: InsumoInsert) => {
 };
 
 /**
- * ACTUALIZAR STOCK (Lógica para el PATCH de tu API)
+ * ACTUALIZAR STOCK FÍSICO (Insumos)
+ * Corregido para usar la columna 'stock_actual' de tu tabla 'insumo'
  */
-export const actualizarStockInsumo = async (supabase: any, id: number, nuevoStock: number) => {
-  try {
-    const { error } = await supabase
-      .from('insumos')
-      .update({ stock_actual: nuevoStock })
-      .eq('id', id);
-
-    if (error) throw error;
-    return { success: true, error: null };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * UTILITARIOS
- */
-export const actualizarStockFisico = async (supabase: any, id: number, cantidad: number, operacion: 'sumar' | 'restar') => {
-  const { data: insumo } = await supabase
-    .from('insumos')
+export const actualizarStockFisicoInsumo = async (
+  supabase: SupabaseClient, 
+  id: number, 
+  cantidad: number, 
+  operacion: 'sumar' | 'restar'
+) => {
+  // 1. Obtenemos el stock actual
+  const { data: insumo, error: fetchError } = await supabase
+    .from('insumo')
     .select('stock_actual')
     .eq('id', id)
     .single();
 
-  if (!insumo) return null;
+  if (fetchError || !insumo) throw new Error("Insumo no encontrado");
 
+  // 2. Calculamos nuevo stock
   const nuevoStock = operacion === 'sumar' 
     ? insumo.stock_actual + cantidad 
     : insumo.stock_actual - cantidad;
 
+  // 3. Actualizamos
   const { data, error } = await supabase
-    .from('insumos')
+    .from('insumo')
     .update({ stock_actual: nuevoStock })
     .eq('id', id)
     .select()
@@ -141,7 +121,20 @@ export const actualizarStockFisico = async (supabase: any, id: number, cantidad:
   return data;
 };
 
+/**
+ * UTILITARIOS
+ */
 export function calcularMargen(costo: number, precio: number) {
-  if (!costo || !precio) return 0;
-  return ((precio - costo) / precio) * 100;
+  if (!costo || !precio || precio === 0) return 0;
+  return parseFloat((((precio - costo) / precio) * 100).toFixed(2));
 }
+
+/**
+ * Formateador de moneda para la UI
+ */
+export const formatearMoneda = (cantidad: number) => {
+  return new Intl.NumberFormat('es-PE', {
+    style: 'currency',
+    currency: 'PEN',
+  }).format(cantidad);
+};
