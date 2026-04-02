@@ -11,7 +11,7 @@ import { updateUsuario, getUsuarioData } from "@/lib/helpers/usuarios-helpers";
 // ============================================================================
 
 interface UsuarioData {
-  id: string;
+  id: number;
   nombre_completo: string;
   email: string;
   rol: string;
