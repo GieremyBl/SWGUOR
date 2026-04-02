@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/client/client"; // Asegúrate de tener configurado tu cliente
-const supabase = createClient();
+import { supabase } from "@/lib/supabase/client";
 
 /**
  * Sube un archivo al bucket de Supabase Storage
