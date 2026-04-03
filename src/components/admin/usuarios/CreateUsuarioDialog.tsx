@@ -28,10 +28,10 @@ export default function CreateUsuarioDialog({ isOpen, onClose, onSuccess }: any)
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Error al crear usuario");
+        throw new Error(errorData.error || "Error al crear personal");
       }
 
-      toast.success("Usuario creado exitosamente");
+      toast.success("personal creado exitosamente");
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -59,7 +59,7 @@ export default function CreateUsuarioDialog({ isOpen, onClose, onSuccess }: any)
             </div>
             <div>
               <DialogTitle className="text-xl font-black text-gray-900 uppercase tracking-tight">
-                Nuevo Usuario
+                Nuevo personal
               </DialogTitle>
               <DialogDescription className="text-sm text-gray-500 mt-1">
                 Registra un nuevo acceso y sus permisos.
@@ -146,7 +146,7 @@ export default function CreateUsuarioDialog({ isOpen, onClose, onSuccess }: any)
                 Cancelar
               </Button>
               <Button type="submit" className="bg-pink-600 hover:bg-pink-700 text-white rounded-xl px-6" disabled={loading}>
-                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</> : "Crear Usuario"}
+                {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</> : "Crear personal"}
               </Button>
             </div>
           </form>

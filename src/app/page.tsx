@@ -30,7 +30,7 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 1. Si el usuario ya está autenticado (es un cliente logueado)
+  // 1. Si el personal ya está autenticado (es un cliente logueado)
   if (user) {
     // Redirigimos a la ruta del portal de clientes que estamos trabajando
     redirect('/portal/dashboard');

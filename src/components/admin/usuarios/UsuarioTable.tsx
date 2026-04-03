@@ -23,7 +23,7 @@ export function UsuariosTable({ usuarios, onEdit, onDelete, onToggleStatus }: Pr
       <Table>
         <TableHeader className="bg-transparent border-none">
           <TableRow className="hover:bg-transparent border-none">
-            <TableHead className="font-black text-[11px] tracking-widest text-slate-400 uppercase py-4 px-6">Usuario</TableHead>
+            <TableHead className="font-black text-[11px] tracking-widest text-slate-400 uppercase py-4 px-6">personal</TableHead>
             <TableHead className="font-black text-[11px] tracking-widest text-slate-400 uppercase text-center">Rol / Cargo</TableHead>
             <TableHead className="font-black text-[11px] tracking-widest text-slate-400 uppercase text-center">Estado</TableHead>
             {showActions && (

@@ -148,7 +148,7 @@ Presiona `Ctrl + C` en la terminal
 
 ## 🔑 PRIMER ACCESO - LOGIN
 
-### Crear tu Usuario Administrativo
+### Crear tu personal Administrativo
 
 **En Supabase:**
 1. Ve a **Authentication** → **Users**

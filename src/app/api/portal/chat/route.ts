@@ -113,7 +113,7 @@ async function ejecutarTool(nombre: string, args: any) {
           nombre: { contains: args.busqueda, mode: 'insensitive' },
           estado: 'activo' 
         },
-        include: { variantes: true },
+        include: { variantes_producto: true },
         take: 5
       });
       return JSON.parse(JSON.stringify({ productos }, (k, v) => typeof v === 'bigint' ? v.toString() : v));

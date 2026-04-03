@@ -8,6 +8,8 @@ datasource db {
   schemas  = ["auth", "public"]
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model audit_log_entries {
   instance_id String?   @db.Uuid
   id          String    @id @db.Uuid
@@ -19,6 +21,7 @@ model audit_log_entries {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model custom_oauth_providers {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   provider_type         String
@@ -52,6 +55,8 @@ model custom_oauth_providers {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model flow_state {
   id                     String                 @id @db.Uuid
   user_id                String?                @db.Uuid
@@ -78,6 +83,8 @@ model flow_state {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model identities {
   provider_id     String
   user_id         String    @db.Uuid
@@ -96,6 +103,8 @@ model identities {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model instances {
   id              String    @id @db.Uuid
   uuid            String?   @db.Uuid
@@ -106,6 +115,8 @@ model instances {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model mfa_amr_claims {
   session_id            String   @db.Uuid
   created_at            DateTime @db.Timestamptz(6)
@@ -118,6 +129,8 @@ model mfa_amr_claims {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model mfa_challenges {
   id                     String      @id @db.Uuid
   factor_id              String      @db.Uuid
@@ -132,6 +145,8 @@ model mfa_challenges {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model mfa_factors {
   id                           String           @id @db.Uuid
   user_id                      String           @db.Uuid
@@ -149,13 +164,14 @@ model mfa_factors {
   mfa_challenges               mfa_challenges[]
   users                        users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([user_id, phone], map: "unique_phone_factor_per_user")
   @@unique([friendly_name, user_id], map: "mfa_factors_user_friendly_name_unique", where: raw("(TRIM(BOTH FROM friendly_name) <> ''::text)"))
+  @@unique([user_id, phone], map: "unique_phone_factor_per_user")
   @@index([user_id, created_at], map: "factor_id_created_at_idx")
   @@index([user_id])
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model oauth_authorizations {
   id                    String                     @id @db.Uuid
   authorization_id      String                     @unique
@@ -181,6 +197,7 @@ model oauth_authorizations {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model oauth_client_states {
   id            String   @id @db.Uuid
   provider_type String
@@ -191,6 +208,7 @@ model oauth_client_states {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model oauth_clients {
   id                         String                  @id @db.Uuid
   client_secret_hash         String?
@@ -213,6 +231,7 @@ model oauth_clients {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model oauth_consents {
   id            String        @id @db.Uuid
   user_id       String        @db.Uuid
@@ -224,12 +243,14 @@ model oauth_consents {
   users         users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([user_id, client_id], map: "oauth_consents_user_client_unique")
-  @@index([user_id, granted_at(sort: Desc)], map: "oauth_consents_user_order_idx")
   @@index([client_id], map: "oauth_consents_active_client_idx", where: raw("(revoked_at IS NULL)"))
   @@index([user_id, client_id], map: "oauth_consents_active_user_client_idx", where: raw("(revoked_at IS NULL)"))
+  @@index([user_id, granted_at(sort: Desc)], map: "oauth_consents_user_order_idx")
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model one_time_tokens {
   id         String              @id @db.Uuid
   user_id    String              @db.Uuid
@@ -246,6 +267,8 @@ model one_time_tokens {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model refresh_tokens {
   instance_id String?   @db.Uuid
   id          BigInt    @id @default(autoincrement())
@@ -266,6 +289,9 @@ model refresh_tokens {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model saml_providers {
   id                String        @id @db.Uuid
   sso_provider_id   String        @db.Uuid
@@ -282,6 +308,9 @@ model saml_providers {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model saml_relay_states {
   id              String        @id @db.Uuid
   sso_provider_id String        @db.Uuid
@@ -300,12 +329,17 @@ model saml_relay_states {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model schema_migrations {
   version String @id @db.VarChar(255)
 
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model sessions {
   id                     String           @id @db.Uuid
   user_id                String           @db.Uuid
@@ -334,6 +368,9 @@ model sessions {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model sso_domains {
   id              String        @id @db.Uuid
@@ -347,6 +384,9 @@ model sso_domains {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model sso_providers {
   id                String              @id @db.Uuid
@@ -362,6 +402,9 @@ model sso_providers {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model users {
   instance_id                 String?                @db.Uuid
@@ -410,8 +453,8 @@ model users {
   clientes                    clientes?
   ordenes                     ordenes[]
   pedidos                     pedidos[]
+  personal                    personal?
   precio_historico            precio_historico[]
-  usuarios                    usuarios?
   ventas                      ventas[]
 
   @@index([instance_id])
@@ -419,6 +462,7 @@ model users {
   @@schema("auth")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model webauthn_challenges {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id        String?  @db.Uuid
@@ -454,6 +498,8 @@ model webauthn_credentials {
   @@schema("auth")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model categorias {
   id          BigInt      @id @default(autoincrement())
   nombre      String      @unique
@@ -468,6 +514,7 @@ model categorias {
   @@schema("public")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model clientes {
   id                  BigInt                @id(map: "Clientes_pkey") @default(autoincrement())
   ruc                 BigInt
@@ -477,20 +524,21 @@ model clientes {
   direccion           String?               @db.VarChar
   activo              EstadoCliente?        @default(activo)
   created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  auth_id             String?               @unique @db.Uuid
   updated_at          DateTime              @default(now()) @db.Timestamptz(6)
   tipo                TipoCliente?          @default(corporativo)
-  users               users?                @relation(fields: [auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  auth_id             String?               @unique @db.Uuid
+  users               users?                @relation(fields: [auth_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   cotizaciones        cotizaciones[]
   direcciones_cliente direcciones_cliente[]
   ordenes             ordenes[]
   pedidos             pedidos[]
-  usuarios            usuarios[]
 
   @@index([auth_id], map: "idx_clientes_auth_id")
   @@schema("public")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model comprobantes {
   id          BigInt    @id @default(autoincrement())
   orden_id    BigInt
@@ -504,6 +552,7 @@ model comprobantes {
   @@schema("public")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model confecciones {
   id            BigInt           @id @default(autoincrement())
   pedido_id     BigInt
@@ -519,6 +568,7 @@ model confecciones {
   @@schema("public")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cotizacion_items {
   id                       BigInt              @id @default(autoincrement())
   cotizacion_id            BigInt?
@@ -534,6 +584,8 @@ model cotizacion_items {
   @@schema("public")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cotizaciones {
   id                 BigInt             @id @default(autoincrement())
   numero             String             @unique
@@ -560,6 +612,7 @@ model cotizaciones {
   @@schema("public")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model despachos {
   id                BigInt         @id @default(autoincrement())
   pedido_id         BigInt
@@ -570,240 +623,8 @@ model despachos {
   updated_at        DateTime
   usuario_id        BigInt
   estado            EstadoDespacho @default(pendiente)
-  usuarios          usuarios       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  personal          personal       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  @@schema("public")
-}
-
-model direcciones_cliente {
-  id           BigInt    @id @default(autoincrement())
-  cliente_id   BigInt
-  alias        String
-  direccion    String
-  ciudad       String?
-  departamento String?
-  es_principal Boolean?  @default(false)
-  created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  clientes     clientes  @relation(fields: [cliente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model insumo {
-  id                     BigInt                   @id(map: "inventario_pkey") @default(autoincrement())
-  nombre                 String
-  tipo                   TipoInsumo
-  unidad_medida          UnidadMedida             @default(unidades)
-  stock_actual           Int                      @default(0)
-  stock_minimo           Int                      @default(10)
-  precio_unitario        Decimal?                 @db.Decimal(10, 2)
-  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
-  proveedor              String?
-  detalle_ficha_insumos  detalle_ficha_insumos[]
-  movimientos_inventario movimientos_inventario[]
-
-  @@schema("public")
-}
-
-model movimientos_inventario {
-  id              BigInt          @id(map: "lista_materiales_pkey") @default(autoincrement())
-  producto_id     BigInt?
-  insumo_id       BigInt?
-  created_at      DateTime        @default(now()) @db.Timestamptz(6)
-  cantidad        Float?
-  motivo          String?
-  usuario_id      BigInt?
-  tipo_movimiento TipoMovimiento?
-  insumo          insumo?         @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  productos       productos?      @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  usuarios        usuarios?       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model ordenes {
-  id                      BigInt        @id @default(autoincrement())
-  cotizacion_id           BigInt?
-  cliente_id              BigInt?
-  user_id                 String?       @db.Uuid
-  estado                  EstadoOrden?  @default(solicitado)
-  metodo_pago             MetodoPago?
-  total_pagado            Decimal?      @default(0) @db.Decimal(12, 2)
-  created_at              DateTime?     @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime?     @default(now()) @db.Timestamptz(6)
-  fecha_prometida_entrega DateTime?     @db.Date
-  estado_pago             String?       @default("pendiente")
-  cliente                 clientes?     @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cotizaciones            cotizaciones? @relation(fields: [cotizacion_id], references: [id], onUpdate: NoAction)
-  users                   users?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model pedidos {
-  id             BigInt           @id @default(autoincrement())
-  cliente_id     BigInt?
-  estado         EstadoPedido?    @default(pendiente)
-  prioridad      PrioridadPedido? @default(normal)
-  notas_cliente  String?
-  created_by     String?          @default(dbgenerated("auth.uid()")) @db.Uuid
-  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  notas_pedido   String?
-  total_estimado Decimal?         @default(0) @db.Decimal(12, 2)
-  cotizaciones   cotizaciones[]
-  pedido_items   pedido_items[]
-  clientes       clientes?        @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users          users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model precio_historico {
-  id            BigInt    @id @default(autoincrement())
-  producto_id   BigInt
-  precio        Decimal   @db.Decimal(10, 2)
-  motivo        String?
-  vigente_desde DateTime  @default(now()) @db.Timestamptz(6)
-  vigente_hasta DateTime? @db.Timestamptz(6)
-  creado_por    String?   @db.Uuid
-  users         users?    @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  productos     productos @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model productos {
-  id                     BigInt                   @id @default(autoincrement())
-  nombre                 String
-  descripcion            String?
-  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
-  imagen                 String?
-  precio                 Float
-  stock                  Int                      @default(0)
-  updated_at             DateTime                 @db.Timestamptz(6)
-  estado                 EstadoProducto           @default(activo)
-  sku                    String                   @unique
-  destacado              Boolean?                 @default(false)
-  categoria_id           BigInt?
-  cotizacion_items       cotizacion_items[]
-  fichas_tecnicas        fichas_tecnicas[]
-  movimientos_inventario movimientos_inventario[]
-  pedido_items           pedido_items[]
-  precio_historico       precio_historico[]
-  categorias             categorias?              @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  variantes              variantes_producto[]
-
-  @@index([estado], map: "idx_productos_estado")
-  @@index([nombre], map: "idx_productos_nombre")
-  @@schema("public")
-}
-
-model reglas_descuento {
-  id            BigInt         @id @default(autoincrement())
-  nombre        String
-  cantidad_min  Int
-  cantidad_max  Int?
-  descuento_pct Decimal        @db.Decimal(5, 2)
-  aplica_a      String?        @default("global")
-  cotizaciones  cotizaciones[]
-
-  @@schema("public")
-}
-
-model reservas_stock {
-  id                 BigInt             @id @default(autoincrement())
-  variante_id        BigInt
-  cotizacion_id      BigInt?
-  orden_id           BigInt?
-  cantidad           Int
-  expira_en          DateTime           @default(dbgenerated("(now() + '00:30:00'::interval)")) @db.Timestamptz(6)
-  estado             String             @default("activa")
-  variantes_producto variantes_producto @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@schema("public")
-}
-
-model talleres {
-  id           BigInt              @id @default(autoincrement())
-  nombre       String
-  direccion    String
-  telefono     String
-  email        String?             @unique
-  created_at   DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime            @db.Timestamptz(6)
-  ruc          String              @unique
-  contacto     String
-  especialidad EspecialidadTaller?
-  estado       EstadoTaller        @default(activo)
-  confecciones confecciones[]
-
-  @@schema("public")
-}
-
-model usuarios {
-  id                     BigInt                   @id @default(autoincrement())
-  email                  String                   @unique
-  nombre_completo        String
-  telefono               String?
-  estado                 EstadoUsuario?           @default(activo)
-  rol                    rol?                     @default(administrador)
-  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
-  auth_id                String?                  @unique @db.Uuid
-  ultimo_acceso          DateTime?                @db.Timestamptz(6)
-  created_by             String?                  @db.Uuid
-  avatar_url             String?
-  cliente_id             BigInt?
-  despachos              despachos[]
-  movimientos_inventario movimientos_inventario[]
-  users                  users?                   @relation(fields: [auth_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  cliente                clientes?                @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([cliente_id], map: "idx_usuarios_cliente_id")
-  @@schema("public")
-}
-
-model variantes_producto {
-  id               BigInt             @id @default(autoincrement())
-  producto_id      BigInt
-  nombre           String             @db.VarChar(100)
-  color            ColorPrenda
-  talla            TallaProductos
-  estado           EstadoProducto     @default(activo)
-  precio_adicional Decimal            @default(0.00) @db.Decimal(10, 2)
-  stock_adicional  Int                @default(0)
-  sku              String             @unique(map: "unique_variant_sku") @db.VarChar(100)
-  imagen_url       String?
-  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
-  cotizacion_items cotizacion_items[]
-  pedido_items     pedido_items[]
-  reservas_stock   reservas_stock[]
-  productos        productos          @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([producto_id, talla, color], map: "unique_producto_talla_color")
-  @@index([producto_id], map: "idx_variantes_producto_id")
-  @@index([talla, color], map: "idx_variantes_busqueda_cliente", where: raw("(estado = 'activo'::\"EstadoProducto\")"))
-  @@schema("public")
-}
-
-model ventas {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orden_id           BigInt
-  vendedor_id        String?          @default(dbgenerated("auth.uid()")) @db.Uuid
-  subtotal           Decimal          @default(0) @db.Decimal(12, 2)
-  impuestos          Decimal          @default(0) @db.Decimal(12, 2)
-  total              Decimal          @default(0) @db.Decimal(12, 2)
-  metodo_pago        MetodoPago?
-  numero_comprobante String?
-  created_at         DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?        @default(now()) @db.Timestamptz(6)
-  tipo_comprobante   TipoComprobante?
-  vendedor           users?           @relation(fields: [vendedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([created_at(sort: Desc)], map: "idx_ventas_fecha_pago")
-  @@index([orden_id], map: "idx_ventas_orden_link")
   @@schema("public")
 }
 
@@ -817,6 +638,21 @@ model detalle_ficha_insumos {
   created_at       DateTime         @default(now()) @db.Timestamptz(6)
   fichas_tecnicas  fichas_tecnicas? @relation(fields: [id_ficha], references: [id], onDelete: NoAction, onUpdate: NoAction)
   insumo           insumo?          @relation(fields: [id_insumo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model direcciones_cliente {
+  id           BigInt    @id @default(autoincrement())
+  cliente_id   BigInt
+  alias        String
+  direccion    String
+  ciudad       String?
+  departamento String?
+  es_principal Boolean?  @default(false)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  clientes     clientes  @relation(fields: [cliente_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@schema("public")
 }
@@ -854,6 +690,61 @@ model fichas_tecnicas {
   @@schema("public")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model insumo {
+  id                     BigInt                   @id(map: "inventario_pkey") @default(autoincrement())
+  nombre                 String
+  tipo                   TipoInsumo
+  unidad_medida          UnidadMedida             @default(unidades)
+  stock_actual           Int                      @default(0)
+  stock_minimo           Int                      @default(10)
+  precio_unitario        Decimal?                 @db.Decimal(10, 2)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  proveedor              String?
+  detalle_ficha_insumos  detalle_ficha_insumos[]
+  movimientos_inventario movimientos_inventario[]
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model movimientos_inventario {
+  id              BigInt          @id(map: "lista_materiales_pkey") @default(autoincrement())
+  producto_id     BigInt?
+  insumo_id       BigInt?
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  cantidad        Float?
+  motivo          String?
+  usuario_id      BigInt?
+  tipo_movimiento TipoMovimiento?
+  insumo          insumo?         @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productos       productos?      @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  personal        personal?       @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ordenes {
+  id                      BigInt        @id @default(autoincrement())
+  cotizacion_id           BigInt?
+  cliente_id              BigInt?
+  user_id                 String?       @db.Uuid
+  estado                  EstadoOrden?  @default(solicitado)
+  metodo_pago             MetodoPago?
+  total_pagado            Decimal?      @default(0) @db.Decimal(12, 2)
+  created_at              DateTime?     @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?     @default(now()) @db.Timestamptz(6)
+  fecha_prometida_entrega DateTime?     @db.Date
+  estado_pago             String?       @default("pendiente")
+  clientes                clientes?     @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cotizaciones            cotizaciones? @relation(fields: [cotizacion_id], references: [id], onUpdate: NoAction)
+  users                   users?        @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model pedido_items {
@@ -867,6 +758,182 @@ model pedido_items {
   productos          productos?          @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variantes_producto variantes_producto? @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pedidos {
+  id             BigInt           @id @default(autoincrement())
+  cliente_id     BigInt?
+  estado         EstadoPedido?    @default(pendiente)
+  prioridad      PrioridadPedido? @default(normal)
+  notas_cliente  String?
+  created_by     String?          @default(dbgenerated("auth.uid()")) @db.Uuid
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  notas_pedido   String?
+  total_estimado Decimal?         @default(0) @db.Decimal(12, 2)
+  cotizaciones   cotizaciones[]
+  pedido_items   pedido_items[]
+  clientes       clientes?        @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users          users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model personal {
+  id                     BigInt                   @id(map: "usuarios_pkey") @default(autoincrement())
+  email                  String                   @unique(map: "usuarios_email_key")
+  nombre_completo        String
+  telefono               BigInt?
+  estado                 EstadoUsuario?           @default(activo)
+  rol                    rol?                     @default(administrador)
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  auth_id                String?                  @unique(map: "usuarios_auth_id_key") @db.Uuid
+  ultimo_acceso          DateTime?                @db.Timestamptz(6)
+  created_by             String?                  @db.Uuid
+  avatar_url             String?
+  despachos              despachos[]
+  movimientos_inventario movimientos_inventario[]
+  users                  users?                   @relation(fields: [auth_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usuarios_auth_id_fkey")
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model precio_historico {
+  id            BigInt    @id @default(autoincrement())
+  producto_id   BigInt
+  precio        Decimal   @db.Decimal(10, 2)
+  motivo        String?
+  vigente_desde DateTime  @default(now()) @db.Timestamptz(6)
+  vigente_hasta DateTime? @db.Timestamptz(6)
+  creado_por    String?   @db.Uuid
+  users         users?    @relation(fields: [creado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  productos     productos @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model productos {
+  id                     BigInt                   @id @default(autoincrement())
+  nombre                 String
+  descripcion            String?
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  imagen                 String?
+  precio                 Float
+  stock                  Int                      @default(0)
+  updated_at             DateTime                 @db.Timestamptz(6)
+  estado                 EstadoProducto           @default(activo)
+  sku                    String                   @unique
+  destacado              Boolean?                 @default(false)
+  categoria_id           BigInt?
+  ficha_tecnica          Json?                    @default("{\"medidas\": {}, \"materiales\": [], \"instrucciones\": \"\"}")
+  cotizacion_items       cotizacion_items[]
+  fichas_tecnicas        fichas_tecnicas[]
+  movimientos_inventario movimientos_inventario[]
+  pedido_items           pedido_items[]
+  precio_historico       precio_historico[]
+  categorias             categorias?              @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  variantes_producto     variantes_producto[]
+
+  @@index([estado], map: "idx_productos_estado")
+  @@index([nombre], map: "idx_productos_nombre")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model reglas_descuento {
+  id            BigInt         @id @default(autoincrement())
+  nombre        String
+  cantidad_min  Int
+  cantidad_max  Int?
+  descuento_pct Decimal        @db.Decimal(5, 2)
+  aplica_a      String?        @default("global")
+  cotizaciones  cotizaciones[]
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model reservas_stock {
+  id                 BigInt             @id @default(autoincrement())
+  variante_id        BigInt
+  cotizacion_id      BigInt?
+  orden_id           BigInt?
+  cantidad           Int
+  expira_en          DateTime           @default(dbgenerated("(now() + '00:30:00'::interval)")) @db.Timestamptz(6)
+  estado             String             @default("activa")
+  variantes_producto variantes_producto @relation(fields: [variante_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model talleres {
+  id           BigInt              @id @default(autoincrement())
+  nombre       String
+  direccion    String
+  telefono     String
+  email        String?             @unique
+  created_at   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime            @db.Timestamptz(6)
+  ruc          String              @unique
+  contacto     String
+  especialidad EspecialidadTaller?
+  estado       EstadoTaller        @default(activo)
+  confecciones confecciones[]
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model variantes_producto {
+  id               BigInt             @id @default(autoincrement())
+  producto_id      BigInt
+  nombre           String             @db.VarChar(100)
+  color            ColorPrenda
+  talla            TallaProductos
+  estado           EstadoProducto     @default(activo)
+  precio_adicional Decimal            @default(0.00) @db.Decimal(10, 2)
+  stock_adicional  Int                @default(0)
+  sku              String             @unique(map: "unique_variant_sku") @db.VarChar(100)
+  imagen_url       String?
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  cotizacion_items cotizacion_items[]
+  pedido_items     pedido_items[]
+  reservas_stock   reservas_stock[]
+  productos        productos          @relation(fields: [producto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([producto_id, talla, color], map: "unique_producto_talla_color")
+  @@index([talla, color], map: "idx_variantes_busqueda_cliente", where: raw("(estado = 'activo'::\"EstadoProducto\")"))
+  @@index([producto_id], map: "idx_variantes_producto_id")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ventas {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orden_id           BigInt
+  vendedor_id        String?          @default(dbgenerated("auth.uid()")) @db.Uuid
+  subtotal           Decimal          @default(0) @db.Decimal(12, 2)
+  impuestos          Decimal          @default(0) @db.Decimal(12, 2)
+  total              Decimal          @default(0) @db.Decimal(12, 2)
+  metodo_pago        MetodoPago?
+  numero_comprobante String?
+  created_at         DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?        @default(now()) @db.Timestamptz(6)
+  tipo_comprobante   TipoComprobante?
+  users              users?           @relation(fields: [vendedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_ventas_fecha_pago")
+  @@index([orden_id], map: "idx_ventas_orden_link")
   @@schema("public")
 }
 
@@ -1167,6 +1234,15 @@ enum UnidadMedida {
   @@schema("public")
 }
 
+enum estado_ficha {
+  borrador
+  en_revision
+  aprobada
+  obsoleta
+
+  @@schema("public")
+}
+
 enum rol {
   administrador
   cortador
@@ -1176,15 +1252,6 @@ enum rol {
   representante_taller
   cliente
   gerente
-
-  @@schema("public")
-}
-
-enum estado_ficha {
-  borrador
-  en_revision
-  aprobada
-  obsoleta
 
   @@schema("public")
 }

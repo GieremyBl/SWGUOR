@@ -1,7 +1,7 @@
 // lib/auth/constants.ts
 
 /**
- * Estados de usuario (deben coincidir con el ENUM de la BD)
+ * Estados de personal (deben coincidir con el ENUM de la BD)
  */
 export const ESTADOS_USUARIO = {
   ACTIVO: 'ACTIVO',
@@ -11,7 +11,7 @@ export const ESTADOS_USUARIO = {
 export type EstadoUsuario = typeof ESTADOS_USUARIO[keyof typeof ESTADOS_USUARIO];
 
 /**
- * Roles de usuario (deben coincidir con el ENUM de la BD)
+ * Roles de personal (deben coincidir con el ENUM de la BD)
  */
 export const ROLES_USUARIO = {
   ADMINISTRADOR: 'administrador',
@@ -32,7 +32,7 @@ export type RolUsuario = typeof ROLES_USUARIO[keyof typeof ROLES_USUARIO];
  */
 export const ERROR_MESSAGES = {
   INVALID_CREDENTIALS: "Credenciales inválidas. Por favor, intenta de nuevo.",
-  USER_NOT_FOUND: "Usuario no encontrado en el sistema.",
+  USER_NOT_FOUND: "personal no encontrado en el sistema.",
   INACTIVE_USER: "Tu cuenta no está activa. Contacta a soporte.",
   UNEXPECTED_ERROR: "Error inesperado. Por favor, intenta de nuevo.",
   NETWORK_ERROR: "Error de conexión. Verifica tu internet.",

@@ -10,7 +10,7 @@ interface Movimiento {
   tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE'
   cantidad: number
   motivo: string
-  usuario: string
+  personal: string
   insumo_nombre: string
 }
 
@@ -36,7 +36,7 @@ export default function MovementHistory({ movimientos }: { movimientos: Movimien
               </div>
               <div>
                 <p className="text-sm font-bold text-gray-800">{m.insumo_nombre}</p>
-                <p className="text-xs text-gray-500">{m.motivo} • {m.usuario}</p>
+                <p className="text-xs text-gray-500">{m.motivo} • {m.personal}</p>
               </div>
             </div>
             <div className="text-right">

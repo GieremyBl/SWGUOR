@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase/client'; 
-import { Usuario, RolUsuario, EstadoUsuario } from '@/types';
+import { Personal } from '@/types';
 
 interface AppPermissions {
   [resource: string]: string[];
 }
 
 const ROLE_PERMISSIONS: { [role: string]: AppPermissions } = {
-  gerente_general: {
+  gerente: {
     usuarios: ['view', 'create', 'edit', 'delete', 'export'],
     categorias: ['view', 'create', 'edit', 'delete', 'export'],
     clientes: ['view', 'create', 'edit', 'delete', 'export'],
@@ -67,7 +67,7 @@ const ROLE_PERMISSIONS: { [role: string]: AppPermissions } = {
 };
 
 export function usePermissions() {
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [personal, setUsuario] = useState<Personal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [permissions, setPermissions] = useState<AppPermissions>({});
 
@@ -77,46 +77,30 @@ export function usePermissions() {
       text.toLowerCase()
           .trim()
           .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "");
+          .replace(/[\u0300-\u036f]/g, ""); // Elimina acentos y eñes
     
     try {
-      // getSession es mucho más rápido que getUser porque usa la caché local
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
-      if (!session?.user) {
-        setUsuario(null);
-        setPermissions({});
-        return;
-      }
-
-      type UsuarioPermissions = {
-        id: number;
-        nombre_completo: string;
-        rol: RolUsuario;
-        estado: EstadoUsuario;
-      };
-
-      const { data: userData, error } = await supabase
-        .from('usuarios')
+      const { data: userData } = await supabase
+        .from('personal')
         .select('id, nombre_completo, rol, estado')
         .eq('auth_id', session.user.id)
-        .maybeSingle<UsuarioPermissions>();
+        .maybeSingle();
 
-      if (error || !userData || userData.estado?.toLowerCase() !== 'activo') {
-        setUsuario(null);
-        setPermissions({});
-        return;
+      if (userData && standardize(userData.estado ?? '') === 'activo') {
+        setUsuario(userData as Personal);
+        
+        // Aquí es donde ocurre la magia:
+        const roleKey = standardize(userData.rol ?? '');
+        console.log("Intentando cargar permisos para:", roleKey);
+        
+        // Si roleKey es "disenador", buscará en ROLE_PERMISSIONS.disenador
+        setPermissions(ROLE_PERMISSIONS[roleKey] || {});
       }
-
-      setUsuario(userData as Usuario);
-         
-      const rawRole = userData.rol || '';
-      const roleKey = standardize(rawRole);
-
-      setPermissions(ROLE_PERMISSIONS[roleKey] || {});
-
     } catch (error) {
-      console.error("Error en sincronización de permisos:", error);
+      console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -139,26 +123,26 @@ export function usePermissions() {
   }, [permissions]);
 
   const hasRole = useCallback((roleName: string | string[]): boolean => {
-    if (!usuario?.rol) return false;
-    const currentRol = usuario.rol.toLowerCase().trim();
+    if (!personal?.rol) return false;
+    const currentRol = personal.rol.toLowerCase().trim();
     if (Array.isArray(roleName)) {
       return roleName.some(r => r.toLowerCase().trim() === currentRol);
     }
     return currentRol === roleName.toLowerCase().trim();
-  }, [usuario]);
+  }, [personal]);
 
   // Nueva utilidad rápida: isAdmin
   const isAdmin = useMemo(() => 
-    usuario?.rol?.toLowerCase().trim() === 'administrador', 
-  [usuario]);
+    personal?.rol?.toLowerCase().trim() === 'administrador', 
+  [personal]);
 
   return useMemo(() => ({ 
-    usuario,
-    role: usuario?.rol?.toLowerCase().trim() || null,
+    personal,
+    role: personal?.rol?.toLowerCase().trim() || null,
     isAdmin,
     isLoading, 
     permissions, 
     can, 
     hasRole 
-  }), [usuario, isAdmin, isLoading, permissions, can, hasRole]);
+  }), [personal, isAdmin, isLoading, permissions, can, hasRole]);
 }

@@ -171,7 +171,7 @@ const validatePassword = (password: string): { valid: boolean; error?: string } 
 // ============================================================================
 
 export default function PerfilPage() {
-  const { usuario, isLoading: loadingPermisos } = usePermissions();
+  const { personal, isLoading: loadingPermisos } = usePermissions();
   const [state, dispatch] = useReducer(profileReducer, INITIAL_STATE);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<any>(null);
@@ -183,11 +183,11 @@ export default function PerfilPage() {
 
   // Load user data only once when user ID is available
   useEffect(() => {
-    if (usuario?.id && !hasLoadedData.current) {
+    if (personal?.id && !hasLoadedData.current) {
       hasLoadedData.current = true;
       loadUserData();
     }
-  }, [usuario?.id]);
+  }, [personal?.id]);
 
   // Auto-clear feedback messages
   useEffect(() => {
@@ -207,11 +207,11 @@ export default function PerfilPage() {
   // ============================================================================
 
   const loadUserData = useCallback(async () => {
-    if (!usuario?.id) return;
+    if (!personal?.id) return;
     
     try {
       dispatch({ type: 'SET_LOADING', loading: true });
-      const { data, error } = await getUsuarioData(String(usuario.id));
+      const { data, error } = await getUsuarioData(String(personal.id));
 
       if (error) throw new Error('Error al cargar datos');
       if (data) {
@@ -223,11 +223,11 @@ export default function PerfilPage() {
     } finally {
       dispatch({ type: 'SET_LOADING', loading: false });
     }
-  }, [usuario]);
+  }, [personal]);
 
   const handleImageUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !usuario?.id) return;
+    if (!file || !personal?.id) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -246,7 +246,7 @@ export default function PerfilPage() {
       dispatch({ type: 'CLEAR_FEEDBACK' });
       
       const fileExt = file.name.split('.').pop();
-      const fileName = `${usuario.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${personal.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       // Upload to storage
@@ -265,7 +265,7 @@ export default function PerfilPage() {
         .getPublicUrl(filePath);
 
       // Update database
-      const { error: updateError } = await updateUsuario(String(usuario.id), {
+      const { error: updateError } = await updateUsuario(String(personal.id), {
         avatar_url: publicUrl,
       });
 
@@ -279,11 +279,11 @@ export default function PerfilPage() {
     } finally {
       dispatch({ type: 'SET_UPLOADING', uploading: false });
     }
-  }, [usuario]);
+  }, [personal]);
 
   const handleUpdateProfile = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!usuario?.id) return;
+    if (!personal?.id) return;
     
     try {
       dispatch({ type: 'SET_SAVING', saving: true });
@@ -302,8 +302,8 @@ export default function PerfilPage() {
         return;
       }
 
-      const isAdmin = usuario.rol?.toLowerCase() === 'administrador';
-      const emailChanged = state.email.trim().toLowerCase() !== usuario.email?.toLowerCase();
+      const isAdmin = personal.rol?.toLowerCase() === 'administrador';
+      const emailChanged = state.email.trim().toLowerCase() !== personal.email?.toLowerCase();
 
       // Handle email change for admin
       if (isAdmin && emailChanged) {
@@ -333,7 +333,7 @@ export default function PerfilPage() {
         updateData.email = state.email.trim().toLowerCase();
       }
 
-      const { error: updateError } = await updateUsuario(String(usuario.id), updateData);
+      const { error: updateError } = await updateUsuario(String(personal.id), updateData);
       if (updateError) throw updateError;
 
       dispatch({
@@ -348,7 +348,7 @@ export default function PerfilPage() {
     } finally {
       dispatch({ type: 'SET_SAVING', saving: false });
     }
-  }, [state.nombreCompleto, state.email, state.telefono, usuario]);
+  }, [state.nombreCompleto, state.email, state.telefono, personal]);
 
   const handleChangePassword = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,14 +423,14 @@ export default function PerfilPage() {
   // RENDER: ERROR STATE
   // ============================================================================
 
-  if (!usuario) {
+  if (!personal) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center bg-white p-10 rounded-xl shadow-lg border border-gray-200 max-w-md">
           <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-xl font-medium text-gray-900 mb-2">Usuario no encontrado</h2>
+          <h2 className="text-xl font-medium text-gray-900 mb-2">personal no encontrado</h2>
           <p className="text-sm text-gray-600">Por favor, inicia sesión nuevamente.</p>
         </div>
       </div>
@@ -441,7 +441,7 @@ export default function PerfilPage() {
   // RENDER: MAIN CONTENT
   // ============================================================================
 
-  const isAdmin = usuario.rol?.toLowerCase() === 'administrador';
+  const isAdmin = personal.rol?.toLowerCase() === 'administrador';
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
@@ -538,7 +538,7 @@ export default function PerfilPage() {
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Rol</p>
                       <p className="text-sm font-medium text-gray-900 capitalize">
-                        {usuario.rol?.replace('_', ' ')}
+                        {personal.rol?.replace('_', ' ')}
                       </p>
                     </div>
                   </div>
@@ -548,7 +548,7 @@ export default function PerfilPage() {
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Estado</p>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
-                        {usuario.estado}
+                        {personal.estado}
                       </span>
                     </div>
                   </div>
@@ -558,8 +558,8 @@ export default function PerfilPage() {
                     <div>
                       <p className="text-xs text-gray-500 uppercase tracking-wide">Miembro desde</p>
                       <p className="text-sm font-medium text-gray-900">
-                        {(usuario as any).created_at
-                          ? new Date((usuario as any).created_at).toLocaleDateString('es-ES', {
+                        {(personal as any).created_at
+                          ? new Date((personal as any).created_at).toLocaleDateString('es-ES', {
                               day: 'numeric',
                               month: 'long',
                               year: 'numeric',

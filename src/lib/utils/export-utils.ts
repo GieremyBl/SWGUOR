@@ -414,7 +414,7 @@ export const exportReporteGerencialExcel = async (ventas: any[], insumos: any[],
  * Exporta el historial de movimientos de un producto específico (Kardex)
  */
 export const exportKardexToPDF = async (producto: any, movimientos: any[]) => {
-  const headers = [["FECHA", "TIPO", "MOTIVO", "CANTIDAD", "USUARIO"]];
+  const headers = [["FECHA", "TIPO", "MOTIVO", "CANTIDAD", "personal"]];
   
   const body = movimientos.map(m => [
     formatDate(m.created_at),

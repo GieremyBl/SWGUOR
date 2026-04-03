@@ -37,12 +37,12 @@ export type EstadoUsuario = 'activo' | 'inactivo' | 'suspendido';
  * INTERFACES DE ENTIDADES
  */
 
-export interface Usuario {
+export interface Personal {
   id: number;
-  auth_id: string;
+  auth_id: string | null;
   nombre_completo: string;
   email: string;
-  telefono?: string;
+  telefono: number | null;
   avatar_url?: string;
   rol: RolUsuario;
   estado: EstadoUsuario;
@@ -69,7 +69,7 @@ export interface Categoria {
   nombre: string;
   descripcion?: string;
   slug?: string;
-  estado: 'activo' | 'inactivo';
+  activo: boolean;
   created_at: string;
 }
 

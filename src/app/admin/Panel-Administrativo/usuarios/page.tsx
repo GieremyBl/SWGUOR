@@ -40,11 +40,11 @@ export default function UsuariosPage() {
   const loadStats = useCallback(async () => {
     try {
       const [resTotal, resActivos, resInactivos, resAdmins, resTaller] = await Promise.all([
-        supabase.from("usuarios").select("*", { count: 'exact', head: true }),
-        supabase.from("usuarios").select("*", { count: 'exact', head: true }).eq("estado", "activo"),
-        supabase.from("usuarios").select("*", { count: 'exact', head: true }).eq("estado", "inactivo"),
-        supabase.from("usuarios").select("*", { count: 'exact', head: true }).eq("rol", "administrador"),
-        supabase.from("usuarios").select("*", { count: 'exact', head: true }).eq("rol", "representante_taller"),
+        supabase.from("personal").select("*", { count: 'exact', head: true }),
+        supabase.from("personal").select("*", { count: 'exact', head: true }).eq("estado", "activo"),
+        supabase.from("personal").select("*", { count: 'exact', head: true }).eq("estado", "inactivo"),
+        supabase.from("personal").select("*", { count: 'exact', head: true }).eq("rol", "administrador"),
+        supabase.from("personal").select("*", { count: 'exact', head: true }).eq("rol", "representante_taller"),
       ]);
       
       setStats({
@@ -60,7 +60,7 @@ export default function UsuariosPage() {
   const fetchUsuarios = useCallback(async () => {
     setLoading(true);
     try {
-      let query = supabase.from("usuarios").select("*", { count: 'exact' });
+      let query = supabase.from("personal").select("*", { count: 'exact' });
       
       // Filtro de estado (activo/inactivo)
       if (statusFilter) query = query.eq("estado", statusFilter);
@@ -83,12 +83,12 @@ export default function UsuariosPage() {
   useEffect(() => { fetchUsuarios(); }, [fetchUsuarios]);
 
   // Manejadores de acciones
-  const handleToggleStatus = async (usuario: any) => {
+  const handleToggleStatus = async (personal: any) => {
     try {
-      const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
-      const { error } = await (supabase.from("usuarios") as any)
+      const nuevoEstado = personal.estado === 'activo' ? 'inactivo' : 'activo';
+      const { error } = await (supabase.from("personal") as any)
         .update({ estado: nuevoEstado })
-        .eq("id", usuario.id);
+        .eq("id", personal.id);
 
       if (error) throw error;
       toast.success(`Estado actualizado a ${nuevoEstado}`);
@@ -96,14 +96,14 @@ export default function UsuariosPage() {
     } catch (err) { toast.error("No se pudo cambiar el estado"); }
   };
 
-  const handleEdit = (usuario: any) => {
-    setSelectedUsuario(usuario);
+  const handleEdit = (personal: any) => {
+    setSelectedUsuario(personal);
     setDialogMode("edit");
   };
 
   // <-- Nuevo manejador para el botón de eliminar de la tabla
-  const handleDelete = (usuario: any) => {
-    setSelectedUsuario(usuario);
+  const handleDelete = (personal: any) => {
+    setSelectedUsuario(personal);
     setDialogMode("delete");
   };
 
@@ -154,7 +154,7 @@ export default function UsuariosPage() {
                 onClick={() => setDialogMode("new")}
                 className="cursor-pointer bg-pink-600 hover:bg-pink-700 text-white shadow-lg font-bold gap-2 h-11 transition-all active:scale-95 px-6"
               >
-                <Plus className="w-5 h-5" /> Nuevo Usuario
+                <Plus className="w-5 h-5" /> Nuevo personal
               </Button>
             )}
           </div>
@@ -222,7 +222,7 @@ export default function UsuariosPage() {
           isOpen={true} 
           onClose={() => {setDialogMode(null); setSelectedUsuario(null);}} 
           onSuccess={fetchUsuarios} 
-          usuario={selectedUsuario} 
+          personal={selectedUsuario} 
         />
       )}
 
@@ -235,7 +235,7 @@ export default function UsuariosPage() {
             setDialogMode(null);
             setSelectedUsuario(null);
           }} 
-          usuario={selectedUsuario} 
+          personal={selectedUsuario} 
         />
       )}
     </div>

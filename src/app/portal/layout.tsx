@@ -59,9 +59,9 @@ function PortalSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
         {!collapsed && (
           <div className="flex items-center gap-3 flex-1 animate-in fade-in duration-300">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
-              <span className="text-white font-bold text-sm">G</span>
+              <span className="text-white font-bold text-sm">M&E</span>
             </div>
-            <span className="text-white font-bold tracking-tight">GUOR PRO</span>
+            <span className="text-white font-bold tracking-tight">Portal M&E GUOR</span>
           </div>
         )}
         <button onClick={onToggle} className={cn("text-slate-500 hover:text-white p-1.5 transition-colors", collapsed && "mx-auto")}>
@@ -113,7 +113,11 @@ function PortalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    console.log("Estado de carga:", loading);
+    console.log("Datos del cliente:", cliente);
+    
     if (!loading && !cliente) {
+      console.warn("Redirigiendo: No se encontró perfil de cliente vinculado.");
       router.replace('/auth/login?redirect=/portal/dashboard');
     }
   }, [loading, cliente, router]);

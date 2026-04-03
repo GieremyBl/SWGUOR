@@ -11,9 +11,10 @@ import {
   BarChart3, Crown
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
-import type { Usuario } from '@/types';
+import type { Personal } from '@/types';
 import { LucideIcon } from 'lucide-react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
+import { personal } from '@/lib/auth/auth.service';
 
 type NavItem = {
   title: string;
@@ -97,7 +98,7 @@ const navItems: NavItem[] = [
   }
 ];
 
-export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
+export default function AdminSidebar({ personal }: { personal: Personal }) {
   const router = useRouter();
   const pathname = usePathname();
   const { can, isAdmin } = usePermissions();
@@ -198,45 +199,6 @@ export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
           )}
         </div>
 
-        {/* PERFIL - Usuario */}
-        {!isCollapsed && usuario.nombre_completo && (
-          <div className="px-4 mt-6 mb-4 animate-in fade-in duration-500">
-            <Link
-              href="/admin/Panel-Administrativo/perfil"
-              onClick={() => setIsMobileOpen(false)}
-              className="group block"
-            >
-              <div className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center gap-4 transition-all hover:border-rose-100 hover:shadow-sm">
-
-                {/* Avatar */}
-                <div className="relative w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                  {usuario.avatar_url ? (
-                    <img src={usuario.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
-                  ) : (
-                    <span className="flex items-center justify-center h-full text-slate-500 font-bold text-lg">
-                      {usuario.nombre_completo?.charAt(0)}
-                    </span>
-                  )}
-                  {isAdmin && (
-                    <div className="absolute -bottom-0.5 -right-0.5 bg-amber-400 p-1 rounded-full border-2 border-white">
-                      <Crown size={10} className="text-white" strokeWidth={3} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Texto */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-slate-950 truncate leading-snug">
-                    {usuario.nombre_completo}
-                  </p>
-                  <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5 truncate">
-                    {usuario.rol?.replace('_', ' ')}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          </div>
-        )}
 
         {/* Navegación - Contenedor Principal */}
         <nav className="flex-1 px-3 mt-4 space-y-1.5 overflow-y-auto custom-scrollbar">

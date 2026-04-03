@@ -4,14 +4,14 @@ import React from "react";
 import { CheckSquare, Zap, AlertTriangle, ClipboardList, AlertCircle, Briefcase } from 'lucide-react';
 import DashboardCharts from "./DashboardCharts";
 
-type Usuario = {
+type personal = {
   id: string | number;
   nombre_completo: string;
   rol: string;
   estado: string;
 };
 
-export default function DashboardAyudante({ usuario }: { usuario: Usuario }) {
+export default function DashboardAyudante({ personal }: { personal: personal }) {
   // Datos simulados (Idealmente vendrían de un fetch)
   const tareas = [
     { id: 1, tarea: "Limpieza de mesas de corte", prioridad: "Urgente", tiempo: "10 min" },
@@ -34,7 +34,7 @@ export default function DashboardAyudante({ usuario }: { usuario: Usuario }) {
               Jornada Productiva
             </div>
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">
-              Hola, {usuario.nombre_completo.split(' ')[0]}
+              Hola, {personal.nombre_completo.split(' ')[0]}
             </h1>
             <p className="text-slate-500 text-sm font-medium">Sector: Talleres GUOR • Turno Mañana</p>
           </div>

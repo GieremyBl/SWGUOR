@@ -22,12 +22,12 @@ const DASHBOARDS_MAP: Record<string, React.ComponentType<any>> = {
 };
 
 export default function DashboardPage() {
-  const { usuario, isLoading } = usePermissions();
+  const { personal, isLoading } = usePermissions();
 
   const ActiveDashboard = useMemo(() => {
-    if (!usuario?.rol) return null;
-    return DASHBOARDS_MAP[usuario.rol] ?? null;
-  }, [usuario]);
+    if (!personal?.rol) return null;
+    return DASHBOARDS_MAP[personal.rol] ?? null;
+  }, [personal]);
 
   if (isLoading) {
     return (
@@ -38,7 +38,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!usuario) {
+  if (!personal) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center p-6">
         <div className="p-4 rounded-full bg-slate-100 mb-4">
@@ -60,7 +60,7 @@ export default function DashboardPage() {
         <p className="text-slate-500 text-sm mt-1">
           El rol{' '}
           <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs">
-            {usuario.rol}
+            {personal.rol}
           </code>{' '}
           no tiene un tablero configurado.
         </p>
@@ -68,5 +68,5 @@ export default function DashboardPage() {
     );
   }
 
-  return <ActiveDashboard usuario={usuario} />;
+  return <ActiveDashboard personal={personal} />;
 }

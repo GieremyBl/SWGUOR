@@ -127,8 +127,7 @@ class MemoryCache<T> {
 // INSTANCIAS DE CACHÉ
 // ============================================
 
-// ✅ Usar tipo generado desde la base de datos
-type UserCacheData = Database['public']['Tables']['usuarios']['Row'];
+type UserCacheData = Database['public']['Tables']['personal']['Row'];
 
 /**
  * Caché de usuarios con TTL de 5 minutos
@@ -149,7 +148,7 @@ if (typeof window === 'undefined') {
 }
 
 /**
- * Utilidad para invalidar caché de un usuario específico
+ * Utilidad para invalidar caché de un personal específico
  * Usar después de actualizar rol o estado
  */
 export function invalidateUserCache(authId: string): void {

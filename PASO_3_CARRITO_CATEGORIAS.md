@@ -5,7 +5,7 @@
 ### 1. **Página de Categoría Dinámica** ✅
 **Archivo**: `app/ecommerce/categorias/[id]/page.tsx`
 
-Cuando el usuario hace clic en una categoría (ej: "Blusas"):
+Cuando el personal hace clic en una categoría (ej: "Blusas"):
 - Se abre una página mostrando TODOS los productos de esa categoría
 - Muestra imagen, nombre, precio y botón (+) para agregar al carrito
 - Header dinámico con nombre y descripción de la categoría
@@ -102,7 +102,7 @@ Retorna todos los productos de una categoría específica en formato:
 ## 📊 Flujo Completo de Compra
 
 ```
-1. Usuario entra a home (/ecommerce)
+1. personal entra a home (/ecommerce)
    ↓
 2. Ve las categorías en CategoryShowcase
    ↓

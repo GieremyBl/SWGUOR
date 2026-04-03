@@ -4,14 +4,14 @@ import React from "react";
 import { Zap, Truck, Users } from 'lucide-react';
 import DashboardCharts from "./DashboardCharts";
 
-type Usuario = {
+type personal = {
   id: string | number;
   nombre_completo: string;
   rol: string;
   estado: string;
 };
 
-export default function DashboardRepresentante({ usuario }: { usuario: Usuario }) {
+export default function DashboardRepresentante({ personal }: { personal: personal }) {
   // Datos simulados del piso de producción
   const lotesEnProduccion = [
     { id: "L-405", prenda: "Pantalón Denim", avance: 65, operarios: 4, prioridad: "Alta" },
@@ -36,7 +36,7 @@ export default function DashboardRepresentante({ usuario }: { usuario: Usuario }
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">
               Planta <span className="text-slate-400 font-light">de</span> Confección
             </h1>
-            <p className="text-slate-500 text-sm font-medium">Línea de producción activa • {usuario.nombre_completo}</p>
+            <p className="text-slate-500 text-sm font-medium">Línea de producción activa • {personal.nombre_completo}</p>
           </div>
 
           <button className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:shadow-lg hover:from-emerald-500 hover:to-emerald-400 transition-all shadow-lg shadow-emerald-200 h-fit">

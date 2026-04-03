@@ -8,10 +8,11 @@ export enum Role {
   RECEPCIONISTA = 'recepcionista',
   AYUDANTE = 'ayudante',
   REPRESENTANTE_TALLER = 'representante_taller',
+  GERENTE = 'gerente',
 }
 
 /**
- * Estados de Usuario (de tu tabla usuarios)
+ * Estados de personal (de tu tabla usuarios)
  */
 export enum EstadoUsuario {
   ACTIVO = 'activo',
@@ -206,19 +207,60 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_DISPATCHES,
     Permission.VIEW_DASHBOARD,
   ],
+  [Role.GERENTE]: [
+    // Acceso amplio pero sin gestión de usuarios
+    Permission.VIEW_USERS,
+    Permission.VIEW_CLIENTS,
+    Permission.MANAGE_CLIENTS,
+    Permission.VIEW_PRODUCTS,
+    Permission.CREATE_PRODUCTS,
+    Permission.EDIT_PRODUCTS,
+    Permission.DELETE_PRODUCTS,
+    Permission.VIEW_VARIANTS,
+    Permission.MANAGE_VARIANTS,
+    Permission.VIEW_CATEGORIES,
+    Permission.MANAGE_CATEGORIES,
+    Permission.VIEW_ORDERS,
+    Permission.CREATE_ORDERS,
+    Permission.EDIT_ORDERS,
+    Permission.CANCEL_ORDERS,
+    Permission.VIEW_QUOTES,
+    Permission.CREATE_QUOTES,
+    Permission.EDIT_QUOTES,
+    Permission.APPROVE_QUOTES,
+    Permission.VIEW_SALES,
+    Permission.MANAGE_SALES,
+    Permission.VIEW_INVENTORY,
+    Permission.MANAGE_INVENTORY,
+    Permission.ADJUST_STOCK,
+    Permission.VIEW_MATERIALS,
+    Permission.MANAGE_MATERIALS,
+    Permission.VIEW_CONFECTIONS,
+    Permission.MANAGE_CONFECTIONS,
+    Permission.VIEW_WORKSHOPS,
+    Permission.MANAGE_WORKSHOPS,
+    Permission.VIEW_DISPATCHES,
+    Permission.MANAGE_DISPATCHES,
+    Permission.VIEW_PAYMENTS,
+    Permission.MANAGE_PAYMENTS,
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_REPORTS,
+    Permission.EXPORT_DATA,
+  ],
+
 };
 
 /**
- * Interface de Usuario (basada en tu tabla usuarios)
+ * Interface de personal (basada en tu tabla usuarios)
  */
-export interface Usuario {
+export interface personal {
   id: number;
   nombre_completo: string;
   email: string;
-  telefono: string | null;
+  telefono: number | null;
   rol: string;
-  estado: string;
-  auth_id?: string | null;
+  estado: EstadoUsuario;
+  auth_id?: number | null;
   ultimo_acceso?: string | null;
   created_by?: string | null;
   created_at: string;
@@ -229,52 +271,52 @@ export interface Usuario {
  * Interface de Sesión
  */
 export interface Session {
-  user: Usuario
+  user: personal
   access_token: string
   refresh_token: string
   expires_at: number
 }
 
 /**
- * Helper: Verificar si un usuario tiene un permiso
+ * Helper: Verificar si un personal tiene un permiso
  */
-export function hasPermission(user: Usuario, permission: Permission): boolean {
+export function hasPermission(user: personal, permission: Permission): boolean {
   const rolePermissions = ROLE_PERMISSIONS[user.rol as Role]
   return rolePermissions.includes(permission)
 }
 
 /**
- * Helper: Verificar si un usuario tiene cualquiera de los permisos
+ * Helper: Verificar si un personal tiene cualquiera de los permisos
  */
-export function hasAnyPermission(user: Usuario, permissions: Permission[]): boolean {
+export function hasAnyPermission(user: personal, permissions: Permission[]): boolean {
   return permissions.some(permission => hasPermission(user, permission))
 }
 
 /**
- * Helper: Verificar si un usuario tiene todos los permisos
+ * Helper: Verificar si un personal tiene todos los permisos
  */
-export function hasAllPermissions(user: Usuario, permissions: Permission[]): boolean {
+export function hasAllPermissions(user: personal, permissions: Permission[]): boolean {
   return permissions.every(permission => hasPermission(user, permission))
 }
 
 /**
- * Helper: Verificar si un usuario tiene un rol específico
+ * Helper: Verificar si un personal tiene un rol específico
  */
-export function hasRole(user: Usuario, role: Role): boolean {
+export function hasRole(user: personal, role: Role): boolean {
   return user.rol === (role as string)
 }
 
 /**
- * Helper: Verificar si un usuario es administrador
+ * Helper: Verificar si un personal es administrador
  */
-export function isAdmin(user: Usuario): boolean {
+export function isAdmin(user: personal): boolean {
   return user.rol === Role.ADMINISTRADOR
 }
 
 /**
- * Helper: Verificar si el usuario está activo
+ * Helper: Verificar si el personal está activo
  */
-export function isUserActive(user: Usuario): boolean {
+export function isUserActive(user: personal): boolean {
   return user.estado === EstadoUsuario.ACTIVO
 }
 
@@ -295,6 +337,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   [Role.RECEPCIONISTA]: 'Recepcionista',
   [Role.AYUDANTE]: 'Ayudante',
   [Role.REPRESENTANTE_TALLER]: 'Representante de Taller',
+  [Role.GERENTE]: 'Gerente',
 }
 
 /**
@@ -307,10 +350,11 @@ export const ROLE_COLORS: Record<Role, string> = {
   [Role.RECEPCIONISTA]: 'bg-green-100 text-green-800',
   [Role.AYUDANTE]: 'bg-gray-100 text-gray-800',
   [Role.REPRESENTANTE_TALLER]: 'bg-yellow-100 text-yellow-800',
+  [Role.GERENTE]: 'bg-blue-100 text-blue-800',
 }
 
 /**
- * Labels para estados de usuario
+ * Labels para estados de personal
  */
 export const ESTADO_LABELS: Record<EstadoUsuario, string> = {
   [EstadoUsuario.ACTIVO]: 'Activo',

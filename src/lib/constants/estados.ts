@@ -70,7 +70,7 @@ export const TIPOS_CLIENTE: Record<string, { label: string; color: string; bgCol
   minorista:    { label: 'Minorista B2B', color: 'text-sky-700',    bgColor: 'bg-sky-100' },
 };
 
-// ── ROLES DE USUARIO ─────────────────────────────────────────────────────────
+// ── ROLES DE personal ─────────────────────────────────────────────────────────
 export const ROLES_USUARIO = {
   administrador: 'Administrador',
   cliente: 'Cliente B2B',

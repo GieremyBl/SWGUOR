@@ -20,21 +20,21 @@ const ROLES_SISTEMA: { value: RolUsuario; label: string }[] = [
   { value: "representante_taller", label: "Representante de Taller" },
 ];
 
-export default function EditUsuarioDialog({ isOpen, onClose, onSuccess, usuario }: any) {
+export default function EditUsuarioDialog({ isOpen, onClose, onSuccess, personal }: any) {
   const [loading, setLoading] = useState(false);
-  const [rolSeleccionado, setRolSeleccionado] = useState<RolUsuario>(usuario?.rol);
+  const [rolSeleccionado, setRolSeleccionado] = useState<RolUsuario>(personal?.rol);
 
   useEffect(() => {
-    if (usuario) {
-      setRolSeleccionado(usuario.rol);
+    if (personal) {
+      setRolSeleccionado(personal.rol);
     }
-  }, [usuario]);
+  }, [personal]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const data = { ...Object.fromEntries(formData), id: usuario.id, rol: rolSeleccionado };
+    const data = { ...Object.fromEntries(formData), id: personal.id, rol: rolSeleccionado };
 
     try {
       const res = await fetch("/api/admin/usuarios", {
@@ -67,7 +67,7 @@ export default function EditUsuarioDialog({ isOpen, onClose, onSuccess, usuario 
               </div>
               <div>
                 <DialogTitle className="text-xl font-bold text-slate-800 uppercase tracking-tight">
-                  Configuración de Usuario
+                  Configuración de personal
                 </DialogTitle>
                 <DialogDescription className="text-slate-500">
                   Modifica los accesos y datos personales del personal.
@@ -84,7 +84,7 @@ export default function EditUsuarioDialog({ isOpen, onClose, onSuccess, usuario 
               </Label>
               <Input 
                 name="nombre_completo" 
-                defaultValue={usuario?.nombre_completo} 
+                defaultValue={personal?.nombre_completo} 
                 required 
                 placeholder="Nombre del colaborador"
                 className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-11"
@@ -98,7 +98,7 @@ export default function EditUsuarioDialog({ isOpen, onClose, onSuccess, usuario 
               </Label>
               <Input 
                 name="email" 
-                defaultValue={usuario?.email} 
+                defaultValue={personal?.email} 
                 disabled 
                 className="bg-slate-100 border-dashed cursor-not-allowed h-11"
               />
@@ -125,7 +125,7 @@ export default function EditUsuarioDialog({ isOpen, onClose, onSuccess, usuario 
                 </SelectContent>
               </Select>
               <p className="text-[10px] text-slate-400 italic">
-                * El rol determina los módulos a los que el usuario puede entrar.
+                * El rol determina los módulos a los que el personal puede entrar.
               </p>
             </div>
 

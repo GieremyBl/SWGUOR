@@ -4,24 +4,24 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import AdminSidebar from './Sidebar';
 import AdminHeader from './Header';
-import type { Usuario } from '@/types';
+import type { Personal } from '@/types';
 
 export default function RealtimeLayoutWrapper({ 
   initialUsuario, 
   children 
 }: { 
-  initialUsuario: Usuario, 
+  initialUsuario: Personal, 
   children: React.ReactNode 
 }) {
-  const [usuario, setUsuario] = useState<Usuario>(initialUsuario);
+  const [personal, setUsuario] = useState<Personal>(initialUsuario);
   
-  // Usamos ref para mantener la referencia del usuario sin disparar efectos
-  const usuarioRef = useRef(usuario);
+  // Usamos ref para mantener la referencia del personal sin disparar efectos
+  const usuarioRef = useRef(personal);
 
   useEffect(() => {
     // Actualizar la referencia cuando el estado cambie
-    usuarioRef.current = usuario;
-  }, [usuario]);
+    usuarioRef.current = personal;
+  }, [personal]);
 
   useEffect(() => {
     // Suscripción a cambios en la tabla 'usuarios'
@@ -36,7 +36,7 @@ export default function RealtimeLayoutWrapper({
           filter: `id=eq.${initialUsuario.id}`,
         },
         (payload) => {
-          const newUser = payload.new as Usuario;
+          const newUser = payload.new as Personal;
           
           // Comparación profunda básica para evitar actualizaciones innecesarias
           if (JSON.stringify(newUser) !== JSON.stringify(usuarioRef.current)) {
@@ -53,9 +53,9 @@ export default function RealtimeLayoutWrapper({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <AdminSidebar usuario={usuario} />
+      <AdminSidebar personal={personal} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <AdminHeader usuario={usuario} />
+        <AdminHeader personal={personal} />
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
           {children}
         </main>

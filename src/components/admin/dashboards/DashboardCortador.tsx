@@ -4,14 +4,14 @@ import React from "react";
 import { Scissors, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import DashboardCharts from "./DashboardCharts";
 
-type Usuario = {
+type personal = {
   id: string | number;
   nombre_completo: string;
   rol: string;
   estado: string;
 };
 
-export default function DashboardCortador({ usuario }: { usuario: Usuario }) {
+export default function DashboardCortador({ personal }: { personal: personal }) {
   // Datos simulados de la cola de corte
   const tareasCorte = [
     { id: 1, lote: "L-405", producto: "Pantalón Denim Slim", capas: 50, tela: "Mezclilla 12oz", prioridad: "Urgente" },

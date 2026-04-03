@@ -9,7 +9,7 @@ import { Save, Building2, Store, Users, CreditCard, Percent, Loader2, CheckCircl
 
 type TabId = 'empresa' | 'tienda' | 'usuarios' | 'pagos' | 'impuestos';
 
-interface Usuario {
+interface personal {
   id: number;
   nombre_completo: string;
   email: string;
@@ -77,7 +77,7 @@ export default function ConfiguracionPage() {
   // State
   const [activeTab, setActiveTab] = useState<TabId>('empresa');
   const [formData, setFormData] = useState<ConfigFormData>(INITIAL_FORM_DATA);
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [usuarios, setUsuarios] = useState<personal[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>({ status: 'idle', message: '' });
 
@@ -377,12 +377,12 @@ export default function ConfiguracionPage() {
                     Gestión de usuarios
                   </h2>
                   <p className="text-sm text-gray-500">
-                    {usuarios.length} {usuarios.length === 1 ? 'usuario registrado' : 'usuarios registrados'}
+                    {usuarios.length} {usuarios.length === 1 ? 'personal registrado' : 'usuarios registrados'}
                   </p>
                 </div>
                 <button className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
                   <Users className="w-4 h-4" />
-                  Agregar usuario
+                  Agregar personal
                 </button>
               </div>
 
@@ -391,7 +391,7 @@ export default function ConfiguracionPage() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Usuario
+                        personal
                       </th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Email

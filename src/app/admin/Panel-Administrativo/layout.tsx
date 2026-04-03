@@ -17,21 +17,21 @@ async function getValidatedUser(supabase: any) {
   if (!user || authError) return { error: 'no_auth' };
 
   // Bajo la OPCIÓN A, consultamos la tabla usuarios
-  const { data: usuario, error: usuarioError } = await supabase
+  const { data: personal, error: usuarioError } = await supabase
     .from('usuarios')
     .select('*')
     .eq('auth_id', user.id)
     .single();
 
-  if (usuarioError || !usuario) return { error: 'no_profile' };
+  if (usuarioError || !personal) return { error: 'no_profile' };
   
   // VALIDACIÓN DE SEGURIDAD EXTRA: 
-  // Si el usuario es un 'cliente', no tiene nada que hacer en el Panel Administrativo
-  if (usuario.rol?.toLowerCase() === 'cliente') return { error: 'is_client' };
+  // Si el personal es un 'cliente', no tiene nada que hacer en el Panel Administrativo
+  if (personal.rol?.toLowerCase() === 'cliente') return { error: 'is_client' };
 
-  if (usuario.estado?.toUpperCase() !== 'ACTIVO') return { error: 'inactive' };
+  if (personal.estado?.toUpperCase() !== 'ACTIVO') return { error: 'inactive' };
 
-  return { usuario };
+  return { personal };
 }
 
 export default async function PanelAdministrativoLayout({
@@ -58,7 +58,7 @@ export default async function PanelAdministrativoLayout({
     }
   );
 
-  const { usuario, error } = await getValidatedUser(supabase);
+  const { personal, error } = await getValidatedUser(supabase);
 
   // --- MANEJO DE REDIRECCIONES ACTUALIZADO ---
   
@@ -79,7 +79,7 @@ export default async function PanelAdministrativoLayout({
 
   return (
     <ReactQueryProvider>
-      <RealtimeLayoutWrapper initialUsuario={usuario}>
+      <RealtimeLayoutWrapper initialUsuario={personal}>
         <div className="min-h-screen bg-slate-50/50">
           {children}
         </div>

@@ -6,14 +6,14 @@ import Link from "next/link";
 import { Clock, TrendingUp, Users } from 'lucide-react';
 import DashboardCharts from "./DashboardCharts";
 
-type Usuario = {
+type personal = {
   id: string | number;
   nombre_completo: string;
   rol: string;
   estado: string;
 };
 
-export default function DashboardRecepcionista({ usuario }: { usuario: Usuario }) {
+export default function DashboardRecepcionista({ personal }: { personal: personal }) {
   // Datos simulados para la vista de recepción
   const pedidosRecientes = [
     { id: "1024", cliente: "Ana García", total: "S/ 450", estado: "Pendiente", tiempo: "Hace 15 min" },
@@ -38,7 +38,7 @@ export default function DashboardRecepcionista({ usuario }: { usuario: Usuario }
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">
               Atención al Cliente
             </h1>
-            <p className="text-slate-500 text-sm font-medium">Bienvenido, {usuario.nombre_completo.split(' ')[0]} • Recepción Central</p>
+            <p className="text-slate-500 text-sm font-medium">Bienvenido, {personal.nombre_completo.split(' ')[0]} • Recepción Central</p>
           </div>
           
           <div className="bg-gradient-to-br from-slate-50 to-white p-6 rounded-2xl border border-slate-100 shadow-sm h-fit">
@@ -110,7 +110,7 @@ export default function DashboardRecepcionista({ usuario }: { usuario: Usuario }
                 <div className="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between hover:border-blue-200 hover:shadow-xl hover:shadow-blue-50 transition-all cursor-pointer">
                   <div>
                     <p className="font-black uppercase text-xs text-slate-800">Registrar Cliente</p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Alta de nuevo usuario</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">Alta de nuevo personal</p>
                   </div>
                 </div>
               </Link>

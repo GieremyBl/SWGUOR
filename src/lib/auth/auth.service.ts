@@ -8,19 +8,19 @@ import type { Database } from "@/types/database";
 // ============================================
 
 // Usar tipo generado desde la base de datos
-export type Usuario = Database['public']['Tables']['usuarios']['Row'];
+export type personal = Database['public']['Tables']['personal']['Row'];
 
 export interface LoginResult {
   success: boolean;
   error?: string;
-  usuario?: Usuario;
+  personal?: personal;
 }
 
 const ESTADO_ACTIVO = 'ACTIVO'; 
 
 const ERROR_MESSAGES = {
   INVALID_CREDENTIALS: "Credenciales inválidas. Por favor, intenta de nuevo.",
-  USER_NOT_FOUND: "Error obteniendo datos del usuario.",
+  USER_NOT_FOUND: "Error obteniendo datos del personal.",
   INACTIVE_USER: "Tu cuenta no está activa. Contacta a soporte.",
   UNEXPECTED_ERROR: "Ocurrió un error. Por favor, intenta de nuevo.",
   NETWORK_ERROR: "Error de conexión. Verifica tu internet."
@@ -39,7 +39,7 @@ function validateEmail(email: string): boolean {
 }
 
 /**
- * Valida el estado del usuario
+ * Valida el estado del personal
  */
 function isUserActive(estado: string | undefined): boolean {
   return estado?.toString().toUpperCase().trim() === ESTADO_ACTIVO;
@@ -50,12 +50,12 @@ function isUserActive(estado: string | undefined): boolean {
 // ============================================
 
 /**
- * Obtiene los datos del usuario desde la base de datos
+ * Obtiene los datos del personal desde la base de datos
  */
-async function fetchUserByAuthId(authId: string): Promise<Usuario | null> {
+async function fetchUserByAuthId(authId: string): Promise<personal | null> {
   try {
     const { data, error } = await supabase
-      .from('usuarios')
+      .from('personal')
       .select('id, auth_id, rol, estado, nombre_completo, email, ultimo_acceso')
       .eq('auth_id', authId)
       .maybeSingle();
@@ -65,7 +65,7 @@ async function fetchUserByAuthId(authId: string): Promise<Usuario | null> {
       return null;
     }
 
-    return (data || null) as Usuario | null;
+    return (data || null) as personal | null;
   } catch (err) {
     console.error('[Auth] Unexpected error fetching user:', err);
     return null;
@@ -73,12 +73,12 @@ async function fetchUserByAuthId(authId: string): Promise<Usuario | null> {
 }
 
 /**
- * Actualiza la fecha del último acceso del usuario
+ * Actualiza la fecha del último acceso del personal
  */
 async function updateLastAccess(userId: number): Promise<void> {
   try {
     await supabase
-      .from('usuarios')
+      .from('personal')
       .update({ ultimo_acceso: new Date().toISOString() })
       .eq('id', userId);
   } catch (err) {
@@ -92,7 +92,7 @@ async function updateLastAccess(userId: number): Promise<void> {
 // ============================================
 
 /**
- * Autentica un usuario con email y contraseña
+ * Autentica un personal con email y contraseña
  * Compatible con SSR middleware
  */
 export async function loginUser(
@@ -131,10 +131,10 @@ export async function loginUser(
       };
     }
 
-    // 2. Obtener datos del usuario
-    const usuario = await fetchUserByAuthId(authData.user.id);
+    // 2. Obtener datos del personal
+    const personal = await fetchUserByAuthId(authData.user.id);
 
-    if (!usuario) {
+    if (!personal) {
       // Si no existe en BD, cerrar sesión de Auth
       await supabase.auth.signOut();
       return { 
@@ -144,7 +144,7 @@ export async function loginUser(
     }
 
     // 3. Validar estado activo
-    if (!isUserActive(usuario.estado ?? undefined)) {
+    if (!isUserActive(personal.estado ?? undefined)) {
       await supabase.auth.signOut();
       invalidateUserCache(authData.user.id);
       return { 
@@ -154,12 +154,12 @@ export async function loginUser(
     }
 
     // 4. Actualizar último acceso (async, no bloqueante)
-    updateLastAccess(usuario.id);
+    updateLastAccess(personal.id);
 
     // 5. Login exitoso
     return { 
       success: true, 
-      usuario 
+      personal 
     };
 
   } catch (err: any) {
@@ -181,7 +181,7 @@ export async function loginUser(
 }
 
 /**
- * Cierra la sesión del usuario actual
+ * Cierra la sesión del personal actual
  * Limpia caché y cookies
  */
 export async function logoutUser(): Promise<{ success: boolean; error?: string }> {
@@ -207,7 +207,7 @@ export async function logoutUser(): Promise<{ success: boolean; error?: string }
 }
 
 /**
- * Obtiene la sesión actual del usuario
+ * Obtiene la sesión actual del personal
  */
 export async function getCurrentSession() {
   try {
@@ -226,9 +226,9 @@ export async function getCurrentSession() {
 }
 
 /**
- * Obtiene el usuario actual completo (auth + BD)
+ * Obtiene el personal actual completo (auth + BD)
  */
-export async function getCurrentUser(): Promise<Usuario | null> {
+export async function getCurrentUser(): Promise<personal | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -244,14 +244,14 @@ export async function getCurrentUser(): Promise<Usuario | null> {
 }
 
 /**
- * Verifica si el usuario tiene un rol específico
+ * Verifica si el personal tiene un rol específico
  */
 export async function hasRole(allowedRoles: string[]): Promise<boolean> {
-  const usuario = await getCurrentUser();
+  const personal = await getCurrentUser();
   
-  if (!usuario || !usuario.rol) {
+  if (!personal || !personal.rol) {
     return false;
   }
 
-  return allowedRoles.includes(usuario.rol.toLowerCase());
+  return allowedRoles.includes(personal.rol.toLowerCase());
 }

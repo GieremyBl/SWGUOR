@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import type { Usuario } from '@/types/auth';
+import type { personal } from '@/types/auth';
 
 export function useAuth() {
-  const [user, setUser] = useState<Usuario | null>(null);
+  const [user, setUser] = useState<personal | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,13 +58,13 @@ export function useAuth() {
   const loadUserData = async (authId: string) => {
     try {
       const { data, error } = await supabase
-        .from('usuarios')
+        .from('personal')
         .select('*')
         .eq('auth_id', authId)
         .single();
 
       if (error) throw error;
-      setUser(data as Usuario);
+      setUser(data as personal);
     } catch (error) {
       console.error('[AUTH] Error loading user data:', error);
       setUser(null);

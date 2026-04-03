@@ -10,7 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Receipt, Printer, Package, Calendar, Hash } from "lucide-react";
+import { Receipt, Printer, Calendar, Hash } from "lucide-react";
 
 export default function ViewPedidoDialog({ isOpen, pedido, onClose }: any) {
   const [detalles, setDetalles] = useState<any[]>([]);

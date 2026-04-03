@@ -1,40 +1,40 @@
 import { supabase } from '@/lib/supabase/client';
-import type { Usuario, ClienteB2B } from '@/types';
+import type { Personal, ClienteB2B } from '@/types';
 
 /**
- * Obtiene los datos detallados de un usuario
- * El ID de la tabla usuarios es numérico.
+ * Obtiene los datos detallados de un personal
+ * El ID de la tabla personal es numérico.
  */
 export const getUsuarioData = async (userId: string) => {
   try {
     const { data, error } = await supabase
-      .from("usuarios")
+      .from("personal")
       .select(`*`)
       .eq("id", Number(userId))
       .single();
 
     if (error) throw error;
-    // Retornamos data casteado a Usuario para asegurar el tipado en el componente
-    return { data: data as Usuario, error: null };
+    // Retornamos data casteado a personal para asegurar el tipado en el componente
+    return { data: data as Personal, error: null };
   } catch (error: any) {
     return { data: null, error };
   }
 };
 
 /**
- * Actualiza la información del perfil del usuario
+ * Actualiza la información del perfil del personal
  */
-export const updateUsuario = async (userId: string, updates: Partial<Usuario>) => {
+export const updateUsuario = async (userId: string, updates: Partial<Personal>) => {
   try {
     const { data, error } = await supabase
-      .from("usuarios")
+      .from("personal")
       .update(updates)
       .eq("id", Number(userId))
       .select()
       .single();
 
     if (error) throw error;
-    return { data: data as Usuario, error: null };
+    return { data: data as Personal, error: null };
   } catch (error: any) {
     return { data: null, error };
   }
@@ -48,17 +48,17 @@ export const obtenerPerfilUsuario = async () => {
   if (!user) return null;
 
   const { data: perfil, error } = await supabase
-    .from('usuarios')
+    .from('personal')
     .select('*')
     .eq('auth_id', user.id) // Buscamos por el UUID de la sesión
     .single();
 
   if (error) return null;
-  return perfil as Usuario;
+  return perfil as Personal;
 };
 
 /**
- * Vincula un usuario de Auth con su entidad de Cliente B2B
+ * Vincula un personal de Auth con su entidad de Cliente B2B
  */
 export const obtenerClienteAsociado = async (userId: string): Promise<ClienteB2B | null> => {
   const { data, error } = await supabase

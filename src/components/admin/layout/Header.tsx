@@ -3,14 +3,14 @@
   import { Bell, ChevronRight, Home, User } from "lucide-react";
   import { usePathname } from "next/navigation";
   import Link from "next/link";
-  import type { Usuario } from '@/types';
+  import type { Personal } from '@/types';
   import { NotificationDropdown } from "./NotificationDropdown";
 
   interface AdminHeaderProps {
-    usuario: Usuario;
+    personal: Personal;
   }
 
-  export default function AdminHeader({ usuario }: AdminHeaderProps) {
+  export default function AdminHeader({ personal }: AdminHeaderProps) {
     const pathname = usePathname();
 
     // Generador de Breadcrumbs
@@ -45,7 +45,7 @@
             </nav>
           </div>
 
-          {/* Lado Derecho: Usuario e Interacción */}
+          {/* Lado Derecho: personal e Interacción */}
           <div className="flex items-center gap-2 sm:gap-4">
             
             {/* Botón de Notificaciones*/}
@@ -58,23 +58,23 @@
               href="/admin/Panel-Administrativo/perfil"
               className="group flex items-center gap-3 p-1 pr-2 rounded-xl transition-all duration-200 hover:bg-rose-50 cursor-pointer"
             >
-              {/* Texto de Usuario */}
+              {/* Texto de personal */}
               <div className="hidden sm:flex flex-col items-end transition-transform group-hover:-translate-x-1">
                 <span className="text-sm font-bold text-gray-800 leading-none group-hover:text-rose-600 transition-colors">
-                  {usuario.nombre_completo || 'Usuario'}
+                  {personal.nombre_completo || 'personal'}
                 </span>
                 <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tighter group-hover:text-rose-400 transition-colors">
-                  {usuario.rol?.replace('_', ' ')}
+                  {personal.rol?.replace('_', ' ')}
                 </span>
               </div>
 
               {/* Avatar con efecto de escala */}
               <div className="relative w-9 h-9 rounded-xl bg-rose-500 overflow-hidden shadow-md">
-                {usuario.avatar_url? (
-                  <img src={usuario.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
+                {personal.avatar_url? (
+                  <img src={personal.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
                 ) : (
                   <span className="flex items-center justify-center h-full text-white font-bold">
-                    {usuario.nombre_completo?.charAt(0)}
+                    {personal.nombre_completo?.charAt(0)}
                   </span>
                 )}
                 

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase/client';
 import { usePermissions } from '@/lib/hooks/usePermissions';
-import { Usuario } from '@/types';
+import { Personal } from '@/types';
 import { useRouter } from 'next/navigation';
 import { Upload, Eye, CheckCircle, AlertCircle, ClipboardList, Layers, FileText, Inbox } from 'lucide-react';
 
@@ -43,7 +43,7 @@ interface PedidoAsignado {
   status: string;
 }
 
-export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
+export default function DisenadorDashboard({ personal }: { personal: Personal }) {
   const router = useRouter();
   const { can, isLoading: permissionsLoading } = usePermissions();
   

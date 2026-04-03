@@ -259,7 +259,7 @@ export function getNivelAcceso(rol: RolUsuario): number {
 
 /**
  * Función para verificar si un rol puede gestionar otro
- * (un usuario solo puede gestionar roles de menor nivel)
+ * (un personal solo puede gestionar roles de menor nivel)
  */
 export function puedeGestionarRol(rolUsuario: RolUsuario, rolAGestionar: RolUsuario): boolean {
   return getNivelAcceso(rolUsuario) > getNivelAcceso(rolAGestionar);

@@ -6,24 +6,24 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Trash2, User, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export default function DeleteUsuarioDialog({ isOpen, onClose, onSuccess, usuario }: any) {
+export default function DeleteUsuarioDialog({ isOpen, onClose, onSuccess, personal }: any) {
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/usuarios?id=${usuario?.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/usuarios?id=${personal?.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      toast.success("Usuario eliminado exitosamente");
+      toast.success("personal eliminado exitosamente");
       onSuccess();
     } catch (error) {
-      toast.error("No se pudo eliminar el usuario");
+      toast.error("No se pudo eliminar el personal");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!usuario) return null;
+  if (!personal) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -39,7 +39,7 @@ export default function DeleteUsuarioDialog({ isOpen, onClose, onSuccess, usuari
             </div>
             <div>
               <DialogTitle className="text-xl font-black text-gray-900 uppercase tracking-tight">
-                Eliminar Usuario
+                Eliminar personal
               </DialogTitle>
               <DialogDescription className="text-sm text-gray-500 leading-tight mt-1">
                 Esta acción es irreversible y eliminará el acceso de esta persona al sistema.
@@ -47,16 +47,16 @@ export default function DeleteUsuarioDialog({ isOpen, onClose, onSuccess, usuari
             </div>
           </div>
 
-          {/* Tarjeta de resumen del usuario a eliminar */}
+          {/* Tarjeta de resumen del personal a eliminar */}
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-6">
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-gray-700">
                 <User className="w-4 h-4 text-gray-400" />
-                <span className="font-semibold text-sm">{usuario.nombre_completo}</span>
+                <span className="font-semibold text-sm">{personal.nombre_completo}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-500">
                 <Mail className="w-4 h-4 text-gray-400" />
-                <span className="text-sm">{usuario.email}</span>
+                <span className="text-sm">{personal.email}</span>
               </div>
             </div>
           </div>
@@ -78,7 +78,7 @@ export default function DeleteUsuarioDialog({ isOpen, onClose, onSuccess, usuari
               disabled={loading}
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              Sí, eliminar usuario
+              Sí, eliminar personal
             </Button>
           </div>
         </div>

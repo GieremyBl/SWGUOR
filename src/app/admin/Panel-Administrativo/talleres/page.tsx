@@ -21,7 +21,7 @@ const EditTallerDialog = dynamic(() => import("@/components/admin/talleres/EditT
 const DeleteTallerDialog = dynamic(() => import("@/components/admin/talleres/DeleteTallerDialog"));
 
 export default function TalleresPage() {
-  const { can, isLoading: authLoading, usuario } = usePermissions();
+  const { can, isLoading: authLoading, personal } = usePermissions();
   const [talleres, setTalleres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");

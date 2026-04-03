@@ -18,7 +18,7 @@ export async function GET() {
   }
 }
 
-// POST: Crear nuevo usuario en AUTH y en la TABLA
+// POST: Crear nuevo personal en AUTH y en la TABLA
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -36,11 +36,11 @@ export async function POST(req: Request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // 3. Crear el usuario en Supabase Auth
+    // 3. Crear el personal en Supabase Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: email.trim().toLowerCase(),
       password: password,
-      email_confirm: true, // Para que el usuario no tenga que verificar su correo y pueda entrar ya
+      email_confirm: true, // Para que el personal no tenga que verificar su correo y pueda entrar ya
       user_metadata: { nombre_completo } // Opcional: guardar nombre en metadata de auth
     });
 
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       .single();
 
     if (dbError) {
-      // Limpieza: si falla la tabla, borramos el usuario de Auth para no dejar basura
+      // Limpieza: si falla la tabla, borramos el personal de Auth para no dejar basura
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       console.error('Error en DB:', dbError.message);
       return NextResponse.json({ error: `Error en Tabla Usuarios: ${dbError.message}` }, { status: 500 });
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH: Editar información del usuario
+// PATCH: Editar información del personal
 export async function PATCH(req: Request) {
   const supabase = await createClient();
   try {
@@ -158,12 +158,12 @@ export async function PATCH(req: Request) {
       .single();
 
     if (error) {
-      console.error('Error actualizando usuario:', error);
+      console.error('Error actualizando personal:', error);
       
-      // Manejar error de usuario no encontrado
+      // Manejar error de personal no encontrado
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Usuario no encontrado' }, 
+          { error: 'personal no encontrado' }, 
           { status: 404 }
         );
       }
@@ -183,13 +183,13 @@ export async function PATCH(req: Request) {
   } catch (error: any) {
     console.error('Error en PATCH /api/usuarios:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al actualizar usuario' }, 
+      { error: error.message || 'Error al actualizar personal' }, 
       { status: 500 }
     );
   }
 }
 
-// DELETE: Eliminar usuario
+// DELETE: Eliminar personal
 export async function DELETE(req: Request) {
   const supabase = await createClient();
   try {
@@ -203,7 +203,7 @@ export async function DELETE(req: Request) {
       );
     }
 
-    // Verificar que el usuario existe antes de eliminar
+    // Verificar que el personal existe antes de eliminar
     const { data: existingUser, error: fetchError } = await supabase
       .from('usuarios')
       .select('id, nombre_completo')
@@ -212,7 +212,7 @@ export async function DELETE(req: Request) {
 
     if (fetchError || !existingUser) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' }, 
+        { error: 'personal no encontrado' }, 
         { status: 404 }
       );
     }
@@ -223,18 +223,18 @@ export async function DELETE(req: Request) {
       .eq('id', id);
 
     if (error) {
-      console.error('Error eliminando usuario:', error);
+      console.error('Error eliminando personal:', error);
       throw error;
     }
 
     return NextResponse.json({ 
-      message: 'Usuario eliminado correctamente',
+      message: 'personal eliminado correctamente',
       deletedUser: existingUser 
     });
   } catch (error: any) {
     console.error('Error en DELETE /api/usuarios:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al eliminar usuario' }, 
+      { error: error.message || 'Error al eliminar personal' }, 
       { status: 500 }
     );
   }

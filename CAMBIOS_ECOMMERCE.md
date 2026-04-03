@@ -26,7 +26,7 @@ _components/
 **Archivo**: `_contexts/AuthContext.tsx`
 
 **Funcionalidades**:
-- ✅ Autenticación del usuario
+- ✅ Autenticación del personal
 - ✅ Gestión de sesión
 - ✅ Hook personalizado `useEcommerce()`
 - ✅ Listener de cambios en auth

@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 
+const INPUT_CLASS =
+  'w-full py-[0.9rem] pr-4 pl-12 bg-white border border-stone-200 rounded-2xl text-sm font-medium text-stone-900 placeholder:text-stone-400 placeholder:font-normal outline-none transition-all duration-200 focus:border-[#C9A84C] focus:shadow-[0_0_0_4px_rgba(201,168,76,0.08)]';
+
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,7 @@ export default function RegisterPage() {
         password: formData.get('password') as string,
         options: {
           data: {
-            full_name: formData.get('razonSocial'),
+            full_name: formData.get('razonS   ocial'),
             ruc: formData.get('ruc'),
             phone: formData.get('telefono'),
             address: formData.get('direccion'),
@@ -80,16 +83,13 @@ export default function RegisterPage() {
 
       {/* ── Columna izquierda: imagen + branding ── */}
       <div className="hidden lg:flex lg:w-[45%] relative flex-col justify-between p-12 overflow-hidden">
-        {/* Imagen de fondo */}
-        <Image 
-          src="/blurred-background-woman-looking-clothes.jpg" 
+        <Image
+          src="/blurred-background-woman-looking-clothes.jpg"
           alt="Fondo Textil Guor"
           fill
           priority
           className="object-cover z-0"
         />
-
-        {/* Overlay oscuro */}
         <div className="absolute inset-0 bg-black/60" />
 
         {/* Logo */}
@@ -129,10 +129,10 @@ export default function RegisterPage() {
       <div className="flex-1 bg-[#F8F5EE] flex items-center justify-center p-6 md:p-12 overflow-y-auto">
         <div className="w-full max-w-lg">
 
-          {/* Encabezado mobile: logo */}
+          {/* Logo mobile */}
           <div className="flex lg:hidden justify-center mb-8">
             <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md border border-stone-100">
-              <Image src="/logo.png" alt="Logo Guor" width={40} height={40} className="rounded-lg" />
+              <Image src="/logo.png" alt="Logo Guor" width={40} height={40} className="rounded-lg" style={{ width: 40, height: 40 }} />
             </div>
           </div>
 
@@ -161,13 +161,14 @@ export default function RegisterPage() {
             <div className="relative group">
               <Building2
                 size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors z-10"
               />
               <input
                 name="razonSocial"
+                autoComplete="organization" 
                 required
                 placeholder="Razón Social / Nombre de la Empresa"
-                className="input-field"
+                className={INPUT_CLASS}
               />
             </div>
 
@@ -176,27 +177,30 @@ export default function RegisterPage() {
               <div className="relative group">
                 <User
                   size={17}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors z-10"
                 />
                 <input
                   name="ruc"
+                  autoComplete="off"
                   required
                   maxLength={11}
                   placeholder="Número de RUC"
-                  className="input-field"
+                  className={INPUT_CLASS}
                 />
               </div>
               <div className="relative group">
                 <Phone
-                  size={9}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
+                  size={17}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors z-10"
                 />
                 <input
                   name="telefono"
+                  autoComplete="tel"
                   required
                   type="tel"
+                  maxLength={9}
                   placeholder="Teléfono de Contacto"
-                  className="input-field"
+                  className={INPUT_CLASS}
                 />
               </div>
             </div>
@@ -205,13 +209,14 @@ export default function RegisterPage() {
             <div className="relative group">
               <MapPin
                 size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors z-10"
               />
               <input
                 name="direccion"
+                autoComplete="street-address"
                 required
                 placeholder="Dirección Fiscal Completa"
-                className="input-field"
+                className={INPUT_CLASS}
               />
             </div>
 
@@ -219,14 +224,15 @@ export default function RegisterPage() {
             <div className="relative group">
               <Mail
                 size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors z-10"
               />
               <input
                 name="email"
+                autoComplete="email"
                 type="email"
                 required
                 placeholder="Correo Electrónico Corporativo"
-                className="input-field"
+                className={INPUT_CLASS}
               />
             </div>
 
@@ -234,14 +240,15 @@ export default function RegisterPage() {
             <div className="relative group">
               <Lock
                 size={17}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[#C9A84C] transition-colors z-10"
               />
               <input
                 name="password"
+                autoComplete="new-password"
                 type="password"
                 required
                 placeholder="Contraseña de Acceso"
-                className="input-field"
+                className={INPUT_CLASS}
               />
             </div>
 
@@ -277,29 +284,6 @@ export default function RegisterPage() {
 
         </div>
       </div>
-
-      <style jsx>{`
-        .input-field {
-          width: 100%;
-          padding: 0.9rem 1rem 0.9rem 3rem;
-          background-color: #ffffff;
-          border: 1px solid #e7e5e4;
-          border-radius: 1rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #1c1917;
-          outline: none;
-          transition: all 0.2s ease;
-        }
-        .input-field::placeholder {
-          color: #a8a29e;
-          font-weight: 400;
-        }
-        .input-field:focus {
-          border-color: #C9A84C;
-          box-shadow: 0 0 0 4px rgba(201, 168, 76, 0.08);
-        }
-      `}</style>
     </div>
   );
 }

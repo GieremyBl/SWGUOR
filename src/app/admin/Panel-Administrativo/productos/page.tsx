@@ -24,7 +24,7 @@ const DeleteProductoDialog = dynamic(() => import("@/components/admin/productos/
 const StockMovimientosDialog = dynamic(() => import("@/components/admin/productos/StockMovimientosDialog"));
 
 export default function ProductosPage() {
-  const { can, isLoading: authLoading, usuario } = usePermissions();
+  const { can, isLoading: authLoading, personal } = usePermissions();
   const { productos, loading: productosLoading, error: productosError, refetch } = useProducts();
   const [categorias, setCategorias] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");

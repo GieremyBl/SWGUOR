@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       .from('despachos')
       .select(`
         *,
-        usuario:usuarios (id, nombre_completo),
+        personal:usuarios (id, nombre_completo),
         pedido:pedidos (
           id,
           cliente_id,
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       tracking: `TRK-${String(desp.id).padStart(8, '0')}`,
       fechaEntrega: desp.fecha_entrega || null,
       fechaDespacho: desp.fecha_despacho,
-      usuario: desp.usuario?.nombre_completo || 'N/A'
+      personal: desp.personal?.nombre_completo || 'N/A'
     }));
 
     return NextResponse.json({
