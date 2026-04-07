@@ -70,7 +70,13 @@ export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categ
 
       // 1. Subir imagen al Storage si existe
       if (file) {
-        finalPath = await uploadProductImage(file); // Retorna el path del archivo
+        const uploadResult = await uploadProductImage(file);
+        
+        // Limpiamos la cadena para extraer SOLO el nombre del archivo final
+        if (uploadResult) {
+          const parts = String(uploadResult).split('/');
+          finalPath = parts[parts.length - 1]; // Extrae solo "mi-foto.png"
+        }
       }
 
       // 2. Preparar objeto exacto para public.productos

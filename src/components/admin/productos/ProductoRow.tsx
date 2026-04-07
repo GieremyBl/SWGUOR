@@ -39,8 +39,8 @@ const ProductoRow = memo(({
   canEdit: boolean;
   canDelete: boolean;
 }) => {
-  const hasImage = p.imagen_url && p.imagen_url.trim() !== '';
-  const publicUrl = hasImage ? `${STORAGE_URL}${p.imagen_url}` : null;
+  const hasImage = p.imagen && p.imagen.trim() !== '';
+  const publicUrl = hasImage ? `${STORAGE_URL}${p.imagen}` : null;
   const hasFicha = (p as any).ficha_url; 
   
   const categoriaNombre = categorias.find(c => c.id === p.categoria_id)?.nombre || 'Sin categoría';
@@ -86,7 +86,7 @@ const ProductoRow = memo(({
               {p.nombre}
             </div>
             <div className="text-pink-600 font-black text-sm mt-1">
-              S/ {p.precio_base?.toFixed(2)}
+              S/ {p.precio?.toFixed(2)}
             </div>
           </div>
         </div>
@@ -104,7 +104,7 @@ const ProductoRow = memo(({
       <td className="bg-white border-y border-slate-100 text-center shadow-sm">
         <div className="flex flex-col items-center">
           <span className="text-lg font-black text-slate-900">
-            {p.stock_actual}
+            {p.stock}
           </span>
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidades</span>
         </div>

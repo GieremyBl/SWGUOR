@@ -20,7 +20,6 @@ const ProductosTable = dynamic(() => import("@/components/admin/productos/Produc
 const CreateProductoDialog = dynamic(() => import("@/components/admin/productos/CreateProductoDialog"));
 const EditProductoDialog = dynamic(() => import("@/components/admin/productos/EditProductoDialog"));
 const DeleteProductoDialog = dynamic(() => import("@/components/admin/productos/DeleteProductoDialog"));
-const StockDialog = dynamic(() => import("@/components/admin/productos/StockDialog"));
 
 export default function ProductosPage() {
   const { can, isLoading: authLoading, usuario } = usePermissions();
@@ -87,9 +86,9 @@ export default function ProductosPage() {
       "SKU": p.sku,
       "Producto": p.nombre,
       "Categoría": categorias.find(c => c.id === p.categoria_id)?.nombre || "Sin categoría",
-      "Stock": p.stock_actual,
-      "Precio": p.precio_base,
-      "Estado": p.stock_actual === 0 ? "Agotado" : p.stock_actual <= 5 ? "Bajo Stock" : "Disponible"
+      "Stock": p.stock,
+      "Precio": p.precio,
+      "Estado": p.stock === 0 ? "Agotado" : p.stock <= 5 ? "Bajo Stock" : "Disponible"
     }));
     exportToExcel(dataToExport as any, { filename: `Inventario_GUOR_${new Date().toISOString().split('T')[0]}` });
     toast.success("Excel generado correctamente");
@@ -250,9 +249,7 @@ export default function ProductosPage() {
           {dialogMode === "delete" && (
             <DeleteProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
           )}
-          {dialogMode === "stock" && (
-            <StockDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
-          )}
+
           
         </>
       )}

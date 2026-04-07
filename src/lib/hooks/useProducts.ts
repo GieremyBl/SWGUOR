@@ -44,7 +44,18 @@ export function useProducts(options?: UseProductsOptions) {
       const { data, error: fetchError } = await query;
 
       if (fetchError) throw fetchError;
-      setProductos(data || []);
+
+      // MAPEO CRÍTICO: Traducimos los datos de la BD a lo que espera la tabla
+      const productosFormateados = data?.map((p: any) => ({
+        ...p,
+        // Si existe p.precio lo usa, si no, usa p.precio_base
+        precio: p.precio ?? p.precio ?? 0,
+        // Lo mismo para el stock y la imagen
+        stock: p.stock ?? p.stock ?? 0,
+        imagen: p.imagen ?? p.imagen ?? null,
+      })) || [];
+
+      setProductos(productosFormateados);
     } catch (err) {
       console.error('Error fetching productos:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');

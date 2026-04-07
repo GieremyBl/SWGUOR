@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Edit2, Trash2, Package, BarChart3, Tag, Lock, FileText, Paperclip, CheckCircle2 } from "lucide-react";
 import type { Producto, Categoria } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ import {
 } from "@/components/ui/tooltip";
 import { memo } from "react";
 
-const STORAGE_URL = "https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/";
 
 // --- COMPONENTE DE FILA (Optimizado) ---
 const ProductoRow = memo(({ 
@@ -35,8 +33,14 @@ const ProductoRow = memo(({
   canEdit: boolean;
   canDelete: boolean;
 }) => {
-  const hasImage = p.imagen_url && p.imagen_url.trim() !== '';
-  const publicUrl = hasImage ? `${STORAGE_URL}${p.imagen_url}` : null;
+  // 1. Extraemos SOLO el nombre del archivo para evitar que la URL se duplique
+  const rawImage = String(p.imagen || "").trim();
+  const fileName = rawImage.split('/').pop(); 
+
+  // 2. Construimos la URL limpia apuntando directamente al bucket de Supabase
+  const publicUrl = fileName && fileName !== "null" && fileName !== ""
+    ? `https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/${fileName}` 
+    : null;
   const hasFicha = (p as any).ficha_url; 
 
   const categoriaNombre = categorias.find(c => c.id === p.categoria_id)?.nombre || 'Sin categoría';
@@ -48,12 +52,10 @@ const ProductoRow = memo(({
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 relative bg-slate-50 rounded-xl border border-slate-100 shrink-0 overflow-hidden">
             {publicUrl ? (
-              <Image 
+              <img 
                 src={publicUrl} 
                 alt={p.nombre || "Producto"} 
-                fill 
-                sizes="56px"
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
@@ -85,7 +87,7 @@ const ProductoRow = memo(({
               {p.nombre}
             </div>
             <div className="text-pink-600 font-black text-sm mt-1">
-              S/ {p.precio_base?.toFixed(2)}
+              S/ {p.precio?.toFixed(2)}
             </div>
           </div>
         </div>
@@ -103,7 +105,7 @@ const ProductoRow = memo(({
       <td className="bg-white border-y border-slate-100 text-center shadow-sm">
         <div className="flex flex-col items-center">
           <span className="text-lg font-black text-slate-900">
-            {p.stock_actual}
+            {p.stock}
           </span>
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unidades</span>
         </div>
