@@ -56,8 +56,8 @@ export default function EditProductoDialog({
         nombre: producto.nombre || "",
         descripcion: producto.descripcion || "",
         sku: producto.sku || "",
-        precio: producto.precio_base?.toString() || "0",
-        stock: producto.stock_actual?.toString() || "0",
+        precio: producto.precio?.toString() || "0",
+        stock: producto.stock?.toString() || "0",
         categoria_id: producto.categoria_id?.toString() || "",
         estado: producto.estado || "activo",
       });
