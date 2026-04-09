@@ -113,9 +113,18 @@ function PortalShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !cliente) {
-      router.replace('/auth/login?redirect=/portal/dashboard');
-    }
+    // Solo redireccionamos si loading terminó Y estamos seguros de que no hay cliente
+    const checkAuth = async () => {
+      if (!loading && !cliente) {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          router.replace('/auth/login?redirect=/portal/dashboard');
+        }
+      }
+    };
+    checkAuth();
   }, [loading, cliente, router]);
 
   if (loading) return (

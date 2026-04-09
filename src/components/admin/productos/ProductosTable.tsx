@@ -1,7 +1,9 @@
 "use client";
 
 import { Edit2, Trash2, Package, BarChart3, Tag, Lock, FileText, Paperclip, CheckCircle2 } from "lucide-react";
-import type { Producto, Categoria } from "@/types";
+import type { Database } from "@/types/database";
+type Producto = Database['public']['Tables']['productos']['Row'];
+type Categoria = Database['public']['Tables']['categorias']['Row'];
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -12,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { memo } from "react";
 
+const STORAGE_URL = "https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/";
 
 // --- COMPONENTE DE FILA (Optimizado) ---
 const ProductoRow = memo(({ 
@@ -45,7 +48,7 @@ const ProductoRow = memo(({
 
   const categoriaNombre = categorias.find(c => c.id === p.categoria_id)?.nombre || 'Sin categoría';
 
-  return (
+   return (
     <tr className="group transition-all duration-200">
       {/* Detalle Producto */}
       <td className="bg-white border-y border-l border-slate-100 py-4 px-6 rounded-l-2xl shadow-sm group-hover:shadow-md transition-all">
@@ -142,20 +145,6 @@ const ProductoRow = memo(({
               <TooltipContent side="top">
                 <p className="text-[10px] font-bold uppercase">Documentación Técnica</p>
               </TooltipContent>
-            </Tooltip>
-
-            {/* Movimientos Stock */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" size="icon" 
-                  onClick={() => onStock(p)}
-                  className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
-                >
-                  <BarChart3 size={16} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-[10px] font-bold uppercase">Gestionar Stock</p></TooltipContent>
             </Tooltip>
 
             {/* Editar */}

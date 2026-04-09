@@ -1,7 +1,9 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, Package } from 'lucide-react';
-import { Insumo } from '@/types';
+import type { Database } from '@/types/database';
+
+type Insumo = Database['public']['Tables']['insumo']['Row'];
 import router from 'next/router';
 
 interface StockAlertCardProps {

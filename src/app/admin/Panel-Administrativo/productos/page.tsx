@@ -249,7 +249,7 @@ export default function ProductosPage() {
           {dialogMode === "delete" && (
             <DeleteProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
           )}
-
+          
           
         </>
       )}

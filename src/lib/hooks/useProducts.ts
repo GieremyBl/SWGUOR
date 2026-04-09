@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-import type { Producto } from '@/types';
+import type { Database } from '@/types/database';
+
+type Producto = Database['public']['Tables']['productos']['Row'];
 
 interface UseProductsOptions {
   categoriaId?: number;

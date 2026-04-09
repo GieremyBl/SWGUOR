@@ -7,19 +7,21 @@ import { Search, Users, RefreshCw, UserCheck, UserMinus, ChevronLeft, ChevronRig
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { usePermissions } from "@/lib/hooks/usePermissions";
-import { EstadoUsuario } from "@/types";
+import type { Database } from "@/types/database";
+type EstadoUsuario = Database['public']['Enums']['EstadoUsuario'];
 
 // Componentes dinámicos
 const UsuariosTable = dynamic(() => import("@/components/admin/usuarios/UsuarioTable"));
 const EditUsuarioDialog = dynamic(() => import("@/components/admin/usuarios/EditUsuarioDialog"));
 const CreateUsuarioDialog = dynamic(() => import("@/components/admin/usuarios/CreateUsuarioDialog"));
+const DeleteUsuarioDialog = dynamic(() => import("@/components/admin/usuarios/DeleteUsuarioDialog"));
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsuario, setSelectedUsuario] = useState<any | null>(null);
-  const [dialogMode, setDialogMode] = useState<"edit" | "new" | null>(null);
+  const [dialogMode, setDialogMode] = useState<"edit" | "new" | "delete" | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<EstadoUsuario | null>(null);
   const pageSize = 10;
@@ -181,7 +183,10 @@ export default function UsuariosPage() {
             usuarios={filteredUsuarios} 
             onEdit={handleEdit}
             onToggleStatus={handleToggleStatus}
-            onDelete={(u: any) => console.log("Delete", u)}
+            onDelete={(u: any) => {
+              setSelectedUsuario(u);
+              setDialogMode("delete");
+            }}
           />
         )}
 
@@ -216,6 +221,15 @@ export default function UsuariosPage() {
           onClose={() => {setDialogMode(null); setSelectedUsuario(null);}} 
           onSuccess={fetchUsuarios} 
           usuario={selectedUsuario} 
+        />
+      )}
+
+      {selectedUsuario && dialogMode === "delete" && (
+        <DeleteUsuarioDialog 
+          isOpen={true}
+          onClose={() => {setDialogMode(null); setSelectedUsuario(null);}}
+          onSuccess={fetchUsuarios}
+          usuario={selectedUsuario}
         />
       )}
     </div>

@@ -11,8 +11,10 @@ import {
   BarChart3, Crown
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-import type { Usuario } from '@/types';
+import type { Database } from '@/types/database';
 import { LucideIcon } from 'lucide-react';
+
+type Usuario = Database['public']['Tables']['usuarios']['Row'];
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
 type NavItem = {
@@ -211,13 +213,9 @@ export default function AdminSidebar({ usuario }: { usuario: Usuario }) {
 
                 {/* Avatar */}
                 <div className="relative w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                  {usuario.avatar_url ? (
-                    <img src={usuario.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
-                  ) : (
-                    <span className="flex items-center justify-center h-full text-slate-500 font-bold text-lg">
-                      {usuario.nombre_completo?.charAt(0)}
-                    </span>
-                  )}
+                  <span className="flex items-center justify-center h-full text-slate-500 font-bold text-lg">
+                    {usuario?.nombre_completo?.charAt(0)}
+                  </span>
                   {isAdmin && (
                     <div className="absolute -bottom-0.5 -right-0.5 bg-amber-400 p-1 rounded-full border-2 border-white">
                       <Crown size={10} className="text-white" strokeWidth={3} />

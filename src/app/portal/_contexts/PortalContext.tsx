@@ -24,7 +24,7 @@ export interface ItemCotizacion {
   sku: string;
   imagen: string | null;
   precio_unitario: number;
-  cantidad: number;        // mínimo MOQ_MINIMO
+  cantidad: number;
   talla: string;
   color: string;
   subtotal: number;
@@ -47,14 +47,14 @@ interface PortalCtx {
   loading: boolean;
   items: ItemCotizacion[];
   resumen: ResumenCotizacion;
-  agregarAlBorrador:   (item: any) => void;
-  actualizarCantidad:(variante_id: number, cantidad: number) => void;
-  eliminarDelBorrador:      (variante_id: number) => void;
+  agregarAlBorrador: (item: any) => void;
+  actualizarCantidad: (variante_id: number, cantidad: number) => void;
+  eliminarDelBorrador: (variante_id: number) => void;
   limpiarBorrador: () => void;
   stats: { cotizaciones_activas: number; ordenes_activas: number; despachos_en_ruta: number };
 }
 
-// ── Reglas de negocio (espejo del backend, solo para preview UI) ─
+// ── Reglas de negocio ────────────────────────────────────────────
 export const MOQ_MINIMO = 400;
 const IGV = 0.18;
 const ESCALAS = [
@@ -83,43 +83,82 @@ function calcularResumen(items: ItemCotizacion[]): ResumenCotizacion {
 const PortalContext = createContext<PortalCtx | null>(null);
 
 export function PortalProvider({ children }: { children: ReactNode }) {
-  const [cliente, setCliente]   = useState<ClientePortal | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [items, setItems]       = useState<ItemCotizacion[]>([]);
-  const [stats,   setStats]     = useState({
+  const [cliente, setCliente] = useState<ClientePortal | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<ItemCotizacion[]>([]);
+  const [stats, setStats] = useState({
     cotizaciones_activas: 0, ordenes_activas: 0, despachos_en_ruta: 0,
   });
 
   useEffect(() => {
     const init = async () => {
       const supabase = getSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
-
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, ruc, razon_social, email, telefono, tipo')
-        .eq('auth_id', user.id)
-        .single();
-
-      if (data) {
-        setCliente(data as ClientePortal);
-        // Cargar stats del portal
-        const [cotRes, ordRes, dspRes] = await Promise.all([
-          supabase.from('cotizaciones').select('id', { count: 'exact', head: true })
-            .eq('cliente_id', data).in('estado', ['borrador', 'enviada', 'aprobada']),
-          supabase.from('ordenes').select('id', { count: 'exact', head: true })
-            .eq('cliente_id', data).not('estado', 'in', '(finalizado,cancelado)'),
-          supabase.from('despachos').select('id', { count: 'exact', head: true })
-            .eq('estado', 'en_ruta'),
-        ]);
-        setStats({
-          cotizaciones_activas: cotRes.count ?? 0,
-          ordenes_activas:      ordRes.count ?? 0,
-          despachos_en_ruta:    dspRes.count ?? 0,
-        });
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        // 1. Obtener el ID del usuario
+        const { data: usuarioData, error: userError } = await supabase
+          .from('usuarios')
+          .select('id')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+
+        if (userError || !usuarioData) {
+          setLoading(false);
+          return;
+        }
+
+        // 2. Obtener los datos del cliente usando el JOIN explícito que arreglamos
+        const { data: perfilCompleto, error: joinError } = await supabase
+          .from('usuarios')
+          .select(`
+            id,
+            cliente_datos:clientes!clientes_usuario_id_fkey (*)
+          `)
+          .eq('id', usuarioData.id)
+          .single();
+
+        if (joinError) console.error("Error join:", joinError.message);
+
+        // 3. Extraer el objeto cliente de forma segura
+        const datosCliente = Array.isArray(perfilCompleto?.cliente_datos) 
+          ? perfilCompleto?.cliente_datos[0] 
+          : perfilCompleto?.cliente_datos;
+
+        if (datosCliente) {
+          setCliente(datosCliente as ClientePortal);
+          
+          // 4. CARGAR ESTADÍSTICAS (Aquí estaba el error 400 por variable inexistente)
+          try {
+            const [cotRes, ordRes, dspRes] = await Promise.all([
+              supabase.from('cotizaciones').select('id', { count: 'exact', head: true })
+                .eq('cliente_id', datosCliente.id).in('estado', ['borrador', 'enviada', 'aprobada']),
+              supabase.from('ordenes').select('id', { count: 'exact', head: true })
+                .eq('cliente_id', datosCliente.id).not('estado', 'in', '(finalizado,cancelado)'),
+              supabase.from('despachos').select('id', { count: 'exact', head: true })
+                .eq('estado', 'en_ruta'),
+            ]);
+
+            setStats({
+              cotizaciones_activas: cotRes.count ?? 0,
+              ordenes_activas: ordRes.count ?? 0,
+              despachos_en_ruta: dspRes.count ?? 0,
+            });
+          } catch (e) {
+            console.warn("Error en estadísticas:", e);
+          }
+        }
+      } catch (err) {
+        console.error("Falla general:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     init();
   }, []);
@@ -127,9 +166,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   const resumen = useMemo(() => calcularResumen(items), [items]);
 
   const agregarAlBorrador = useCallback((nuevoItem: any) => {
-    // Tipamos explícitamente 'prev' como un array de ItemCotizacion
     setItems((prev: ItemCotizacion[]) => { 
-      // Ahora TS sabe que 'prev' es un array de items y no 'never'
       const idx = prev.findIndex(i => i.producto_id === nuevoItem.id);
       
       if (idx >= 0) {
@@ -143,7 +180,6 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      // Preparar el nuevo item formateado
       const itemFormateado: ItemCotizacion = {
         producto_id: nuevoItem.id,
         variante_id: nuevoItem.id,
@@ -163,7 +199,6 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const actualizarCantidad = useCallback((variante_id: number, cantidad: number) => {
-    // No bloquear en frontend (MOQ se valida en el servidor), pero mostramos warning
     setItems(prev => prev.map(i =>
       i.variante_id === variante_id
         ? { ...i, cantidad: Math.max(1, cantidad), subtotal: Math.max(1, cantidad) * i.precio_unitario }

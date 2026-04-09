@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { Eye, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Orden, EstadoOrden } from '@/types';
+import type { Database } from '@/types/database';
+
+type Orden = Database['public']['Tables']['ordenes']['Row'];
+type EstadoOrden = Database['public']['Enums']['EstadoOrden'];
 
 interface RecentOrdersTableProps {
   orders: (Orden & { clientes: { razon_social: string } | null })[];
@@ -80,14 +83,14 @@ export default function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
                       {order.clientes?.razon_social || 'Consumidor General'}
                     </p>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                      {new Date(order.created_at).toLocaleDateString('es-PE', {
+                      {order.created_at ? new Date(order.created_at).toLocaleDateString('es-PE', {
                         day: 'numeric', month: 'short',
-                      })}
+                      }) : 'Sin fecha'}
                     </p>
                   </td>
                   <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">
                     <span className="font-black text-slate-900 text-xs">
-                      S/ {order.total?.toLocaleString('es-PE')}
+                      S/ {Number(order.total_pagado ?? 0).toLocaleString('es-PE')}
                     </span>
                   </td>
                   <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">

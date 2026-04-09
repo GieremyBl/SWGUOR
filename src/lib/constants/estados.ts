@@ -3,10 +3,10 @@
  * Centrado en el ciclo de vida comercial y logístico
  */
 
-import type {
-  EstadoOrden,
-  EstadoDespacho,
-} from '@/types';
+import type { Database } from '@/types/database';
+
+type EstadoOrden = Database['public']['Enums']['EstadoOrden'];
+type EstadoDespacho = Database['public']['Enums']['EstadoDespacho'];
 
 // ─── COTIZACIONES B2B ────────────────────────────────────────────────────────
 // Estados específicos para el flujo de negociación e IA

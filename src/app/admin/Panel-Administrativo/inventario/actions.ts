@@ -3,7 +3,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import type { Database, InsumoInsert, InsumoUpdate } from '@/types'
+import type { Database } from '@/types/database'
+
+type Insumo = Database['public']['Tables']['insumo']['Row'];
+type InsumoInsert = Database['public']['Tables']['insumo']['Insert'];
+type InsumoUpdate = Database['public']['Tables']['insumo']['Update'];
 
 async function getSupabase() {
   const cookieStore = await cookies()

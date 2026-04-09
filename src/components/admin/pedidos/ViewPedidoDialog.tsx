@@ -23,7 +23,7 @@ export default function ViewPedidoDialog({ isOpen, pedido, onClose }: any) {
         try {
           const supabase = getSupabaseBrowserClient();
           const { data, error } = await supabase
-            .from("detalles_orden")
+            .from("detalles_orden" as any)
             .select("*, productos(nombre, sku)")
             .eq("orden_id", pedido.id);
           if (error) throw error;

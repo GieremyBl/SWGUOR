@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  schemas   = ["auth", "public"]
+  provider = "postgresql"
+  schemas  = ["auth", "public"]
 }
 
 // ==========================================
@@ -782,7 +782,6 @@ model usuarios {
   ultimo_acceso          DateTime?                @db.Timestamptz(6)
   created_by             String?                  @db.Uuid
   cliente_id             String?                  @db.Uuid
-  avatar_url             String?
   cliente                clientes?                @relation(fields: [cliente_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   users                  users?                   @relation(fields: [auth_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   movimientos_inventario movimientos_inventario[]

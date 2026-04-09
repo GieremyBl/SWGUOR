@@ -1,6 +1,8 @@
 'use client'
 
-import { Insumo } from '@/types'
+import type { Database } from '@/types/database'
+
+type Insumo = Database['public']['Tables']['insumo']['Row']
 import { AlertTriangle, Package, BarChart3 } from 'lucide-react'
 
 interface Props {

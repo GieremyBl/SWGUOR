@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Producto, Categoria } from "@/types";
+import type { Database } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +9,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -22,7 +21,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Lock, Info } from "lucide-react";
+import { Loader2, Save, Lock } from "lucide-react";
+
+type Producto = Database['public']['Tables']['productos']['Row'];
+type Categoria = Database['public']['Tables']['categorias']['Row'];
 
 interface EditProductoDialogProps {
   isOpen: boolean;
@@ -56,8 +58,8 @@ export default function EditProductoDialog({
         nombre: producto.nombre || "",
         descripcion: producto.descripcion || "",
         sku: producto.sku || "",
-        precio: producto.precio_base?.toString() || "0",
-        stock: producto.stock_actual?.toString() || "0",
+        precio: producto.precio?.toString() || "0",
+        stock: producto.stock?.toString() || "0",
         categoria_id: producto.categoria_id?.toString() || "",
         estado: producto.estado || "activo",
       });
@@ -102,131 +104,160 @@ export default function EditProductoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        style={{ background: '#ffffff',
-          opacity: 1,
-          visibility: 'visible',
-        }} 
-        className="max-w-md rounded-3xl border-none shadow-2xl overflow-hidden p-0 !bg-white !opacity-100 z-[9999]"
-      >
-        
-        {/* Cabecera con fondo blanco forzado */}
-        <div className="flex flex-col bg-white w-full h-full">
-          <DialogHeader className="!bg-white">
-            <DialogTitle className="text-xl font-black flex items-center gap-2 text-slate-800">
-              <div className="bg-pink-100 text-pink-600 p-2 rounded-xl">
-                <Save className="w-5 h-5" />
-              </div>
-              EDITAR PRENDA
-            </DialogTitle>
-            <DialogDescription className="font-medium text-slate-500 mt-2 flex items-center gap-2">
-              <Info className="w-4 h-4 text-pink-400" />
-              Los campos con candado son solo de lectura.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+      <DialogContent className="max-w-md p-0">
+        {/* Banner rosa superior */}
+        <div className="h-2 bg-pink-600 w-full" />
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 !bg-white">
-          
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nombre Comercial</Label>
-            <Input
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              className="rounded-xl border-gray-200 focus:border-pink-500 focus:ring-pink-500 font-bold h-11 bg-white"
-              required
-            />
+        <div className="p-6 space-y-5">
+          {/* Header con icono */}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-pink-50 rounded-lg flex-shrink-0">
+              <Save className="w-6 h-6 text-pink-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold">
+                Editar Producto
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-600">
+                Actualiza los datos del producto
+              </DialogDescription>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* SKU (LECTURA) */}
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5" /> SKU
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400">
+                Nombre Comercial
               </Label>
-              <div className="h-11 flex items-center px-4 rounded-xl bg-slate-50 text-slate-500 font-mono text-xs border border-dashed border-slate-200 uppercase">
-                {formData.sku}
-              </div>
-            </div>
-
-            {/* PRECIO (EDITABLE) */}
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Precio Venta (S/)</Label>
               <Input
-                type="number"
-                step="0.01"
-                value={formData.precio}
-                onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
-                className="rounded-xl border-gray-200 font-black text-pink-600 focus:border-pink-500 h-11 bg-white"
+                value={formData.nombre}
+                onChange={(e) =>
+                  setFormData({ ...formData, nombre: e.target.value })
+                }
+                className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white"
                 required
               />
             </div>
-          </div>
 
-          {/* CATEGORÍA */}
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Línea / Categoría</Label>
-            <Select
-              value={formData.categoria_id}
-              onValueChange={(value) => setFormData({ ...formData, categoria_id: value })}
-            >
-              <SelectTrigger className="rounded-xl border-gray-200 bg-white h-11 font-semibold text-slate-700">
-                <SelectValue placeholder="Seleccionar categoría" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {categorias.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id.toString()}>
-                    {cat.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* SKU (READ-ONLY) */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> SKU
+                </Label>
+                <div className="h-10 flex items-center px-3 rounded-lg bg-slate-50 text-slate-500 font-mono text-xs border border-dashed border-slate-200 uppercase">
+                  {formData.sku}
+                </div>
+              </div>
 
-          {/* STOCK (LECTURA) */}
-          <div className="grid grid-cols-2 gap-4 items-end">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1">
-                <Lock className="w-2.5 h-2.5" /> Stock Físico
-              </Label>
-              <div className="h-11 flex items-center px-4 rounded-xl bg-slate-50 text-slate-600 font-bold border border-dashed border-slate-200">
-                {formData.stock} und.
+              {/* PRECIO (EDITABLE) */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400">
+                  Precio Venta (S/)
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.precio}
+                  onChange={(e) =>
+                    setFormData({ ...formData, precio: e.target.value })
+                  }
+                  className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white font-bold text-pink-600"
+                  required
+                />
               </div>
             </div>
-            
-            <div className={`h-11 flex items-center justify-center px-4 rounded-xl text-[10px] font-black uppercase border mb-[2px] ${
-                parseInt(formData.stock) === 0 ? "bg-red-50 text-red-600 border-red-100" : 
-                parseInt(formData.stock) <= 5 ? "bg-orange-50 text-orange-600 border-orange-100" : 
-                "bg-emerald-50 text-emerald-600 border-emerald-100"
-              }`}>
-                {parseInt(formData.stock) === 0 ? "Agotado" : 
-                parseInt(formData.stock) <= 5 ? "Bajo Stock" : "Suficiente"}
+
+            {/* CATEGORÍA */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400">
+                Línea / Categoría
+              </Label>
+              <Select
+                value={formData.categoria_id}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, categoria_id: value })
+                }
+              >
+                <SelectTrigger className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white">
+                  <SelectValue placeholder="Seleccionar categoría" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {categorias.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {cat.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Notas / Descripción</Label>
-            <Textarea
-              value={formData.descripcion}
-              onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-              className="rounded-xl border-gray-200 resize-none focus:border-pink-500 min-h-[80px] bg-white"
-              placeholder="Detalles sobre el material..."
-            />
-          </div>
+            {/* STOCK (READ-ONLY) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase text-slate-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Stock Físico
+                </Label>
+                <div className="h-10 flex items-center px-3 rounded-lg bg-slate-50 text-slate-600 font-bold border border-dashed border-slate-200">
+                  {formData.stock} und.
+                </div>
+              </div>
 
-          <DialogFooter className="pt-6 border-t border-gray-100 mt-4 flex gap-3 !bg-white">
-            <Button type="button" variant="ghost" onClick={onClose} className="rounded-xl font-bold text-slate-400 hover:bg-slate-100 flex-1">
-              Descartar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading} 
-              className="bg-pink-600 hover:bg-pink-700 text-white rounded-xl px-8 font-black transition-all active:scale-95 shadow-lg shadow-pink-100 flex-1"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "ACTUALIZAR"}
-            </Button>
-          </DialogFooter>
-        </form>
+              <div
+                className={`h-10 flex items-center justify-center px-3 rounded-lg text-[10px] font-black uppercase border ${
+                  parseInt(formData.stock) === 0
+                    ? "bg-red-50 text-red-600 border-red-100"
+                    : parseInt(formData.stock) <= 5
+                    ? "bg-orange-50 text-orange-600 border-orange-100"
+                    : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                }`}
+              >
+                {parseInt(formData.stock) === 0
+                  ? "Agotado"
+                  : parseInt(formData.stock) <= 5
+                  ? "Bajo Stock"
+                  : "Suficiente"}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase text-slate-400">
+                Notas / Descripción
+              </Label>
+              <Textarea
+                value={formData.descripcion}
+                onChange={(e) =>
+                  setFormData({ ...formData, descripcion: e.target.value })
+                }
+                className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white resize-none min-h-[80px]"
+                placeholder="Detalles sobre el material..."
+              />
+            </div>
+
+            {/* Footer */}
+            <DialogFooter className="mt-8 pt-6 border-t border-slate-100 flex gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1"
+              >
+                Descartar
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
+              >
+                {loading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Actualizar
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

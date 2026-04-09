@@ -1,13 +1,13 @@
 import { createClient } from '@/lib/supabase/client';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-import type { Usuario, ClienteB2B } from '@/types';
+import type { Database } from '@/types/database';
 
-/**
- * Obtiene los datos detallados de un usuario para el panel administrativo
- */
+type Usuario = Database['public']['Tables']['usuarios']['Row'];
+type ClienteB2B = Database['public']['Tables']['clientes']['Row'];
+type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
+
 export const getUsuarioData = async (userId: string) => {
   const supabase = getSupabaseBrowserClient();
-
   try {
     const { data, error } = await supabase
       .from("usuarios")
@@ -16,13 +16,12 @@ export const getUsuarioData = async (userId: string) => {
         nombre_completo,
         email,
         telefono,
-        avatar_url,
         rol,
         estado,
         created_at,
         ultimo_acceso
-      `)
-      .eq("id", userId)
+      `) 
+      .eq("auth_id", userId)
       .single();
 
     if (error) throw error;
@@ -33,17 +32,16 @@ export const getUsuarioData = async (userId: string) => {
   }
 };
 
-/**
- * Actualiza la información del perfil del usuario (nombre, teléfono, avatar)
- */
-export const updateUsuario = async (userId: string, updates: Partial<Usuario>) => {
+export const updateUsuario = async (
+  userId: string, 
+  updates: TablesUpdate<'usuarios'> 
+) => {
   const supabase = getSupabaseBrowserClient();
-
   try {
-    const { data, error } = await (supabase.from("usuarios") as any)
+    const { data, error } = await supabase
       .from("usuarios")
-      .update(updates as any)
-      .eq("id", userId)
+      .update(updates)
+      .eq("auth_id", userId)
       .select()
       .single();
 
@@ -55,66 +53,27 @@ export const updateUsuario = async (userId: string, updates: Partial<Usuario>) =
   }
 };
 
-/**
- * Función auxiliar para subir el avatar al bucket de storage
- * (Útil si quieres centralizar la lógica de carga de imágenes)
- */
-export const uploadAvatar = async (userId: string, file: File) => {
-  const supabase = getSupabaseBrowserClient();
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${userId}-${Math.random()}.${fileExt}`;
-  const filePath = `avatars/${fileName}`;
-
-  try {
-    // 1. Subir imagen
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    // 2. Obtener URL pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
-
-    // 3. Actualizar tabla usuarios
-    await updateUsuario(userId, { avatar_url: publicUrl });
-
-    return { publicUrl, error: null };
-  } catch (error: any) {
-    return { publicUrl: null, error };
-  }
-};
-
-/**
- * Obtiene el perfil del usuario actual desde la sesión de Supabase
- */
 export const obtenerPerfilUsuario = async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) return null;
 
   const { data: perfil } = await supabase
     .from('usuarios')
     .select('*')
-    .eq('id', user.id)
+    .eq('auth_id', user.id)
     .single();
 
-  return perfil as Usuario;
+  return perfil as unknown as Usuario;
 };
 
-/**
- * Vincula un usuario de Auth con su entidad de Cliente B2B
- */
 export const obtenerClienteAsociado = async (userId: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from('clientes')
     .select('*')
-    .eq('auth_id', userId) // Usando el campo auth_id que vimos en tu Prisma
+    .eq('auth_id', userId)
     .single();
 
-  return data as ClienteB2B;
+  return data as unknown as ClienteB2B;
 };
