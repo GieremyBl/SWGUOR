@@ -147,6 +147,20 @@ const ProductoRow = memo(({
               </TooltipContent>
             </Tooltip>
 
+            {/* Movimientos Stock */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" size="icon" 
+                  onClick={() => onStock(p)}
+                  className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
+                >
+                  <BarChart3 size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-[10px] font-bold uppercase">Gestionar Stock</p></TooltipContent>
+            </Tooltip>
+
             {/* Editar */}
             <Tooltip>
               <TooltipTrigger asChild>

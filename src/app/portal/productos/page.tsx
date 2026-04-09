@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Loader2, Package, SlidersHorizontal, X, Info, Palette, Ruler, ShoppingCart } from 'lucide-react';
+import { Search, Package, SlidersHorizontal, X, Info, Palette, Ruler, ShoppingCart } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductoCard } from '@/components/portal/ProductoCard';
 import { cn } from '@/lib/utils';
