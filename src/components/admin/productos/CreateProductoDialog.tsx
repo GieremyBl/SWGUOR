@@ -77,7 +77,6 @@ export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categ
           const parts = String(uploadResult).split('/');
           finalPath = parts[parts.length - 1]; // Extrae solo "mi-foto.png"
         }
-        const uploadResult = await uploadProductImage(file);
 
         // Limpiamos la cadena para extraer SOLO el nombre del acrchivo final
         if (uploadResult){
