@@ -1,8 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Loader2, X, PackagePlus } from "lucide-react";
-import { Categoria } from "@/types";
+import { PackagePlus } from "lucide-react";
+import type { Database } from "@/types/database";
+type Categoria = Database['public']['Tables']['categorias']['Row'];
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   isOpen: boolean;
@@ -13,8 +19,15 @@ interface Props {
 export default function CreateInsumoDialog({ isOpen, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [formData, setFormData] = useState({
+    nombre: "",
+    tipo: "Tela",
+    unidad_medida: "Metros",
+    stock_actual: "",
+    stock_minimo: "",
+    categoria_id: "",
+  });
 
-  // Carga de categorías con manejo de errores mejorado
   useEffect(() => {
     if (isOpen) {
       fetch("/api/admin/categorias")
@@ -34,17 +47,13 @@ export default function CreateInsumoDialog({ isOpen, onClose, onSuccess }: Props
     e.preventDefault();
     setLoading(true);
     
-    const formData = new FormData(e.currentTarget);
-    
-    // Preparación de datos asegurando tipos numéricos correctos
     const data = {
-      nombre: formData.get("nombre")?.toString(),
-      tipo: formData.get("tipo")?.toString(),
-      unidad_medida: formData.get("unidad_medida")?.toString(),
-      stock_actual: parseFloat(formData.get("stock_actual")?.toString() || "0"),
-      stock_minimo: parseFloat(formData.get("stock_minimo")?.toString() || "0"),
-      // Si tu base de datos usa IDs numéricos (Int), usa Number(). Si usa UUID, quita el Number()
-      categoria_id: formData.get("categoria_id") ? Number(formData.get("categoria_id")) : null,
+      nombre: formData.nombre,
+      tipo: formData.tipo,
+      unidad_medida: formData.unidad_medida,
+      stock_actual: parseFloat(formData.stock_actual || "0"),
+      stock_minimo: parseFloat(formData.stock_minimo || "0"),
+      categoria_id: formData.categoria_id ? Number(formData.categoria_id) : null,
     };
 
     try {
@@ -56,6 +65,7 @@ export default function CreateInsumoDialog({ isOpen, onClose, onSuccess }: Props
 
       if (res.ok) {
         toast.success("Nuevo insumo registrado con éxito");
+        setFormData({ nombre: "", tipo: "Tela", unidad_medida: "Metros", stock_actual: "", stock_minimo: "", categoria_id: "" });
         onSuccess();
         onClose();
       } else {
@@ -69,109 +79,164 @@ export default function CreateInsumoDialog({ isOpen, onClose, onSuccess }: Props
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-white p-0 overflow-hidden max-h-[90vh]">
+        {/* Banner decorativo superior */}
+        <div className="h-2 bg-pink-600 w-full" />
         
-        {/* Header con estilo coherente */}
-        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-pink-50/30">
-          <div className="flex items-center gap-2">
-            <PackagePlus className="text-pink-600" size={24} />
-            <h2 className="text-xl font-black text-gray-900 uppercase">Nuevo Insumo</h2>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-white rounded-full">
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Nombre del Material</label>
-            <input 
-              name="nombre" 
-              placeholder="ej. Tela Lino Premium" 
-              required 
-              className="w-full border-gray-200 border p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-none font-medium transition-all" 
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tipo</label>
-              <select name="tipo" className="w-full border-gray-200 border p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-none font-bold text-sm bg-white cursor-pointer" required>
-                <option value="Tela">Tela</option>
-                <option value="Hilo">Hilo</option>
-                <option value="Avios">Avíos / Accesorios</option>
-                <option value="Embalaje">Embalaje</option>
-              </select>
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-8px)]">
+          <DialogHeader className="mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-pink-50 rounded-lg">
+                <PackagePlus className="w-6 h-6 text-pink-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800 uppercase tracking-tight">
+                  Nuevo Insumo
+                </DialogTitle>
+                <DialogDescription className="text-slate-500">
+                  Registra un nuevo material o insumo al inventario.
+                </DialogDescription>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">U. Medida</label>
-              <select name="unidad_medida" className="w-full border-gray-200 border p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-none font-bold text-sm bg-white cursor-pointer">
-                <option value="Metros">Metros</option>
-                <option value="Unidades">Unidades</option>
-                <option value="Conos">Conos</option>
-                <option value="Kg">Kilogramos</option>
-              </select>
-            </div>
-          </div>
+          </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Stock Inicial</label>
-              <input 
-                name="stock_actual" 
-                type="number" 
-                step="0.01" 
-                min="0"
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Nombre */}
+            <div className="space-y-2">
+              <Label className="text-[11px] uppercase font-bold text-slate-400">
+                Nombre del Material
+              </Label>
+              <Input 
+                value={formData.nombre}
+                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                placeholder="Ej: Tela Lino Premium" 
                 required 
-                placeholder="0.00" 
-                className="w-full border-gray-200 border p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-none font-bold" 
+                disabled={loading}
+                className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-11"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Stock Mínimo</label>
-              <input 
-                name="stock_minimo" 
-                type="number" 
-                step="0.01" 
-                min="0"
-                placeholder="5.00" 
-                className="w-full border-gray-200 border p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-none font-bold text-orange-600" 
-              />
+
+            {/* Tipo y Unidad de Medida */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[11px] uppercase font-bold text-slate-400">Tipo</Label>
+                <Select 
+                  value={formData.tipo} 
+                  onValueChange={(value) => setFormData({ ...formData, tipo: value })}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="h-11 bg-slate-50 border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="Tela">Tela</SelectItem>
+                    <SelectItem value="Hilo">Hilo</SelectItem>
+                    <SelectItem value="Avios">Avíos / Accesorios</SelectItem>
+                    <SelectItem value="Embalaje">Embalaje</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] uppercase font-bold text-slate-400">U. Medida</Label>
+                <Select 
+                  value={formData.unidad_medida} 
+                  onValueChange={(value) => setFormData({ ...formData, unidad_medida: value })}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="h-11 bg-slate-50 border-slate-200">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    <SelectItem value="Metros">Metros</SelectItem>
+                    <SelectItem value="Unidades">Unidades</SelectItem>
+                    <SelectItem value="Conos">Conos</SelectItem>
+                    <SelectItem value="Kg">Kilogramos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Categoría Relacionada</label>
-            <select name="categoria_id" required className="w-full border-gray-200 border p-3 rounded-xl focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 outline-none font-medium bg-white cursor-pointer">
-              <option value="">Seleccionar una categoría...</option>
-              {categorias.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-              ))}
-            </select>
-          </div>
+            {/* Stock Actual y Mínimo */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[11px] uppercase font-bold text-slate-400">Stock Inicial</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  min="0"
+                  value={formData.stock_actual}
+                  onChange={(e) => setFormData({ ...formData, stock_actual: e.target.value })}
+                  placeholder="0.00"
+                  required 
+                  disabled={loading}
+                  className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[11px] uppercase font-bold text-slate-400">Stock Mínimo</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  min="0"
+                  value={formData.stock_minimo}
+                  onChange={(e) => setFormData({ ...formData, stock_minimo: e.target.value })}
+                  placeholder="5.00"
+                  disabled={loading}
+                  className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-11"
+                />
+              </div>
+            </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="px-6 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button 
-              type="submit" 
-              disabled={loading} 
-              className="bg-pink-600 hover:bg-pink-700 text-white px-8 py-3 rounded-xl font-black flex items-center gap-2 shadow-lg shadow-pink-100 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100"
-            >
-              {loading ? <Loader2 className="animate-spin" size={18} /> : "REGISTRAR INSUMO"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            {/* Categoría */}
+            <div className="space-y-2">
+              <Label className="text-[11px] uppercase font-bold text-slate-400">Categoría Relacionada</Label>
+              <Select 
+                value={formData.categoria_id} 
+                onValueChange={(value) => setFormData({ ...formData, categoria_id: value })}
+                disabled={loading}
+              >
+                <SelectTrigger className="h-11 bg-slate-50 border-slate-200">
+                  <SelectValue placeholder="Seleccionar una categoría..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {categorias.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>{cat.nombre}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Footer con acciones */}
+            <DialogFooter className="mt-8 pt-6 border-t border-slate-100 flex gap-3">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={onClose}
+                disabled={loading}
+                className="text-slate-500 hover:bg-slate-100"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="bg-pink-600 hover:bg-pink-700 text-white shadow-md shadow-pink-200 px-8 transition-all"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Registrando
+                  </span>
+                ) : (
+                  "Registrar Insumo"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

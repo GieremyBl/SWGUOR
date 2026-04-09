@@ -89,9 +89,9 @@ export default function PedidosPage() {
     }
     const dataToExport = filteredPedidos.map(p => ({
       "N° Pedido": p.id,
-      "Fecha": new Date(p.created_at).toLocaleDateString(),
+      "Fecha": p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Sin fecha',
       "Cliente": p.clientes?.razon_social || 'Desconocido',
-      "Total": p.total,
+      "Total": p.total_pagado || 0,
       "Estado": p.estado?.toUpperCase() ?? 'SIN ESTADO',
       "Método Pago": p.metodo_pago || 'No especificado'
     }));

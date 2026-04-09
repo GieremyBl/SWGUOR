@@ -34,7 +34,7 @@ export default function DetalleCotizacionPage() {
               producto:productos(nombre, sku, imagen_url)
             )
           `)
-          .eq('id', id) // Ahora TS sabe que 'id' es un string
+          .eq('id', Number(id)) // Convertir string a número
           .single();
 
         if (error) throw error;

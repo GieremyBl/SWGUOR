@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { UserPlus, Mail, ShieldCheck, User } from "lucide-react";
 
 export default function CreateUsuarioDialog({ isOpen, onClose, onSuccess }: any) {
   const [loading, setLoading] = useState(false);
@@ -21,6 +21,7 @@ export default function CreateUsuarioDialog({ isOpen, onClose, onSuccess }: any)
     try {
       const res = await fetch("/api/admin/usuarios", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!res.ok) throw new Error();
@@ -36,53 +37,106 @@ export default function CreateUsuarioDialog({ isOpen, onClose, onSuccess }: any)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-106.25">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-black uppercase text-slate-900">Nuevo Usuario</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Nombre Completo</Label>
-            <Input name="nombre_completo" placeholder="Ej. Juan Pérez" required />
-          </div>
-          <div className="space-y-2">
-            <Label>Correo Electrónico</Label>
-            <Input name="email" type="email" placeholder="correo@modasguor.com" required />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+      <DialogContent className="sm:max-w-[450px] border-none shadow-2xl bg-white p-0 overflow-hidden">
+        {/* Banner decorativo superior */}
+        <div className="h-2 bg-pink-600 w-full" />
+        
+        <div className="p-6">
+          <DialogHeader className="mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-pink-50 rounded-lg">
+                <UserPlus className="w-6 h-6 text-pink-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-800 uppercase tracking-tight">
+                  Nuevo Usuario
+                </DialogTitle>
+                <DialogDescription className="text-slate-500">
+                  Crea una nueva cuenta para un miembro del equipo.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Campo: Nombre */}
             <div className="space-y-2">
-              <Label>Rol</Label>
-              <Select name="rol" defaultValue="vendedor">
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar rol" />
+              <Label className="text-[11px] uppercase font-bold text-slate-400 flex items-center gap-2">
+                <User className="w-3.5 h-3.5" /> Nombre Completo
+              </Label>
+              <Input 
+                name="nombre_completo" 
+                placeholder="Ej. Juan Pérez"
+                required 
+                className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-11"
+              />
+            </div>
+
+            {/* Campo: Email */}
+            <div className="space-y-2">
+              <Label className="text-[11px] uppercase font-bold text-slate-400 flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5" /> Correo Electrónico
+              </Label>
+              <Input 
+                name="email" 
+                type="email"
+                placeholder="correo@modasguor.com"
+                required 
+                className="bg-slate-50 border-slate-200 focus:bg-white transition-all h-11"
+              />
+            </div>
+
+            {/* Campo: Rol */}
+            <div className="space-y-2">
+              <Label className="text-[11px] uppercase font-bold text-slate-400 flex items-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5" /> Nivel de Acceso (Rol)
+              </Label>
+              <Select name="rol" defaultValue="recepcionista">
+                <SelectTrigger className="h-11 bg-slate-50 border-slate-200">
+                  <SelectValue placeholder="Seleccione un cargo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="gerente_general">Gerente General</SelectItem>
                   <SelectItem value="administrador">Administrador</SelectItem>
-                  <SelectItem value="vendedor">Vendedor</SelectItem>
+                  <SelectItem value="recepcionista">Recepcionista</SelectItem>
+                  <SelectItem value="disenador">Diseñador</SelectItem>
+                  <SelectItem value="cortador">Cortador</SelectItem>
+                  <SelectItem value="ayudante">Ayudante</SelectItem>
+                  <SelectItem value="representante_taller">Representante de Taller</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[10px] text-slate-400 italic">
+                * El rol determina los módulos a los que el usuario puede entrar.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select name="estado" defaultValue="ACTIVO">
-                <SelectTrigger>
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVO">Activo</SelectItem>
-                  <SelectItem value="INACTIVO">Inactivo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit" className="bg-pink-600 hover:bg-pink-700" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Guardar Usuario
-            </Button>
-          </DialogFooter>
-        </form>
+
+            {/* Footer con acciones */}
+            <DialogFooter className="mt-8 pt-6 border-t border-slate-100 flex gap-3">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={onClose}
+                className="text-slate-500 hover:bg-slate-100"
+              >
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading}
+                className="bg-pink-600 hover:bg-pink-700 text-white shadow-md shadow-pink-200 px-8 transition-all"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creando
+                  </span>
+                ) : (
+                  "Crear Usuario"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

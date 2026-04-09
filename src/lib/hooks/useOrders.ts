@@ -11,7 +11,12 @@ import {
   cambiarEstadoOrden, 
   verificarStock 
 } from '@/lib/helpers/ordenes-helpers';
-import type { Orden, OrdenInsert, EstadoOrden, MetodoPago } from '@/types';
+import type { Database } from '@/types/database';
+
+type Orden = Database['public']['Tables']['ordenes']['Row'];
+type OrdenInsert = Database['public']['Tables']['ordenes']['Insert'];
+type EstadoOrden = Database['public']['Enums']['EstadoOrden'];
+type MetodoPago = Database['public']['Enums']['MetodoPago'];
 
 // Tipos locales para el estado del hook
 interface FiltrosOrden {

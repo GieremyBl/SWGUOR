@@ -1,5 +1,10 @@
 import { createClient } from '@/lib/supabase/client';
-import type { Orden, OrdenInsert, EstadoOrden, MetodoPago } from '@/types';
+import type { Database } from '@/types/database';
+
+type Orden = Database['public']['Tables']['ordenes']['Row'];
+type OrdenInsert = Database['public']['Tables']['ordenes']['Insert'];
+type EstadoOrden = Database['public']['Enums']['EstadoOrden'];
+type MetodoPago = Database['public']['Enums']['MetodoPago'];
 
 /**
  * Obtiene órdenes con filtros opcionales y relación con clientes

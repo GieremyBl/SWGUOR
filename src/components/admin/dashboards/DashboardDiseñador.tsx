@@ -4,7 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { usePermissions } from '@/lib/hooks/usePermissions';
-import { Usuario } from '@/types';
+import type { Database } from '@/types/database';
+
+type Usuario = Database['public']['Tables']['usuarios']['Row'];
 import { useRouter } from 'next/navigation';
 import { Upload, Eye, CheckCircle, AlertCircle, ClipboardList, Layers, FileText, Inbox } from 'lucide-react';
 
@@ -104,7 +106,7 @@ export default function DisenadorDashboard({ usuario }: { usuario: Usuario }) {
         priority: 'normal'
       })));
 
-      const pedidosData = (pedidosRes.data as DBPedido[]) || [];
+      const pedidosData = (pedidosRes.data as unknown as DBPedido[]) || [];
       setAssignedOrders(pedidosData.map((pedido: DBPedido) => ({
         id: pedido.id,
         product: pedido.nombre_producto_snapshot || 'Sin descripción', // campo correcto

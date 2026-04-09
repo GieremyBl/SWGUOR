@@ -12,7 +12,9 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { exportToExcel } from "@/lib/utils/export-utils";
 import { usePermissions } from "@/lib/hooks/usePermissions";
-import { EstadoCliente } from "@/types";
+import type { Database } from "@/types/database";
+
+type EstadoCliente = Database['public']['Enums']['EstadoCliente'];
 
 const ClientesTable = dynamic(() => import("@/components/admin/clientes/ClientesTable"));
 const EditClienteDialog = dynamic(() => import("@/components/admin/clientes/EditClienteDialog"));

@@ -1,118 +1,31 @@
-import { Role, Permission } from '@/types/auth';
+/**
+ * Configuración de Permisos del Sistema
+ * Re-utiliza la definición centralizada de roles.ts
+ */
 
-const rolePermissions: Record<Role, Permission[]> = {
-  [Role.ADMINISTRADOR]: [
-    Permission.VIEW_USERS,
-    Permission.MANAGE_USERS,
-    Permission.VIEW_CLIENTS,
-    Permission.MANAGE_CLIENTS,
-    Permission.VIEW_ORDERS,
-    Permission.CREATE_ORDERS,
-    Permission.EDIT_ORDERS,
-    Permission.CANCEL_ORDERS,
-    Permission.VIEW_PRODUCTS,
-    Permission.CREATE_PRODUCTS,
-    Permission.EDIT_PRODUCTS,
-    Permission.DELETE_PRODUCTS,
-    Permission.VIEW_VARIANTS,
-    Permission.MANAGE_VARIANTS,
-    Permission.VIEW_CATEGORIES,
-    Permission.MANAGE_CATEGORIES,
-    Permission.VIEW_INVENTORY,
-    Permission.MANAGE_INVENTORY,
-    Permission.ADJUST_STOCK,
-    Permission.VIEW_MATERIALS,
-    Permission.MANAGE_MATERIALS,
-    Permission.VIEW_CONFECTIONS,
-    Permission.MANAGE_CONFECTIONS,
-    Permission.VIEW_WORKSHOPS,
-    Permission.MANAGE_WORKSHOPS,
-    Permission.VIEW_QUOTES,
-    Permission.CREATE_QUOTES,
-    Permission.EDIT_QUOTES,
-    Permission.APPROVE_QUOTES,
-    Permission.VIEW_SALES,
-    Permission.MANAGE_SALES,
-    Permission.VIEW_DISPATCHES,
-    Permission.MANAGE_DISPATCHES,
-    Permission.VIEW_PAYMENTS,
-    Permission.MANAGE_PAYMENTS,
-    Permission.VIEW_DASHBOARD,
-    Permission.VIEW_REPORTS,
-    Permission.EXPORT_DATA,
-  ],
-  [Role.CORTADOR]: [
-    Permission.VIEW_PRODUCTS,
-    Permission.VIEW_VARIANTS,
-    Permission.VIEW_ORDERS,
-    Permission.VIEW_CONFECTIONS,
-    Permission.MANAGE_CONFECTIONS,
-    Permission.VIEW_WORKSHOPS,
-    Permission.VIEW_INVENTORY,
-    Permission.VIEW_MATERIALS,
-    Permission.MANAGE_MATERIALS,
-    Permission.VIEW_DASHBOARD,
-  ],
-  [Role.DISENADOR]: [
-    Permission.VIEW_PRODUCTS,
-    Permission.CREATE_PRODUCTS,
-    Permission.EDIT_PRODUCTS,
-    Permission.VIEW_VARIANTS,
-    Permission.MANAGE_VARIANTS,
-    Permission.VIEW_CATEGORIES,
-    Permission.MANAGE_CATEGORIES,
-    Permission.VIEW_ORDERS,
-    Permission.VIEW_CONFECTIONS,
-    Permission.MANAGE_CONFECTIONS,
-    Permission.VIEW_INVENTORY,
-    Permission.VIEW_MATERIALS,
-    Permission.VIEW_QUOTES,
-    Permission.VIEW_DASHBOARD,
-  ],
-  [Role.RECEPCIONISTA]: [
-    Permission.VIEW_CLIENTS,
-    Permission.MANAGE_CLIENTS,
-    Permission.VIEW_PRODUCTS,
-    Permission.VIEW_VARIANTS,
-    Permission.VIEW_ORDERS,
-    Permission.CREATE_ORDERS,
-    Permission.EDIT_ORDERS,
-    Permission.VIEW_QUOTES,
-    Permission.CREATE_QUOTES,
-    Permission.EDIT_QUOTES,
-    Permission.VIEW_INVENTORY,
-    Permission.VIEW_PAYMENTS,
-    Permission.VIEW_DASHBOARD,
-  ],
-  [Role.AYUDANTE]: [
-    Permission.VIEW_PRODUCTS,
-    Permission.VIEW_VARIANTS,
-    Permission.VIEW_ORDERS,
-    Permission.VIEW_INVENTORY,
-    Permission.VIEW_CONFECTIONS,
-    Permission.VIEW_DISPATCHES,
-    Permission.VIEW_DASHBOARD,
-  ],
-  [Role.REPRESENTANTE_TALLER]: [
-    Permission.VIEW_ORDERS,
-    Permission.VIEW_CONFECTIONS,
-    Permission.MANAGE_CONFECTIONS,
-    Permission.VIEW_WORKSHOPS,
-    Permission.VIEW_INVENTORY,
-    Permission.VIEW_MATERIALS,
-    Permission.VIEW_DISPATCHES,
-    Permission.VIEW_DASHBOARD,
-  ],
-};
-  
-export function hasPermission(userRole: Role, permission: Permission): boolean {
-  return rolePermissions[userRole]?.includes(permission) ?? false;
+import type { RolUsuario, PermissionKey } from '@/types/auth';
+import { PERMISOS_POR_ROL, tienePermiso } from '@/types/auth';
+
+// Re-exportar para compatibilidad
+export const rolePermissions: Record<RolUsuario, PermissionKey[]> = PERMISOS_POR_ROL;
+
+/**
+ * Verifica si un rol tiene un permiso específico
+ */
+export function hasPermission(userRole: RolUsuario, permission: PermissionKey): boolean {
+  return tienePermiso(userRole, permission);
 }
 
-export function hasAnyPermission(userRole: Role, permissions: Permission[]): boolean {
+/**
+ * Verifica si un rol tiene al menos uno de los permisos
+ */
+export function hasAnyPermission(userRole: RolUsuario, permissions: PermissionKey[]): boolean {
   return permissions.some(permission => hasPermission(userRole, permission));
 }
 
-export function hasAllPermissions(userRole: Role, permissions: Permission[]): boolean {
+/**
+ * Verifica si un rol tiene todos los permisos
+ */
+export function hasAllPermissions(userRole: RolUsuario, permissions: PermissionKey[]): boolean {
   return permissions.every(permission => hasPermission(userRole, permission));
 }

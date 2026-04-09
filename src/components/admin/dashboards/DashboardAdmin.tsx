@@ -10,7 +10,12 @@ import {
   RefreshCw, Package, Clock, CheckCircle2,
   AlertCircle, ArrowRight, Eye,
 } from 'lucide-react';
-import { Insumo, EstadoOrden, Orden, OrdenConCliente } from '@/types';
+import type { Database } from '@/types/database';
+
+type Insumo = Database['public']['Tables']['insumo']['Row'];
+type EstadoOrden = Database['public']['Enums']['EstadoOrden'];
+type Orden = Database['public']['Tables']['ordenes']['Row'];
+type OrdenConCliente = Orden & { clientes: { razon_social: string } | null };
 import { ESTADOS_ORDEN, ESTADOS_PAGO, PRIORIDADES_PEDIDO, ROLES_USUARIO, TIPOS_CLIENTE, UNIDADES_MEDIDA } from '@/lib/constants/estados';
 
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
@@ -473,7 +478,7 @@ export default function AdminDashboard() {
               <tbody>
                 {orders.map((o) => {
                   const st   = getOrdenStatus(o.estado ?? '');
-                  const tipo = getTipoCliente(o.clientes?.tipo_cliente ?? '');
+                  const tipo = getTipoCliente((o.clientes as any)?.tipo ?? '');
                   return (
                     <tr key={o.id} className="group">
                       <td className="py-2.5 pl-5 bg-slate-50 group-hover:bg-slate-100 rounded-l-xl transition-colors">
@@ -484,12 +489,12 @@ export default function AdminDashboard() {
                           {o.clientes?.razon_social ?? 'Consumidor'}
                         </p>
                         <p className="text-[9px] text-slate-400 mt-0.5">
-                          {new Date(o.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' })}
+                          {o.created_at ? new Date(o.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : 'Sin fecha'}
                         </p>
                       </td>
                       <td className="py-2.5 px-2 bg-slate-50 group-hover:bg-slate-100 transition-colors">
                         <span className="text-xs font-black text-slate-800">
-                          S/ {Number(o.total ?? 0).toLocaleString('es-PE')}
+                          S/ {Number(o.total_pagado ?? 0).toLocaleString('es-PE')}
                         </span>
                       </td>
                       <td className="py-2.5 px-2 bg-slate-50 group-hover:bg-slate-100 transition-colors">

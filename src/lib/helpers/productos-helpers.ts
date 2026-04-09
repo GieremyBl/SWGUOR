@@ -1,4 +1,8 @@
-import type { ProductoPortal, Insumo, InsumoInsert } from '@/types';
+import type { Database } from '@/types/database';
+
+type Insumo = Database['public']['Tables']['insumo']['Row'];
+type InsumoInsert = Database['public']['Tables']['insumo']['Insert'];
+type ProductoPortal = Database['public']['Tables']['productos']['Row'];
 
 /**
  * PRODUCTOS (Panel Administrativo & API)

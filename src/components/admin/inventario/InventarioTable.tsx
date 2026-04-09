@@ -1,7 +1,8 @@
 "use client";
 
 import { Edit2, Trash2, Layers, Loader2 } from "lucide-react";
-import { Insumo } from "@/types";
+import type { Database } from "@/types/database";
+type Insumo = Database['public']['Tables']['insumo']['Row'];
 import { Button } from "@/components/ui/button";
 
 interface InventarioTableProps {

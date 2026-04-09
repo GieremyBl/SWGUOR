@@ -4,7 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import AdminSidebar from './Sidebar';
 import AdminHeader from './Header';
-import type { Usuario } from '@/types';
+import type { Database } from '@/types/database';
+
+type Usuario = Database['public']['Tables']['usuarios']['Row'];
 
 export default function RealtimeLayoutWrapper({ 
   initialUsuario, 

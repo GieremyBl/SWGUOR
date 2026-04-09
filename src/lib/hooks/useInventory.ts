@@ -7,7 +7,11 @@ import {
   crearInsumo,
   actualizarStockFisico,
 } from '@/lib/helpers/productos-helpers';
-import type { Insumo, InsumoInsert, TipoInsumo } from '@/types';
+import type { Database } from '@/types/database';
+
+type Insumo = Database['public']['Tables']['insumo']['Row'];
+type InsumoInsert = Database['public']['Tables']['insumo']['Insert'];
+type TipoInsumo = Database['public']['Enums']['TipoInsumo'];
 
 interface UseInventarioState {
   insumos: Insumo[];

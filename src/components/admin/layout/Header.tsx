@@ -3,7 +3,9 @@
   import { Bell, ChevronRight, Home, User } from "lucide-react";
   import { usePathname } from "next/navigation";
   import Link from "next/link";
-  import type { Usuario } from '@/types';
+  import type { Database } from '@/types/database';
+  
+  type Usuario = Database['public']['Tables']['usuarios']['Row'];
   import { NotificationDropdown } from "./NotificationDropdown";
 
   interface AdminHeaderProps {
@@ -70,13 +72,9 @@
 
               {/* Avatar con efecto de escala */}
               <div className="relative w-9 h-9 rounded-xl bg-rose-500 overflow-hidden shadow-md">
-                {usuario.avatar_url? (
-                  <img src={usuario.avatar_url} className="w-full h-full object-cover" alt="Perfil" />
-                ) : (
-                  <span className="flex items-center justify-center h-full text-white font-bold">
-                    {usuario.nombre_completo?.charAt(0)}
-                  </span>
-                )}
+                <span className="flex items-center justify-center h-full text-white font-bold">
+                  {usuario?.nombre_completo?.charAt(0)}
+                </span>
                 
                 {/* Indicador de "Clickable" o presencia */}
                 <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />

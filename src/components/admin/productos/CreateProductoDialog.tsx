@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
+  DialogDescription,
   DialogFooter,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ImageIcon, Loader2, X } from "lucide-react";
+import { ImageIcon, Loader2, X, Plus } from "lucide-react";
 
 export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categorias }: any) {
   const { productos, refetch } = useProducts();
@@ -77,6 +77,13 @@ export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categ
           const parts = String(uploadResult).split('/');
           finalPath = parts[parts.length - 1]; // Extrae solo "mi-foto.png"
         }
+        const uploadResult = await uploadProductImage(file);
+
+        // Limpiamos la cadena para extraer SOLO el nombre del acrchivo final
+        if (uploadResult){
+          const parts = String(uploadResult).split('/');
+          finalPath = parts[parts.length - 1];  // Extrae solo "mi-foto.png"
+        }
       }
 
       // 2. Preparar objeto exacto para public.productos
@@ -117,25 +124,45 @@ export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categ
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md rounded-3xl p-0 bg-white border-none shadow-2xl overflow-hidden">
-        <div className="p-6">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-slate-800">Nueva Prenda</DialogTitle>
-            <p className="text-sm text-slate-500">Configura el nuevo producto para el inventario.</p>
-          </DialogHeader>
+      <DialogContent className="max-w-md p-0">
+        {/* Banner rosa superior */}
+        <div className="h-2 bg-pink-600 w-full" />
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <div className="p-6 space-y-5">
+          {/* Header con icono */}
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-pink-50 rounded-lg flex-shrink-0">
+              <Plus className="w-6 h-6 text-pink-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-bold">
+                Crear Producto
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-600">
+                Añade un nuevo producto al catálogo
+              </DialogDescription>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* PREVISUALIZACIÓN DE IMAGEN */}
-            <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl p-4 bg-slate-50 min-h-[140px]">
+            <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 min-h-[140px]">
               {imagePreview ? (
                 <div className="relative w-full h-32">
-                  <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" />
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    size="icon" 
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-full object-contain"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
                     className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                    onClick={() => { setImagePreview(null); setFile(null); }}
+                    onClick={() => {
+                      setImagePreview(null);
+                      setFile(null);
+                    }}
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -143,53 +170,83 @@ export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categ
               ) : (
                 <label className="cursor-pointer flex flex-col items-center">
                   <ImageIcon className="w-8 h-8 text-pink-500 mb-2" />
-                  <span className="text-xs font-bold text-slate-500">Añadir foto del producto</span>
-                  <input type="file" className="hidden" onChange={handleImageChange} accept="image/*" />
+                  <span className="text-xs font-bold text-slate-500">
+                    Añadir foto del producto
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleImageChange}
+                    accept="image/*"
+                  />
                 </label>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Nombre de la Prenda</Label>
-              <Input 
+              <Label className="text-[10px] font-black uppercase text-slate-400">
+                Nombre de la Prenda
+              </Label>
+              <Input
                 value={formData.nombre}
-                onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                className="rounded-xl border-slate-200" 
-                required 
+                onChange={(e) =>
+                  setFormData({ ...formData, nombre: e.target.value })
+                }
+                className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white"
+                required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400">SKU (Auto)</Label>
-                <Input value={formData.sku} disabled className="bg-slate-50 font-mono text-pink-600 font-bold rounded-xl" />
+                <Label className="text-[10px] font-black uppercase text-slate-400">
+                  SKU (Auto)
+                </Label>
+                <Input
+                  value={formData.sku}
+                  disabled
+                  className="bg-slate-50 font-mono text-pink-600 font-bold rounded-lg border-slate-200"
+                />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase text-slate-400">Precio Venta (S/)</Label>
-                <Input 
-                  type="number" 
-                  step="0.01" 
+                <Label className="text-[10px] font-black uppercase text-slate-400">
+                  Precio Venta (S/)
+                </Label>
+                <Input
+                  type="number"
+                  step="0.01"
                   value={formData.precio}
-                  onChange={(e) => setFormData({...formData, precio: e.target.value})}
-                  className="rounded-xl border-slate-200" 
-                  required 
+                  onChange={(e) =>
+                    setFormData({ ...formData, precio: e.target.value })
+                  }
+                  className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white"
+                  required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase text-slate-400">Categoría</Label>
-              <Select onValueChange={(val) => setFormData({...formData, categoria_id: val})}>
-                <SelectTrigger className="rounded-xl border-slate-200 bg-white">
+              <Label className="text-[10px] font-black uppercase text-slate-400">
+                Categoría
+              </Label>
+              <Select
+                onValueChange={(val) =>
+                  setFormData({ ...formData, categoria_id: val })
+                }
+              >
+                <SelectTrigger className="rounded-lg border-slate-200 bg-slate-50 focus:bg-white">
                   <SelectValue placeholder="Seleccionar categoría..." />
                 </SelectTrigger>
-                {/* FIX DE TRANSPARENCIA PARA TAILWIND V3.4 */}
-                <SelectContent 
-                  position="popper" 
-                  className="z-[9999] bg-white border border-slate-200 shadow-xl rounded-xl"
+                <SelectContent
+                  position="popper"
+                  className="z-[9999] bg-white border border-slate-200 shadow-xl rounded-lg"
                 >
                   {categorias.map((cat: any) => (
-                    <SelectItem key={cat.id} value={cat.id.toString()} className="cursor-pointer">
+                    <SelectItem
+                      key={cat.id}
+                      value={cat.id.toString()}
+                      className="cursor-pointer"
+                    >
                       {cat.nombre}
                     </SelectItem>
                   ))}
@@ -197,16 +254,26 @@ export default function CreateProductoDialog({ isOpen, onClose, onSuccess, categ
               </Select>
             </div>
 
-            <DialogFooter className="pt-4 flex gap-2">
-              <Button type="button" variant="ghost" onClick={onClose} className="flex-1 rounded-xl">
+            {/* Footer */}
+            <DialogFooter className="mt-8 pt-6 border-t border-slate-100 flex gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                disabled={loading}
+                className="flex-1"
+              >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
-                disabled={loading} 
-                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-bold"
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-pink-600 hover:bg-pink-700 text-white"
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar Producto"}
+                {loading && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Guardar
               </Button>
             </DialogFooter>
           </form>

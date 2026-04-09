@@ -75,7 +75,7 @@ export async function middleware(request: NextRequest) {
       .single();
 
     // Validar cuenta activa
-    if (!usuario || usuario.estado?.toUpperCase() !== ESTADO_ACTIVO) {
+    if (!usuario || usuario.estado?.toLowerCase() !== 'activo') {
       return NextResponse.redirect(new URL('/auth/login?error=cuenta_inactiva', request.url));
     }
 

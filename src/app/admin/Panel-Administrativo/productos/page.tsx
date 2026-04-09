@@ -250,7 +250,10 @@ export default function ProductosPage() {
             <DeleteProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
           )}
 
+<<<<<<< HEAD
           
+=======
+>>>>>>> main
         </>
       )}
     </div>

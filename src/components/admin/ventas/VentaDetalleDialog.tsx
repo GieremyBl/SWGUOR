@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import type { Venta } from "@/types";
+import type { Database } from "@/types/database";
+type Venta = Database['public']['Tables']['ventas']['Row'];
 
 interface DetalleVenta {
   id: number;
-  orden_id: number;
   producto_id: number;
   cantidad: number;
-  precio_unitario: number;
+  precio_unitario_snapshot: number;
   productos?: {
     nombre: string;
   };
@@ -42,10 +42,25 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
     setLoading(true);
     setError(null);
     try {
+      // Primero obtenemos la orden para sacar el cotizacion_id
+      const { data: ordenData, error: ordenError } = await supabase
+        .from("ordenes")
+        .select("cotizacion_id")
+        .eq("id", venta.orden_id)
+        .single();
+
+      if (ordenError) throw ordenError;
+
+      if (!ordenData.cotizacion_id) {
+        setDetalles([]);
+        return;
+      }
+
+      // Luego obtenemos los items de la cotización
       const { data, error: queryError } = await supabase
-        .from("detalles_orden")
-        .select("*, productos(nombre)")
-        .eq("orden_id", venta.orden_id);
+        .from("cotizacion_items")
+        .select("id, cantidad, precio_unitario_snapshot, producto_id, productos(nombre)")
+        .eq("cotizacion_id", ordenData.cotizacion_id);
 
       if (queryError) throw queryError;
 
@@ -78,7 +93,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
       // 1. Devolver stock (Ejecución en paralelo para mayor velocidad)
       const stockUpdates = detalles.map(item => 
         supabase.rpc('increment_stock', {
-          row_id: item.producto_id,
+          row_id: String(item.producto_id),
           quantity: item.cantidad
         })
       );
@@ -92,7 +107,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
       const { error: errorVenta } = await supabase
         .from("ventas")
         .delete()
-        .eq("id", venta.id);
+        .eq("id", String(venta.id));
 
       if (errorVenta) throw errorVenta;
 
@@ -149,7 +164,7 @@ export default function VentaDetalleDialog({ venta, isOpen, onClose, onUpdate }:
                       <span className="font-bold text-gray-900">{item.cantidad}x</span> {item.productos?.nombre || 'Producto sin nombre'}
                     </span>
                     <span className="font-medium text-gray-900">
-                      S/ {(item.cantidad * item.precio_unitario).toFixed(2)}
+                      S/ {(item.cantidad * item.precio_unitario_snapshot).toFixed(2)}
                     </span>
                   </div>
                 ))}

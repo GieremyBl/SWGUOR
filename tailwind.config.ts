@@ -9,7 +9,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // --- CONEXIÓN CON SHADCN (Lo que arregla la transparencia) ---
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -38,7 +37,7 @@ const config: Config = {
           300: '#f9c79d',
           400: '#f5a869',
           500: '#d4945a',
-          600: '#b87947',
+          600: '#b87947', 
           700: '#935f38',
           800: '#77502f',
           900: '#624128',
