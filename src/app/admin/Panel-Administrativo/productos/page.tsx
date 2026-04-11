@@ -4,47 +4,53 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useProducts } from "@/lib/hooks/useProducts";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  FileSpreadsheet, Plus, Search, Package, RefreshCw, 
-  AlertTriangle, XCircle, BarChart3, ChevronLeft, ChevronRight, 
+import {
+  FileSpreadsheet, Plus, Package, RefreshCw,
+  AlertTriangle, XCircle, BarChart3, ChevronLeft, ChevronRight,
   FileText, ShieldAlert
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { exportToExcel, exportToPDF } from "@/lib/utils/export-utils";
+import { exportToExcel, exportInventarioToPDF } from "@/lib/utils/export-utils";
+import ProductFilters from "@/components/admin/productos/ProductFilters";
+import { Constants } from "@/types/database";
 
-// Lazy loading de componentes
+// Lazy loading de componentes base
 const ProductosTable = dynamic(() => import("@/components/admin/productos/ProductosTable"));
 const CreateProductoDialog = dynamic(() => import("@/components/admin/productos/CreateProductoDialog"));
 const EditProductoDialog = dynamic(() => import("@/components/admin/productos/EditProductoDialog"));
 const DeleteProductoDialog = dynamic(() => import("@/components/admin/productos/DeleteProductoDialog"));
 
+// Componentes que crearemos para el detalle profundo
+const VariantsDetailDialog = dynamic(() => import("@/components/admin/productos/VariantsDetailDialog"));
+const TechSheetDialog = dynamic(() => import("@/components/admin/productos/TechSheetDialog"));
+
 export default function ProductosPage() {
-  const { can, isLoading: authLoading, usuario } = usePermissions();
-  const { productos, loading: productosLoading, error: productosError, refetch } = useProducts();
+  const { can, isLoading: authLoading } = usePermissions();
+  const { productos, loading: productosLoading, refetch } = useProducts();
+  
+  // ESTADOS DE DATOS
   const [categorias, setCategorias] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total: 0, bajoStock: 0, agotados: 0, lineas: 0 });
+  
+  // ESTADOS DE FILTROS [cite: 63-66, 86-90]
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategoria, setSelectedCategoria] = useState<string>("todos");
+  const [colorFilter, setColorFilter] = useState("");
+  const [sizeFilter, setSizeFilter] = useState(""); // Filtro de tallas (S, M, L, XL)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'none'>('none');
+  const [quickFilter, setQuickFilter] = useState<"todos" | "bajo_stock" | "agotados">("todos");
+  
+  // ESTADOS DE INTERFAZ
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<any | null>(null);
   const [dialogMode, setDialogMode] = useState<"edit" | "delete" | "stock" | "ficha" | null>(null);
-  
   const [currentPage, setCurrentPage] = useState(0);
-  const [quickFilter, setQuickFilter] = useState<"todos" | "bajo_stock" | "agotados">("todos");
-  const [selectedCategoria, setSelectedCategoria] = useState<string>("todos");
-  
+
+  const allColors = Constants.public.Enums.ColorPrenda;
   const pageSize = 10;
-  const [stats, setStats] = useState({ total: 0, bajoStock: 0, agotados: 0, lineas: 0 });
 
-  const canManageFichas = useMemo(() => {
-    if (!usuario?.rol) return false;
-    const rolActual = usuario.rol.toLowerCase().trim()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    return rolActual === 'disenador' || rolActual === 'administrador';
-  }, [usuario]);
-
+  // CARGA DE CATEGORÍAS [cite: 69]
   const loadCategorias = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/categorias');
@@ -55,15 +61,16 @@ export default function ProductosPage() {
     }
   }, []);
 
+  // EFECTO DE CARGA INICIAL (Sin bucle infinito) 
   useEffect(() => {
-    if (!authLoading && can('view', 'productos')) {
+    if (!authLoading) {
       loadCategorias();
       refetch();
     }
-  }, [authLoading]);
+  }, [authLoading]); 
 
-  // Calcular stats cuando cambien los datos
-  useEffect(() => { 
+  // CÁLCULO DE ESTADÍSTICAS [cite: 71]
+  useEffect(() => {
     if (productos.length > 0) {
       setStats({
         total: productos.length,
@@ -74,12 +81,13 @@ export default function ProductosPage() {
     }
   }, [productos, categorias]);
 
-  // Handlers memorizados para la tabla (Mejora técnica invisible)
+  // HANDLERS [cite: 72-76]
   const handleEdit = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("edit"); }, []);
   const handleDelete = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("delete"); }, []);
   const handleStock = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("stock"); }, []);
   const handleFicha = useCallback((p: any) => { setSelectedProducto(p); setDialogMode("ficha"); }, []);
 
+  // EXPORTACIÓN [cite: 77-85]
   const handleExportExcel = () => {
     if (filteredProducts.length === 0) return toast.error("No hay datos para exportar");
     const dataToExport = filteredProducts.map(p => ({
@@ -94,27 +102,63 @@ export default function ProductosPage() {
     toast.success("Excel generado correctamente");
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (filteredProducts.length === 0) return toast.error("No hay datos para exportar");
-    exportToPDF(filteredProducts as any, categorias, { 
-      title: "REPORTE DE INVENTARIO - Modas y Estilos GUOR", 
-      filename: `Inventario_GUOR_${new Date().toISOString().split('T')[0]}`
-    });
-    toast.success("PDF generado correctamente"); 
+    const toastId = toast.loading("Preparando PDF...");
+    try {
+      await exportInventarioToPDF(filteredProducts as any, categorias, {
+        title: "REPORTE DE INVENTARIO - Modas y Estilos GUOR",
+        filename: `Inventario_GUOR_${new Date().toISOString().split('T')[0]}`
+      });
+      toast.success("PDF descargado con éxito", { id: toastId });
+    } catch (error) {
+      toast.error("Error al generar el PDF", { id: toastId });
+    }
   };
 
+  // LÓGICA DE FILTRADO AVANZADA 
   const filteredProducts = useMemo(() => {
+    let result = [...productos];
     const search = searchTerm.toLowerCase().trim();
-    return productos.filter((p: any) => { 
-      const matchSearch = !search || p.nombre.toLowerCase().includes(search) || p.sku.toLowerCase().includes(search);
-      const matchCat = selectedCategoria === "todos" || p.categoria_id === Number(selectedCategoria);
-      let matchQuick = true;
-      if (quickFilter === "bajo_stock") matchQuick = p.stock > 0 && p.stock <= 5;
-      if (quickFilter === "agotados") matchQuick = p.stock === 0;
 
-      return matchSearch && matchCat && matchQuick;
-    });
-  }, [productos, searchTerm, quickFilter, selectedCategoria]);
+    if (search) {
+      result = result.filter((p: any) =>
+        p.nombre.toLowerCase().includes(search) || p.sku.toLowerCase().includes(search)
+      );
+    }
+
+    if (selectedCategoria !== "todos") {
+      result = result.filter((p: any) => p.categoria_id === Number(selectedCategoria));
+    }
+
+    if (colorFilter) {
+      result = result.filter((p: any) =>
+        p.variantes_producto?.some((v: any) => v.color === colorFilter)
+      );
+    }
+
+    if (sizeFilter) {
+      result = result.filter((p: any) =>
+        p.variantes_producto?.some((v: any) => v.talla === sizeFilter)
+      );
+    }
+
+    if (quickFilter === "bajo_stock") {
+      result = result.filter((p: any) => p.stock > 0 && p.stock <= 5);
+    } else if (quickFilter === "agotados") {
+      result = result.filter((p: any) => p.stock === 0);
+    }
+
+    if (sortOrder !== 'none') {
+      result.sort((a, b) => {
+        const precioA = Number(a.precio || 0);
+        const precioB = Number(b.precio || 0);
+        return sortOrder === 'asc' ? precioA - precioB : precioB - precioA;
+      });
+    }
+
+    return result;
+  }, [productos, searchTerm, colorFilter, sizeFilter, quickFilter, selectedCategoria, sortOrder]);
 
   const totalPages = Math.ceil(filteredProducts.length / pageSize);
   const paginatedData = useMemo(() => {
@@ -127,8 +171,8 @@ export default function ProductosPage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Header - Diseño Original */}
+
+        {/* Header [cite: 93-97] */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
@@ -136,7 +180,7 @@ export default function ProductosPage() {
             </h1>
             <p className="text-gray-500 text-sm">Gestión unificada del catálogo Modas y Estilos GUOR</p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {can('export', 'productos') && (
               <>
@@ -150,7 +194,6 @@ export default function ProductosPage() {
                 </Button>
               </>
             )}
-
             {can('create', 'productos') && (
               <Button onClick={() => setIsCreateOpen(true)} className="bg-pink-600 hover:bg-pink-700 text-white shadow-lg font-bold gap-2 h-11 px-6 transition-all">
                 <Plus className="w-5 h-5" /> Nuevo Producto
@@ -159,45 +202,32 @@ export default function ProductosPage() {
           </div>
         </div>
 
-        {/* Stats Grid - Diseño Original */}
+        {/* Stats Grid [cite: 98-101] */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="TOTAL PRODUCTOS" value={stats.total} icon={<Package className="w-6 h-6" />} isActive={quickFilter === "todos"} color="pink" onClick={() => {setQuickFilter("todos"); setCurrentPage(0);}} />
-          <StatCard title="BAJO STOCK" value={stats.bajoStock} icon={<AlertTriangle className="w-6 h-6" />} isActive={quickFilter === "bajo_stock"} color="orange" onClick={() => {setQuickFilter("bajo_stock"); setCurrentPage(0);}} />
-          <StatCard title="AGOTADOS" value={stats.agotados} icon={<XCircle className="w-6 h-6" />} isActive={quickFilter === "agotados"} color="red" onClick={() => {setQuickFilter("agotados"); setCurrentPage(0);}} />
-          <StatCard title="CATEGORÍAS" value={stats.lineas} icon={<BarChart3 className="w-6 h-6" />} isActive={false} color="blue" onClick={() => {}} />
+          <StatCard title="TOTAL PRODUCTOS" value={stats.total} icon={<Package className="w-6 h-6" />} isActive={quickFilter === "todos"} color="pink" onClick={() => { setQuickFilter("todos"); setCurrentPage(0); }} />
+          <StatCard title="BAJO STOCK" value={stats.bajoStock} icon={<AlertTriangle className="w-6 h-6" />} isActive={quickFilter === "bajo_stock"} color="orange" onClick={() => { setQuickFilter("bajo_stock"); setCurrentPage(0); }} />
+          <StatCard title="AGOTADOS" value={stats.agotados} icon={<XCircle className="w-6 h-6" />} isActive={quickFilter === "agotados"} color="red" onClick={() => { setQuickFilter("agotados"); setCurrentPage(0); }} />
+          <StatCard title="CATEGORÍAS" value={stats.lineas} icon={<BarChart3 className="w-6 h-6" />} isActive={false} color="blue" onClick={() => { }} />
         </div>
 
-        {/* Filtros - Diseño Original */}
-        <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border shadow-sm">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Buscar por nombre o SKU..."
-              className="pl-10 h-11 border-gray-200 focus:ring-pink-500"
-              value={searchTerm}
-              onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(0);}}
-            />
-          </div>
+        {/* FILTROS INTEGRADOS (Aquí va el componente que actualizaremos luego)  */}
+        <ProductFilters 
+  searchTerm={searchTerm} 
+  setSearchTerm={setSearchTerm}
+  colorFilter={colorFilter} 
+  setColorFilter={setColorFilter}
+  sizeFilter={sizeFilter} 
+  setSizeFilter={setSizeFilter}
+  sortOrder={sortOrder} 
+  setSortOrder={setSortOrder}
+  selectedCategoria={selectedCategoria} 
+  setSelectedCategoria={setSelectedCategoria}
+  categorias={categorias} 
+  colors={allColors as any}
+  // BORRAMOS: statusFilter y setStatusFilter (ya no se necesitan)
+/>
 
-          <Select value={selectedCategoria} onValueChange={(v) => {setSelectedCategoria(v); setCurrentPage(0);}}>
-            <SelectTrigger className="w-full md:w-64 h-11 border-gray-200">
-              <SelectValue placeholder="Todas las categorías" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todas las categorías</SelectItem>
-              {categorias.map((c: any) => (
-                <SelectItem key={c.id} value={c.id.toString()}>{c.nombre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" className="h-11 border-gray-200" onClick={refetch}>
-            <RefreshCw className={`w-4 h-4 ${productosLoading && 'animate-spin'}`} />
-          </Button>
-        </div>
-
-        {/* Tabla y Paginación */}
+        {/* Tabla principal [cite: 107-109] */}
         {productosLoading ? (
           <div className="h-64 flex flex-col items-center justify-center bg-white rounded-xl border animate-pulse">
             <div className="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4" />
@@ -205,9 +235,9 @@ export default function ProductosPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <ProductosTable 
-              data={paginatedData} 
-              categorias={categorias} 
+            <ProductosTable
+              data={paginatedData}
+              categorias={categorias}
               canEdit={can('edit', 'productos')}
               canDelete={can('delete', 'productos')}
               onEdit={handleEdit}
@@ -215,7 +245,8 @@ export default function ProductosPage() {
               onStock={handleStock}
               onFicha={handleFicha}
             />
-            
+
+            {/* Paginación [cite: 111-114] */}
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
               <p className="text-xs text-gray-500">
                 Mostrando <span className="font-bold text-gray-900">{paginatedData.length}</span> de <span className="font-bold text-gray-900">{filteredProducts.length}</span>
@@ -236,7 +267,7 @@ export default function ProductosPage() {
         )}
       </div>
 
-      {/* Modales */}
+      {/* MODALES [cite: 114-117] */}
       {isCreateOpen && (
         <CreateProductoDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={refetch} categorias={categorias} />
       )}
@@ -244,20 +275,24 @@ export default function ProductosPage() {
       {selectedProducto && (
         <>
           {dialogMode === "edit" && (
-            <EditProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} categorias={categorias} />
+            <EditProductoDialog isOpen={true} producto={selectedProducto} onClose={() => { setDialogMode(null); setSelectedProducto(null); }} onSuccess={refetch} categorias={categorias} />
           )}
           {dialogMode === "delete" && (
-            <DeleteProductoDialog isOpen={true} producto={selectedProducto} onClose={() => {setDialogMode(null); setSelectedProducto(null);}} onSuccess={refetch} />
+            <DeleteProductoDialog isOpen={true} producto={selectedProducto} onClose={() => { setDialogMode(null); setSelectedProducto(null); }} onSuccess={refetch} />
           )}
-          
-          
+          {dialogMode === "stock" && (
+            <VariantsDetailDialog isOpen={true} producto={selectedProducto} onClose={() => { setDialogMode(null); setSelectedProducto(null); }} />
+          )}
+          {dialogMode === "ficha" && (
+            <TechSheetDialog isOpen={true} producto={selectedProducto} onClose={() => { setDialogMode(null); setSelectedProducto(null); }} />
+          )}
         </>
       )}
     </div>
   );
 }
 
-// Sub-componentes visuales originales
+// SUB-COMPONENTES AUXILIARES [cite: 118-122]
 function AccessDenied() {
   return (
     <div className="h-[80vh] flex flex-col items-center justify-center text-center p-6 bg-gray-50">
@@ -265,9 +300,7 @@ function AccessDenied() {
         <ShieldAlert className="w-16 h-16 text-amber-600" />
       </div>
       <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter italic">Privilegios Insuficientes</h2>
-      <p className="text-gray-500 max-w-sm mt-2 font-medium">
-        Tu rol actual permite la visualización, pero no la modificación de existencias físicas en el inventario.
-      </p>
+      <p className="text-gray-500 max-w-sm mt-2 font-medium">Tu rol actual no permite la gestión del inventario físico.</p>
     </div>
   );
 }

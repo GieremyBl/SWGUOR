@@ -8,6 +8,26 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      extend: {
+        animation: {
+          'thread-flow': 'thread 15s ease-in-out infinite',
+          'thread-flow-slow': 'thread 20s ease-in-out infinite reverse',
+        },
+        keyframes: {
+          thread: {
+            '0%, 100%': {
+              strokeDasharray: '0, 1000',
+              strokeDashoffset: '0',
+              transform: 'translateX(-5%)'
+            },
+            '50%': {
+              strokeDasharray: '1000, 0',
+              strokeDashoffset: '-100',
+              transform: 'translateX(5%)'
+            },
+          }
+        }
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -37,7 +57,7 @@ const config: Config = {
           300: '#f9c79d',
           400: '#f5a869',
           500: '#d4945a',
-          600: '#b87947', 
+          600: '#b87947',
           700: '#935f38',
           800: '#77502f',
           900: '#624128',
@@ -67,8 +87,7 @@ const config: Config = {
       },
     },
   },
-  // Plugin necesario para las animaciones del Dialog
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 };
 
 export default config;

@@ -3,13 +3,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  FileSpreadsheet, Plus, Search, Layers, RefreshCw, 
-  CheckCircle2, XCircle, ChevronLeft, ChevronRight 
+import {
+  FileSpreadsheet, Plus, Search, Layers, RefreshCw,
+  CheckCircle2, XCircle, ChevronLeft, ChevronRight, FileText
 } from "lucide-react";
+import { exportToExcel, exportCategoriasToPDF } from "@/lib/utils/export-utils";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { exportToExcel } from "@/lib/utils/export-utils";
+
 import { usePermissions } from "@/lib/hooks/usePermissions";
 
 // Lazy loading de componentes
@@ -26,7 +27,7 @@ export default function CategoriasPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedCategoria, setSelectedCategoria] = useState<any | null>(null);
   const [dialogMode, setDialogMode] = useState<"edit" | "delete" | null>(null);
-  
+
   const [currentPage, setCurrentPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState<boolean | null>(null);
   const pageSize = 10;
@@ -56,7 +57,7 @@ export default function CategoriasPage() {
 
       const results = data || [];
       setCategorias(results);
-      
+
       setStats({
         total: results.length,
         activas: results.filter((c: any) => c.activo).length,
@@ -69,16 +70,16 @@ export default function CategoriasPage() {
     }
   }, [canView]);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (!authLoading) {
-      loadCategorias(); 
+      loadCategorias();
     }
   }, [loadCategorias, authLoading]);
 
   const filteredCategorias = useMemo(() => {
     return categorias.filter((c: any) => {
-      const matchSearch = c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchSearch = c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.descripcion && c.descripcion.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchStatus = statusFilter === null || c.activo === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -102,6 +103,28 @@ export default function CategoriasPage() {
     }));
     exportToExcel(dataToExport, { filename: `Categorias_ModasGUOR_${new Date().toISOString().split('T')[0]}` });
     toast.success("Excel generado correctamente");
+  };
+
+  // El handler para exportar a PDF, que utiliza la función exportCategoriasToPDF del archivo export-utils.tsx
+  const handleExportPDF = async () => {
+    if (!canExport) {
+      toast.error("No tienes permisos para exportar");
+      return;
+    }
+    if (filteredCategorias.length === 0) return toast.error("No hay datos para exportar");
+
+    const toastId = toast.loading("Preparando reporte PDF...");
+
+    try {
+      await exportCategoriasToPDF(filteredCategorias, {
+        title: "REPORTE DE CATEGORÍAS",
+        filename: `Categorias_GUOR_${new Date().toISOString().split('T')[0]}`
+      });
+      toast.success("PDF generado correctamente", { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al generar el PDF", { id: toastId });
+    }
   };
 
   const handleCreateClick = () => {
@@ -154,7 +177,7 @@ export default function CategoriasPage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -166,11 +189,27 @@ export default function CategoriasPage() {
 
           <div className="flex items-center gap-3">
             {canExport && (
-              <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
-                <FileSpreadsheet className="w-5 h-5" />
-                <span className="hidden sm:inline">Exportar Excel</span>
-              </Button>
+              <>
+                <Button
+                  onClick={handleExportPDF}
+                  variant="outline"
+                  className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 transition-all active:scale-95"
+                >
+                  <FileText className="w-5 h-5" />
+                  <span className="hidden sm:inline">Exportar PDF</span>
+                </Button>
+
+                <Button
+                  onClick={handleExportExcel}
+                  variant="outline"
+                  className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95"
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                  <span className="hidden sm:inline">Exportar Excel</span>
+                </Button>
+              </>
             )}
+
             {canCreate && (
               <Button onClick={handleCreateClick} className="bg-pink-600 hover:bg-pink-700 shadow-lg font-bold gap-2 h-11 px-6 text-white transition-all active:scale-95">
                 <Plus className="w-5 h-5" /> Nueva Categoría
@@ -181,29 +220,29 @@ export default function CategoriasPage() {
 
         {/* Stats (Filtros rápidos) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard 
-            title="TOTAL GENERAL" 
-            value={stats.total} 
-            icon={<Layers className="w-6 h-6" />} 
-            isActive={statusFilter === null} 
-            color="pink" 
-            onClick={() => {setStatusFilter(null); setCurrentPage(0);}} 
+          <StatCard
+            title="TOTAL GENERAL"
+            value={stats.total}
+            icon={<Layers className="w-6 h-6" />}
+            isActive={statusFilter === null}
+            color="pink"
+            onClick={() => { setStatusFilter(null); setCurrentPage(0); }}
           />
-          <StatCard 
-            title="ACTIVAS" 
-            value={stats.activas} 
-            icon={<CheckCircle2 className="w-6 h-6" />} 
-            isActive={statusFilter === true} 
-            color="emerald" 
-            onClick={() => {setStatusFilter(true); setCurrentPage(0);}} 
+          <StatCard
+            title="ACTIVAS"
+            value={stats.activas}
+            icon={<CheckCircle2 className="w-6 h-6" />}
+            isActive={statusFilter === true}
+            color="emerald"
+            onClick={() => { setStatusFilter(true); setCurrentPage(0); }}
           />
-          <StatCard 
-            title="INACTIVAS" 
-            value={stats.inactivas} 
-            icon={<XCircle className="w-6 h-6" />} 
-            isActive={statusFilter === false} 
-            color="orange" 
-            onClick={() => {setStatusFilter(false); setCurrentPage(0);}} 
+          <StatCard
+            title="INACTIVAS"
+            value={stats.inactivas}
+            icon={<XCircle className="w-6 h-6" />}
+            isActive={statusFilter === false}
+            color="orange"
+            onClick={() => { setStatusFilter(false); setCurrentPage(0); }}
           />
         </div>
 
@@ -211,11 +250,11 @@ export default function CategoriasPage() {
         <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-            <Input 
-              placeholder="Buscar por nombre o descripción de categoría..." 
+            <Input
+              placeholder="Buscar por nombre o descripción de categoría..."
               className="pl-10 h-11 border-gray-200 focus:ring-pink-500"
               value={searchTerm}
-              onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(0);}}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
             />
           </div>
           <Button variant="outline" className="h-11 border-gray-200" onClick={loadCategorias}>
@@ -231,12 +270,12 @@ export default function CategoriasPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <CategoriasTable 
-              data={paginatedData} 
+            <CategoriasTable
+              data={paginatedData}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
-            
+
             {/* Paginación */}
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
               <p className="text-xs text-gray-500">
@@ -263,10 +302,10 @@ export default function CategoriasPage() {
         <CreateCategoriaDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={loadCategorias} />
       )}
       {canEdit && selectedCategoria && dialogMode === "edit" && (
-        <EditCategoriaDialog isOpen={true} categoria={selectedCategoria} onClose={() => {setDialogMode(null); setSelectedCategoria(null);}} onSuccess={loadCategorias} />
+        <EditCategoriaDialog isOpen={true} categoria={selectedCategoria} onClose={() => { setDialogMode(null); setSelectedCategoria(null); }} onSuccess={loadCategorias} />
       )}
       {canDelete && selectedCategoria && dialogMode === "delete" && (
-        <DeleteCategoriaDialog isOpen={true} categoria={selectedCategoria} onClose={() => {setDialogMode(null); setSelectedCategoria(null);}} onSuccess={loadCategorias} />
+        <DeleteCategoriaDialog isOpen={true} categoria={selectedCategoria} onClose={() => { setDialogMode(null); setSelectedCategoria(null); }} onSuccess={loadCategorias} />
       )}
     </div>
   );

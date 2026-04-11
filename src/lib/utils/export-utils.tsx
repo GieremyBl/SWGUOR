@@ -1,6 +1,7 @@
 import * as XLSX from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { pdf, Document, Page, Text, View, StyleSheet, Image as PdfImage } from '@react-pdf/renderer';
 
 // =====================================================
 // INTERFACES Y TIPOS
@@ -39,30 +40,28 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-// Carga el logo y lo añade al documento con un fondo corporativo
+// Carga el logo y lo añade al documento con un fondo corporativo (Versión Segura)
 const drawHeaderWithLogo = async (doc: jsPDF, title: string, subtitle?: string): Promise<number> => {
   const exactBgColor = [255, 246, 228];
   const pinkGUOR = [219, 39, 119];
   const pageWidth = doc.internal.pageSize.width;
 
   try {
-    // 1. Dibujar el fondo del encabezado (Franja de color)
     doc.setFillColor(exactBgColor[0], exactBgColor[1], exactBgColor[2]);
-    doc.rect(0, 0, pageWidth, 40, 'F'); // Un rectángulo sólido de 40mm de alto
+    doc.rect(0, 0, pageWidth, 40, 'F'); 
 
-    // 2. Cargar e insertar el Logo
     const img = new Image();
     img.src = '/logo.png';
+    
+    // AÑADIMOS UN TIMEOUT: Si el logo no carga en 1.5s, forzamos el renderizado sin él
     await new Promise((resolve, reject) => {
       img.onload = resolve;
       img.onerror = reject;
+      setTimeout(() => reject(new Error("Timeout loading logo")), 1500); 
     });
     
-    // El logo se coloca sobre la franja blanca o con un pequeño borde si prefieres
-    // Aquí lo ponemos en una posición limpia
     doc.addImage(img, 'PNG', 14, 8, 22, 22);
     
-    // 3. Títulos (Cambiamos el color a BLANCO para que resalte sobre el rosa)
     doc.setFontSize(20);
     doc.setTextColor(pinkGUOR[0], pinkGUOR[1], pinkGUOR[2]);
     doc.text(title, 42, 18);
@@ -76,13 +75,18 @@ const drawHeaderWithLogo = async (doc: jsPDF, title: string, subtitle?: string):
       doc.text(`Generado: ${new Date().toLocaleString('es-PE')}`, 42, 25);
     }
 
-    return 48; // Aumentamos el margen para que la tabla no pegue con la franja
+    return 48; 
   } catch (e) {
-    // Fallback si falla el logo: Solo texto rosa sobre fondo blanco
+    // Si falla o tarda mucho, entramos al Fallback automáticamente
+    console.warn("No se pudo cargar el logo, generando encabezado de texto...");
     doc.setFontSize(18);
     doc.setTextColor(pinkGUOR[0], pinkGUOR[1], pinkGUOR[2]);
     doc.text(title, 14, 20);
-    return 30;
+    
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80); 
+    doc.text(`Generado: ${new Date().toLocaleString('es-PE')}`, 14, 28);
+    return 35; // Un margen un poco más pequeño si no hay logo
   }
 };
 
@@ -115,6 +119,77 @@ export const exportToExcel = async (data: any[], config: ExcelExportConfig) => {
   const fecha = new Date().toISOString().split("T")[0];
   a.href = url;
   a.download = `${config.filename}_${fecha}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+
+// =====================================================
+// EXPORTACIÓN A PDF - CATEGORIAS
+// =====================================================
+
+// 1. Componente de Diseño para Categorías
+const CategoriasDocument = ({ data, config }: any) => {
+  const colWidths = ['25%', '40%', '15%', '20%'];
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* ENCABEZADO */}
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{config.title}</Text>
+            <Text style={styles.subtitle}>Directorio Oficial - Modas y Estilos GUOR</Text>
+            <Text style={styles.subtitle}>Generado: {new Date().toLocaleString('es-PE')}</Text>
+          </View>
+        </View>
+
+        {/* TABLA */}
+        <View style={styles.table}>
+          {/* Fila de Títulos */}
+          <View style={styles.tableRow}>
+            {['CATEGORÍA', 'DESCRIPCIÓN', 'ESTADO', 'CREACIÓN'].map((header, i) => (
+              <View key={i} style={[styles.tableColHeader, { width: colWidths[i] }]}>
+                <Text style={styles.tableCellHeader}>{header}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Filas de Datos */}
+          {data.map((item: any, rowIndex: number) => (
+            <View key={rowIndex} style={rowIndex % 2 === 0 ? styles.tableRow : styles.tableRowStriped}>
+              <View style={[styles.tableCol, { width: colWidths[0] }]}>
+                <Text style={styles.tableCell}>{item.nombre || "---"}</Text>
+              </View>
+              <View style={[styles.tableCol, { width: colWidths[1] }]}>
+                <Text style={styles.tableCell}>{item.descripcion || "Sin descripción"}</Text>
+              </View>
+              <View style={[styles.tableCol, { width: colWidths[2] }]}>
+                <Text style={styles.tableCell}>{item.activo ? "Activa" : "Inactiva"}</Text>
+              </View>
+              <View style={[styles.tableCol, { width: colWidths[3] }]}>
+                <Text style={styles.tableCell}>{new Date(item.created_at).toLocaleDateString()}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </Page>
+    </Document>
+  );
+};
+
+// 2. Función Ejecutora para Categorías
+export const exportCategoriasToPDF = async (data: any[], config: { title: string; filename: string }) => {
+  if (!data || data.length === 0) return;
+
+  const asPdf = pdf();
+  asPdf.updateContainer(<CategoriasDocument data={data} config={config} />);
+  const blob = await asPdf.toBlob();
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${config.filename}.pdf`;
   a.click();
   URL.revokeObjectURL(url);
 };
@@ -152,6 +227,91 @@ export const exportToPDF = async (
   }
 
   doc.save(`${config.filename}.pdf`);
+};
+// =====================================================
+// EXPORTACIÓN A PDF - INVENTARIO (@react-pdf/renderer)
+// =====================================================
+
+// 1. Definimos los estilos visuales del PDF
+const styles = StyleSheet.create({
+  page: { padding: 40, fontFamily: 'Helvetica' },
+  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF6E4', padding: 15, marginBottom: 20, borderRadius: 5 },
+  logo: { width: 40, height: 40, marginRight: 15 },
+  headerText: { display: 'flex', flexDirection: 'column' },
+  title: { fontSize: 18, color: '#db2777', fontWeight: 'bold' },
+  subtitle: { fontSize: 10, color: '#555', marginTop: 3 },
+  table: { width: '100%', borderStyle: 'solid', borderWidth: 1, borderColor: '#eee', borderBottomWidth: 0, borderRightWidth: 0 },
+  tableRow: { flexDirection: 'row' },
+  tableRowStriped: { flexDirection: 'row', backgroundColor: '#f9fafb' },
+  tableColHeader: { borderStyle: 'solid', borderWidth: 1, borderColor: '#eee', borderLeftWidth: 0, borderTopWidth: 0, backgroundColor: '#db2777', padding: 6 },
+  tableCol: { borderStyle: 'solid', borderWidth: 1, borderColor: '#eee', borderLeftWidth: 0, borderTopWidth: 0, padding: 6, justifyContent: 'center' },
+  tableCellHeader: { color: 'white', fontSize: 8, fontWeight: 'bold' },
+  tableCell: { fontSize: 8, color: '#333' }
+});
+
+// 2. Componente de Diseño del PDF
+const InventarioDocument = ({ data, categorias, config }: any) => {
+  const colWidths = ['15%', '35%', '20%', '10%', '10%', '10%'];
+
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        {/* ENCABEZADO */}
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>{config.title}</Text>
+            <Text style={styles.subtitle}>Generado: {new Date().toLocaleString('es-PE')}</Text>
+          </View>
+        </View>
+
+        {/* TABLA */}
+        <View style={styles.table}>
+          {/* Fila de Títulos */}
+          <View style={styles.tableRow}>
+            {['SKU', 'PRODUCTO', 'CATEGORÍA', 'STOCK', 'PRECIO', 'ESTADO'].map((header, i) => (
+              <View key={i} style={[styles.tableColHeader, { width: colWidths[i] }]}>
+                <Text style={styles.tableCellHeader}>{header}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Filas de Datos */}
+          {data.map((item: any, rowIndex: number) => {
+            const cat = categorias.find((c: any) => c.id === item.categoria_id)?.nombre || "General";
+            const est = item.stock === 0 ? "Agotado" : item.stock <= 5 ? "Bajo" : "Disp.";
+            const pre = `S/ ${Number(item.precio || 0).toFixed(2)}`;
+
+            return (
+              <View key={rowIndex} style={rowIndex % 2 === 0 ? styles.tableRow : styles.tableRowStriped}>
+                <View style={[styles.tableCol, { width: colWidths[0] }]}><Text style={styles.tableCell}>{item.sku || "---"}</Text></View>
+                <View style={[styles.tableCol, { width: colWidths[1] }]}><Text style={styles.tableCell}>{item.nombre || "---"}</Text></View>
+                <View style={[styles.tableCol, { width: colWidths[2] }]}><Text style={styles.tableCell}>{cat}</Text></View>
+                <View style={[styles.tableCol, { width: colWidths[3] }]}><Text style={styles.tableCell}>{item.stock ?? "0"}</Text></View>
+                <View style={[styles.tableCol, { width: colWidths[4] }]}><Text style={styles.tableCell}>{pre}</Text></View>
+                <View style={[styles.tableCol, { width: colWidths[5] }]}><Text style={styles.tableCell}>{est}</Text></View>
+              </View>
+            );
+          })}
+        </View>
+      </Page>
+    </Document>
+  );
+};
+
+// 3. Función Ejecutora
+export const exportInventarioToPDF = async (data: any[], categorias: any[], config: PDFExportConfig) => {
+  if (!data || data.length === 0) return;
+
+  const asPdf = pdf();
+  asPdf.updateContainer(<InventarioDocument data={data} categorias={categorias} config={config} />);
+  const blob = await asPdf.toBlob();
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${config.filename}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
 };
 
 // =====================================================

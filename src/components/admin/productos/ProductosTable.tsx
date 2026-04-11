@@ -1,12 +1,12 @@
 "use client";
 
-import { Edit2, Trash2, Package, BarChart3, Tag, Lock, FileText, Paperclip, CheckCircle2 } from "lucide-react";
+import { Edit2, Trash2, Package, BarChart3, Tag, Lock, FileText, Paperclip, CheckCircle2,XCircle } from "lucide-react";
 import type { Database } from "@/types/database";
 type Producto = Database['public']['Tables']['productos']['Row'];
 type Categoria = Database['public']['Tables']['categorias']['Row'];
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -17,15 +17,16 @@ import { memo } from "react";
 const STORAGE_URL = "https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/";
 
 // --- COMPONENTE DE FILA (Optimizado) ---
-const ProductoRow = memo(({ 
-  p, 
-  categorias, 
-  onEdit, 
-  onDelete, 
-  onStock, 
-  onFicha, 
-  canEdit, 
-  canDelete 
+const ProductoRow = memo(({
+  p,
+  categorias,
+  onEdit,
+  onDelete,
+  onStock,
+  onFicha,
+  onCancel,
+  canEdit,
+  canDelete
 }: {
   p: Producto;
   categorias: Categoria[];
@@ -33,31 +34,32 @@ const ProductoRow = memo(({
   onDelete: (p: Producto) => void;
   onStock: (p: Producto) => void;
   onFicha: (p: Producto) => void;
+  onCancel?: (p: Producto) => void;
   canEdit: boolean;
   canDelete: boolean;
 }) => {
   // 1. Extraemos SOLO el nombre del archivo para evitar que la URL se duplique
   const rawImage = String(p.imagen || "").trim();
-  const fileName = rawImage.split('/').pop(); 
+  const fileName = rawImage.split('/').pop();
 
   // 2. Construimos la URL limpia apuntando directamente al bucket de Supabase
   const publicUrl = fileName && fileName !== "null" && fileName !== ""
-    ? `https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/${fileName}` 
+    ? `https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/${fileName}`
     : null;
-  const hasFicha = (p as any).ficha_url; 
+  const hasFicha = (p as any).ficha_url;
 
   const categoriaNombre = categorias.find(c => c.id === p.categoria_id)?.nombre || 'Sin categoría';
 
-   return (
+  return (
     <tr className="group transition-all duration-200">
       {/* Detalle Producto */}
       <td className="bg-white border-y border-l border-slate-100 py-4 px-6 rounded-l-2xl shadow-sm group-hover:shadow-md transition-all">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 relative bg-slate-50 rounded-xl border border-slate-100 shrink-0 overflow-hidden">
             {publicUrl ? (
-              <img 
-                src={publicUrl} 
-                alt={p.nombre || "Producto"} 
+              <img
+                src={publicUrl}
+                alt={p.nombre || "Producto"}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
             ) : (
@@ -116,13 +118,12 @@ const ProductoRow = memo(({
 
       {/* Estado */}
       <td className="bg-white border-y border-slate-100 text-center shadow-sm">
-        <Badge className={`rounded-full px-3 py-0.5 text-[9px] font-black border-2 uppercase shadow-none ${
-          p.estado === 'activo' 
-            ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+        <Badge className={`rounded-full px-3 py-0.5 text-[9px] font-black border-2 uppercase shadow-none ${p.estado === 'activo'
+            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
             : p.estado === 'agotado'
-            ? 'bg-rose-50 text-rose-600 border-rose-100'
-            : 'bg-slate-50 text-slate-400 border-slate-100'
-        }`} variant="outline">
+              ? 'bg-rose-50 text-rose-600 border-rose-100'
+              : 'bg-slate-50 text-slate-400 border-slate-100'
+          }`} variant="outline">
           {p.estado}
         </Badge>
       </td>
@@ -134,8 +135,8 @@ const ProductoRow = memo(({
             {/* Ficha Técnica */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" size="icon" 
+                <Button
+                  variant="outline" size="icon"
                   onClick={() => onFicha(p)}
                   className={`h-9 w-9 rounded-xl border-slate-200 transition-all ${hasFicha ? 'text-pink-600 border-pink-100 bg-pink-50' : 'text-slate-400 hover:text-pink-600 hover:bg-pink-50'}`}
                 >
@@ -147,25 +148,13 @@ const ProductoRow = memo(({
               </TooltipContent>
             </Tooltip>
 
-            {/* Movimientos Stock */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" size="icon" 
-                  onClick={() => onStock(p)}
-                  className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
-                >
-                  <BarChart3 size={16} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-[10px] font-bold uppercase">Gestionar Stock</p></TooltipContent>
-            </Tooltip>
+
 
             {/* Editar */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" size="icon" 
+                <Button
+                  variant="outline" size="icon"
                   onClick={() => canEdit && onEdit(p)}
                   disabled={!canEdit}
                   className={`h-9 w-9 rounded-xl border-slate-200 transition-all ${!canEdit ? 'opacity-30 cursor-not-allowed' : 'text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50'}`}
@@ -180,8 +169,8 @@ const ProductoRow = memo(({
             {canDelete && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" size="icon" 
+                  <Button
+                    variant="outline" size="icon"
                     onClick={() => onDelete(p)}
                     className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all"
                   >
@@ -208,15 +197,16 @@ interface ProductosTableProps {
   onDelete: (p: Producto) => void;
   onStock: (p: Producto) => void;
   onFicha: (p: Producto) => void;
+  onCancel?: (p: Producto) => void;
   canEdit?: boolean;
   canDelete?: boolean;
 }
 
-function ProductosTable({ 
-  data, 
-  categorias, 
-  onEdit, 
-  onDelete, 
+function ProductosTable({
+  data,
+  categorias,
+  onEdit,
+  onDelete,
   onStock,
   onFicha,
   canEdit = false,
@@ -248,7 +238,7 @@ function ProductosTable({
               </tr>
             ) : (
               data.map((p) => (
-                <ProductoRow 
+                <ProductoRow
                   key={p.id}
                   p={p}
                   categorias={categorias}
