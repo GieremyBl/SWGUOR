@@ -1,71 +1,85 @@
-const CollectionsBanner = () => {
-  return (
-    <section className="px-6 py-32">
-      <div className="max-w-7xl mx-auto">
+"use client";
 
+import { useEffect, useRef, useState } from "react";
+
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, visible };
+}
+
+const CollectionsBanner = () => {
+  const s = useScrollReveal();
+
+  return (
+    <section style={{ background: "#0f0d0b", padding: "6rem 2rem" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div
-          className="relative rounded-[3rem] overflow-hidden flex items-center"
+          ref={s.ref}
           style={{
-            minHeight: "760px",
-            border: "2px solid #e4c28a",
+            position: "relative", borderRadius: "40px", overflow: "hidden",
+            minHeight: "700px", display: "flex", alignItems: "center",
+            border: "1px solid rgba(196,163,90,0.2)",
             backgroundImage: "url('/fotoColeccion2.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundSize: "cover", backgroundPosition: "center",
+            opacity: s.visible ? 1 : 0,
+            transform: s.visible ? "translateY(0) scale(1)" : "translateY(40px) scale(0.98)",
+            transition: "all 1s ease",
+            boxShadow: "0 40px 80px rgba(0,0,0,0.6)",
+            willChange: "transform",
+          }}
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            e.currentTarget.style.transform = `perspective(1200px) rotateY(${x * 4}deg) rotateX(${-y * 4}deg) scale(1.01)`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "perspective(1200px) rotateY(0) rotateX(0) scale(1)";
           }}
         >
+          {/* Overlay */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(to right, rgba(15,13,11,0.9), rgba(15,13,11,0.3), transparent)",
+          }} />
 
-          {/* OVERLAY */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(to right, rgba(35,30,29,0.82), rgba(35,30,29,0.18), transparent)",
-            }}
-          />
+          {/* Content */}
+          <div style={{ position: "relative", zIndex: 1, padding: "4rem 5rem", maxWidth: "620px" }}>
+            <p style={{
+              fontSize: "11px", fontWeight: 900, textTransform: "uppercase",
+              letterSpacing: "0.4em", color: "#c4a35a", marginBottom: "1.5rem",
+            }}>
+              Editorial Fashion
+            </p>
 
-          {/* CONTENIDO */}
-          <div className="relative z-10 w-full px-10 md:px-20">
+            <h2 style={{
+              fontSize: "clamp(2.5rem, 5vw, 4.5rem)", fontWeight: 900,
+              fontStyle: "italic", lineHeight: 1,
+              color: "#fdf9f3", marginBottom: "1.5rem",
+            }}>
+              Moda diseñada
+              <br />para marcas
+              <br /><span style={{ color: "#c4a35a" }}>modernas.</span>
+            </h2>
 
-            <div className="max-w-3xl">
+            <div style={{ width: "60px", height: "3px", background: "linear-gradient(90deg,#c4a35a,transparent)", marginBottom: "1.5rem" }} />
 
-              <p
-                className="text-[11px] uppercase tracking-[0.4em] font-black mb-8"
-                style={{ color: "#e4c28a" }}
-              >
-                Editorial Fashion
-              </p>
-
-              <h2
-                className="text-5xl md:text-7xl leading-[0.95] font-black italic mb-10"
-                style={{
-                  color: "#fff4e2",
-                  textShadow: "0 4px 25px rgba(0,0,0,0.45)",
-                }}
-              >
-                Moda diseñada
-                <br />
-
-                para marcas
-                <br />
-
-                modernas.
-              </h2>
-
-              <p
-                className="text-xl md:text-2xl leading-relaxed max-w-2xl"
-                style={{
-                  color: "rgba(255,244,226,0.9)",
-                  textShadow: "0 2px 10px rgba(0,0,0,0.35)",
-                }}
-              >
-                Producción textil premium con visión estratégica,
-                identidad visual y excelencia operativa.
-              </p>
-
-            </div>
-
+            <p style={{ fontSize: "1.05rem", lineHeight: 1.8, color: "rgba(253,249,243,0.65)", margin: 0 }}>
+              Producción textil premium con visión estratégica, identidad
+              visual y excelencia operativa.
+            </p>
           </div>
-
         </div>
       </div>
     </section>

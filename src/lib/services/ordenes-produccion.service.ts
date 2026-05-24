@@ -8,17 +8,28 @@ export const OrdenesProduccionService = {
     producto_id?: string;
     taller_id?: string;
     estado?: string;
+    etapa?: string;
     search?: string;
     page?: number;
     limit?: number;
   }) {
-    const { producto_id, taller_id, estado, search, page = 1, limit = 10 } = params || {};
+    const { producto_id, taller_id, estado, etapa, search, page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
     const where: any = {};
 
     if (producto_id) where.producto_id = BigInt(producto_id);
     if (taller_id) where.taller_id = BigInt(taller_id);
-    if (estado && estado !== 'todos') where.estado = estado;
+    if (estado && estado !== 'todos' && estado !== 'all') where.estado = estado;
+    
+    // Filtrar por etapa del seguimiento más reciente
+    if (etapa && etapa !== 'all') {
+      where.seguimiento_produccion = {
+        some: {
+          etapa: etapa,
+          activo: true,
+        },
+      };
+    }
 
     if (search) {
       where.OR = [

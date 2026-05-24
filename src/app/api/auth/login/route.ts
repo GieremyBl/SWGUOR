@@ -28,9 +28,9 @@ function checkRateLimit(ip: string): boolean {
 
 export async function POST(request: Request) {
   // Obtener IP del cliente
-  const ip = request.headers.get('x-forwarded-for') || 
-             request.headers.get('x-real-ip') || 
-             'unknown';
+  const ip = request.headers.get('x-forwarded-for') ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
 
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
@@ -70,9 +70,9 @@ export async function POST(request: Request) {
     // 2. Consulta unificada usando Prisma para máxima velocidad
     const usuario = await prisma.usuarios.findUnique({
       where: { auth_id: authData.user.id },
-      select: { 
-        id: true, 
-        rol: true, 
+      select: {
+        id: true,
+        rol: true,
         estado: true,
         clientes: { select: { id: true } }
       }
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      role: usuario.rol?.toLowerCase().trim() || '',
+      role: usuario.rol ? String(usuario.rol).toLowerCase().trim() : '',
       user_id: usuario.id.toString(),
       cliente_id: cliente_id?.toString() || null
     });

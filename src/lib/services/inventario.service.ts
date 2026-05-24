@@ -186,7 +186,7 @@ export const InventarioService = {
           nuevoStock < stockAnterior ? 'salida' : 'ajuste';
 
       const referencia_tipo: ReferenciaMovimiento =
-        input.referencia_tipo ?? 'AJUSTE';
+        input.referencia_tipo ?? 'AJUSTE_MANUAL';
 
       const [actualizado] = await Promise.all([
         tx.insumo.update({

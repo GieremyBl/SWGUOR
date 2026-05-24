@@ -28,7 +28,7 @@ interface Props {
 
 export function FormSelector({ orden, rol, onComplete }: Props) {
     const permitidas = ROL_ETAPAS[rol] ?? [];
-    const etapa = orden.etapa as string;
+    const etapa = (orden.seguimiento_produccion?.[0]?.etapa || "diseno") as string;
 
     // Sin acceso a la etapa actual
     if (!permitidas.includes(etapa)) return <VistaLectura orden={orden} />;

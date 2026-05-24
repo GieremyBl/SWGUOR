@@ -33,7 +33,7 @@ export default function LoginAdminPage() {
       if (!res.ok) throw new Error(data.error || 'Credenciales incorrectas');
 
       const role = data.role?.toLowerCase().trim();
-      const staffRoles = ['gerente','administrador','recepcionista','disenador','cortador','ayudante','representante_taller', 'almacenero'];
+      const staffRoles = ['gerente', 'administrador', 'recepcionista', 'disenador', 'cortador', 'ayudante', 'representante_taller', 'almacenero'];
 
       if (staffRoles.includes(role)) {
         router.push('/admin/Panel-Administrativo/dashboard');

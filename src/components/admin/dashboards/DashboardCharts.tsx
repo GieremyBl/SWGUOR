@@ -2,28 +2,41 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, AreaChart, Area
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 import { TrendingUp, ShoppingCart, Package } from 'lucide-react';
-// Importamos el tipo para que TypeScript no de error
-import { COMPANY_PALETTE, type RolPaleta } from './widgets/DashboardUtils';
+import type { RolPaleta } from './widgets/DashboardUtils';
+import { fmtCompact } from './widgets/DashboardWidgets';
 
-// ACTUALIZACIÓN: Se agrega 'rol' a la interfaz
+// ─── Paleta ERP ───────────────────────────────────────────────────────────────
+const P = {
+  accent:  '#1d3fa6',
+  accent2: '#3358e8',
+  bg:      '#ffffff',
+  surface: '#f4f6f9',
+  border:  '#d4dae5',
+  text:    '#0f172a',
+  muted:   '#64748b',
+  green:   '#16a34a',
+};
+
 interface DashboardChartsProps {
-  minimal?: boolean;
-  rol?: RolPaleta; 
-  data?: any[];
+  minimal?:  boolean;
+  rol?:      RolPaleta;
+  data?:     any[];
 }
 
-export default function DashboardCharts({ minimal = false, rol, data: externalData }: DashboardChartsProps) {
-  const [isMounted, setIsMounted] = useState(false);
-  const [loading, setLoading] = useState(true);
+export default function DashboardCharts({
+  minimal = false,
+  rol,
+  data: externalData,
+}: DashboardChartsProps) {
+  const [isMounted, setIsMounted]   = useState(false);
+  const [loading, setLoading]       = useState(true);
   const [ventasData, setVentasData] = useState<any[]>([]);
 
-  useEffect(() => { 
-    setIsMounted(true); 
-  }, []);
+  useEffect(() => { setIsMounted(true); }, []);
 
   const fetchData = useCallback(async () => {
     if (externalData) {
@@ -33,113 +46,165 @@ export default function DashboardCharts({ minimal = false, rol, data: externalDa
     }
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/charts?days=30`);
-      const data = await response.json();
-      setVentasData(data.ventasData || []);
-    } catch (error) {
-      console.error("Error cargando gráficas:", error);
+      const res  = await fetch('/api/admin/charts?days=30');
+      const json = await res.json();
+      setVentasData(json.ventasData || []);
+    } catch (err) {
+      console.error('Error cargando gráficas:', err);
     } finally {
       setLoading(false);
     }
   }, [externalData]);
 
-  useEffect(() => { 
-    if (isMounted) fetchData(); 
+  useEffect(() => {
+    if (isMounted) fetchData();
   }, [isMounted, fetchData]);
 
   if (!isMounted) return null;
 
+  const totalVentas = ventasData.reduce(
+    (acc, d) => acc + (Number(d.ventas) || 0), 0
+  );
+
   return (
-    <div className="bg-white border border-[#F2D2BD]/40 rounded-[32px] p-8 shadow-sm">
-      <div className="flex justify-between items-center mb-8">
+    <div style={{
+      background:   P.bg,
+      border:       `1px solid ${P.border}`,
+      borderRadius: 12,
+      padding:      '20px 24px',
+      boxShadow:    '0 1px 3px 0 rgb(0 0 0 / 0.07)',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h3 className="text-sm font-black text-[#2B1B12] uppercase tracking-widest">Actividad</h3>
-          <p className="text-[10px] text-[#C05A31] font-bold mt-1 uppercase tracking-tighter">
-            {/* Opcionalmente puedes usar el rol aquí o dejarlo genérico */}
+          <p style={{ fontSize: 13, fontWeight: 700, color: P.text,
+            textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
+            Actividad
+          </p>
+          <p style={{ fontSize: 10, color: P.muted, textTransform: 'uppercase',
+            letterSpacing: '0.05em' }}>
             Rendimiento {rol ? rol.replace('_', ' ') : 'Institucional'}
           </p>
         </div>
-        <div 
-          className="px-4 py-2 rounded-xl text-[10px] font-black border"
-          style={{ 
-            backgroundColor: COMPANY_PALETTE.bgSoft, 
-            color: COMPANY_PALETTE.accent,
-            borderColor: `${COMPANY_PALETTE.border}66`
-          }}
-        >
+        <div style={{
+          padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+          background: '#f0f4ff', color: P.accent,
+          border: `1px solid #c0d0ff`,
+        }}>
           ↑ +12.5%
         </div>
       </div>
 
-      <div style={{ width: '100%', height: minimal ? 180 : 350 }}>
+      {/* Gráfico */}
+      <div style={{ width: '100%', height: minimal ? 180 : 300 }}>
         {loading ? (
-          <div className="h-full flex items-center justify-center text-[10px] font-black animate-pulse text-[#C05A31] uppercase">
-            Cargando...
+          <div style={{ height: '100%', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {[0, 1, 2].map((i) => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: P.accent,
+                animation: `bounce 0.8s ${i * 0.15}s ease-in-out infinite alternate`,
+              }} />
+            ))}
+          </div>
+        ) : ventasData.length === 0 ? (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: 12, color: P.muted, fontWeight: 500 }}>
+            Sin datos para mostrar
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={ventasData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={ventasData} margin={{ top: 8, right: 8, left: 10, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorCorp" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={COMPANY_PALETTE.accent} stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor={COMPANY_PALETTE.accent} stopOpacity={0}/>
+                <linearGradient id="gradErp" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={P.accent} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={P.accent} stopOpacity={0}    />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={COMPANY_PALETTE.bgSoft} />
-              <XAxis 
-                dataKey="fecha" 
-                tick={{fontSize: 10, fontWeight: 700, fill: COMPANY_PALETTE.text}} 
-                axisLine={false} tickLine={false} 
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={P.border} />
+              <XAxis
+                dataKey="mes"
+                tick={{ fontSize: 10, fontWeight: 600, fill: P.muted }}
+                axisLine={false} tickLine={false}
               />
-              <YAxis 
-                tick={{fontSize: 10, fontWeight: 700, fill: COMPANY_PALETTE.text}} 
-                axisLine={false} tickLine={false} 
+              <YAxis
+                tickFormatter={(v) => {
+                  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+                  if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}k`;
+                  return String(v);
+                }}
+                tick={{ fontSize: 10, fontWeight: 600, fill: P.muted }}
+                axisLine={false} tickLine={false}
+                width={42}
               />
-              <Tooltip content={<CustomTooltip />} />
-              <Area 
-                type="monotone" dataKey="ventas" 
-                stroke={COMPANY_PALETTE.accent} strokeWidth={4} 
-                fillOpacity={1} fill="url(#colorCorp)" 
+              <Tooltip content={<ChartTooltip accent={P.accent} />} />
+              <Area
+                type="monotone"
+                dataKey="ventas"
+                stroke={P.accent}
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#gradErp)"
+                dot={false}
+                activeDot={{ r: 4, fill: P.accent, stroke: P.bg, strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
 
+      {/* Mini stats */}
       {!minimal && (
-        <div className="grid grid-cols-3 gap-6 mt-10 pt-8 border-t" style={{ borderColor: COMPANY_PALETTE.bgSoft }}>
-          <MiniStat label="Ventas" value="S/ 12k" icon={<TrendingUp size={16}/>} />
-          <MiniStat label="Pedidos" value="48" icon={<ShoppingCart size={16}/>} />
-          <MiniStat label="Meta" value="92%" icon={<Package size={16}/>} />
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+          gap: 16, marginTop: 20,
+          paddingTop: 16, borderTop: `1px solid ${P.border}`,
+        }}>
+          <MiniStat label="Ventas"  value={fmtCompact(totalVentas)} icon={<TrendingUp  size={13} />} accent={P.accent} />
+          <MiniStat label="Pedidos" value="48"                       icon={<ShoppingCart size={13} />} accent={P.accent} />
+          <MiniStat label="Meta"    value="92%"                      icon={<Package      size={13} />} accent={P.green}  />
         </div>
       )}
     </div>
   );
 }
 
-function MiniStat({ label, value, icon }: any) {
+function MiniStat({ label, value, icon, accent }: {
+  label: string; value: string; icon: React.ReactNode; accent: string;
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2" style={{ color: COMPANY_PALETTE.mid }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: accent }}>
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.08em', color: '#64748b' }}>
+          {label}
+        </span>
       </div>
-      <span className="text-xl font-black text-[#2B1B12]">{value}</span>
+      <span style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+        {value}
+      </span>
     </div>
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length) {
-    return (
-      <div 
-        className="text-white p-4 rounded-2xl shadow-2xl border"
-        style={{ backgroundColor: COMPANY_PALETTE.text, borderColor: 'rgba(255,255,255,0.1)' }}
-      >
-        <p className="text-[9px] font-black uppercase mb-1" style={{ color: COMPANY_PALETTE.border }}>{label}</p>
-        <p className="text-lg font-black">S/ {payload[0].value}</p>
-      </div>
-    );
-  }
-  return null;
+function ChartTooltip({ active, payload, label, accent }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#0f172a',
+      border: `1px solid ${accent}40`,
+      borderRadius: 8,
+      padding: '7px 11px',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
+    }}>
+      <p style={{ fontSize: 9, color: accent, textTransform: 'uppercase',
+        letterSpacing: '0.08em', marginBottom: 3 }}>{label}</p>
+      <p style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>
+        {fmtCompact(Number(payload[0].value ?? 0))}
+      </p>
+    </div>
+  );
 }

@@ -5,28 +5,29 @@ import { getSupabaseBrowserClient } from '@/lib/supabase';
 import AdminSidebar from './Sidebar';
 import AdminHeader from './Header';
 import type { usuarios } from '@prisma/client';
-import { PermissionsProvider } from '@/components/providers/PermissionsProvider';
+import { PermissionsProvider, UsuarioContext, PersonalInternoRelacion } from '@/components/providers/PermissionsProvider';
+
+export interface UsuarioConPersonal extends usuarios {
+  personal_interno: PersonalInternoRelacion[];
+}
 
 export default function RealtimeLayoutWrapper({ 
   initialUsuario, 
   children 
 }: { 
-  initialUsuario: usuarios, 
+  initialUsuario: UsuarioConPersonal, 
   children: React.ReactNode 
 }) {
-  const [usuario, setUsuario] = useState<usuarios>(initialUsuario);
+  const [usuario, setUsuario] = useState<UsuarioConPersonal>(initialUsuario);
   const supabase = getSupabaseBrowserClient();
   
-  // Usamos ref para mantener la referencia del usuario sin disparar efectos
-  const usuarioRef = useRef(usuario);
+  const usuarioRef = useRef<UsuarioConPersonal>(usuario);
 
   useEffect(() => {
-    // Actualizar la referencia cuando el estado cambie
     usuarioRef.current = usuario;
   }, [usuario]);
 
   useEffect(() => {
-    // Suscripción a cambios en la tabla 'usuarios'
     const channel = supabase
       .channel(`user-changes-${initialUsuario.id}`)
       .on(
@@ -40,9 +41,11 @@ export default function RealtimeLayoutWrapper({
         (payload) => {
           const newUser = payload.new as usuarios;
           
-          // Comparación profunda básica para evitar actualizaciones innecesarias
           if (JSON.stringify(newUser) !== JSON.stringify(usuarioRef.current)) {
-            setUsuario(newUser);
+            setUsuario((prev) => ({
+              ...prev,
+              ...newUser
+            }));
           }
         }
       )
@@ -53,8 +56,20 @@ export default function RealtimeLayoutWrapper({
     };
   }, [initialUsuario.id, supabase]);
 
+  // Conversión formal sin aserciones forzadas (Mapeo estricto campo a campo)
+  const usuarioContextFormateado: UsuarioContext = {
+    id: usuario.id,
+    email: usuario.email,
+    rol: usuario.rol,
+    estado: usuario.estado,
+    auth_id: usuario.auth_id,
+    ultimo_acceso: usuario.ultimo_acceso,
+    created_at: usuario.created_at,
+    personal_interno: usuario.personal_interno,
+  };
+
   return (
-    <PermissionsProvider usuario={usuario as any}>
+    <PermissionsProvider usuario={usuarioContextFormateado}>
       <div className="admin-shell flex h-screen overflow-hidden bg-slate-50">
         <AdminSidebar usuario={usuario} />
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -66,4 +81,4 @@ export default function RealtimeLayoutWrapper({
       </div>
     </PermissionsProvider>
   );
-}
+}

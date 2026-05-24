@@ -1,258 +1,148 @@
-export const runtime = 'nodejs';
-import { prisma } from '@/lib/prisma';
-import { serializeBigInt, stringifyBigInts } from '@/lib/utils/serialize';
 import { NextResponse } from 'next/server';
-import { requireServerRole } from '@/lib/auth/server';
+import { prisma } from '@/lib/prisma';
+import { startOfDay, subDays } from 'date-fns';
 
-const REPORTES_ROLES: any = ['administrador', 'gerente'];
-
-export async function GET(req: Request) {
-  const auth = await requireServerRole(REPORTES_ROLES);
-  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
+    const daysParam = searchParams.get('days') || '30';
+    const days = parseInt(daysParam, 10);
 
-    // ── Filtros ──────────────────────────────────────────────
-    const days       = parseInt(searchParams.get('days') || '30');
-    const fechaDesde = searchParams.get('fecha_desde')
-      ? new Date(searchParams.get('fecha_desde')!)
-      : new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-    const fechaHasta = searchParams.get('fecha_hasta')
-      ? new Date(searchParams.get('fecha_hasta')!)
-      : new Date();
+    const fechaLimite = startOfDay(subDays(new Date(), days));
 
-    const estadoOrden = searchParams.get('estado_orden');
-    const metodoPago  = searchParams.get('metodo_pago');
-    const grupo       = searchParams.get('grupo') || 'dia';
-
-    const whereFecha = { gte: fechaDesde, lte: fechaHasta };
-
-    // ── Consultas en paralelo ────────────────────────────────
-    const [
-      resumenGeneral,
-      ventasDetalle,
-      pedidosProduccion,
-      inventarioSnapshot,
-      clientesRanking,
-      categoriasPareto,
-      ventasTimeline,
-      pagosDetalle,
-    ] = await Promise.all([
-
-      // 0. RESUMEN GENERAL
-      prisma.$transaction([
-        prisma.ordenes_compra.aggregate({
-          where: { created_at: whereFecha },
-          _count: { id: true },
-          _sum:   { total_orden: true },
-        }),
-        prisma.pedidos.aggregate({
-          where: { created_at: whereFecha, estado: 'entregado' },
-          _count: { id: true },
-          _sum:   { total: true },
-        }),
-        prisma.clientes.count({ where: { created_at: whereFecha } }),
-        prisma.pedidos.count({ where:  { created_at: whereFecha } }),
-      ]),
-
-      // 1. DETALLE DE VENTAS
-      prisma.pedidos.findMany({
-          where:   { created_at: whereFecha, estado: 'entregado' },
-        include: { clientes: { select: { email: true } } },
-        orderBy: { created_at: 'desc' },
-        take:    200,
-      }),
-
-      // 2. PEDIDOS EN PRODUCCIÓN (sin duplicado)
-      prisma.pedidos.findMany({
-        where: { created_at: whereFecha },
-        include: {
-          clientes:     { select: { razon_social: true } },
-          pedido_items: { include: { productos: { select: { nombre: true } } } },
-        },
-        orderBy: { created_at: 'desc' },
-        take:    100,
-      }),
-
-      // 3. SNAPSHOT DE INVENTARIO
-      prisma.insumo.findMany({
-        select:  { id: true, nombre: true, stock_actual: true, stock_minimo: true },
-        orderBy: { stock_actual: 'asc' },
-      }),
-
-      // 4. RANKING DE CLIENTES
-      // ✅ total_estimado pertenece a pedidos, no a ordenes_compra
-      prisma.pedidos.groupBy({
-        by:      ['cliente_id'],
-        _count:  true,
-        _sum:    { total_estimado: true },
-        where:   { created_at: whereFecha, cliente_id: { not: null } },
-        orderBy: { _sum: { total_estimado: 'desc' } },
-        take:    10,
-      }),
-
-      // 5. PARETO POR PRODUCTO
-      prisma.pedido_items.groupBy({
-        by:      ['producto_id'],
-        _sum:    { cantidad: true },
-        _count:  true,
-        orderBy: { _sum: { cantidad: 'desc' } },
-        take:    15,
-      }),
-
-      // 6. VENTAS AGRUPADAS POR TIEMPO
-      prisma.pedidos.findMany({
-        where:   { created_at: whereFecha, estado: 'entregado' },
-        select:  { total: true, created_at: true },
-        orderBy: { created_at: 'asc' },
-      }),
-
-      // 7. DETALLE DE PAGOS
-      prisma.pagos.groupBy({
-        by:      ['metodo_pago'],
-        _sum:    { monto: true },
-        _count:  true,
-        where:   { fecha_pago: whereFecha },
-        orderBy: { _sum: { monto: 'desc' } },
-      }),
-    ]);
-
-    // ── Filtros adicionales en memoria ───────────────────────
-    const ventasFiltradas = metodoPago
-      ? ventasDetalle.filter((v) => v.metodo_pago === metodoPago)
-      : ventasDetalle;
-
-    const pedidosFiltrados = estadoOrden
-      ? pedidosProduccion.filter((p) => p.estado === estadoOrden)
-      : pedidosProduccion;
-
-    // ── Timeline ─────────────────────────────────────────────
-    const ventasTimelineProcesado = agruparTimeline(ventasTimeline, grupo);
-
-    // ── Enriquecer ranking de clientes ───────────────────────
-    const clienteIds = clientesRanking
-      .map((c) => c.cliente_id)
-      .filter((id): id is bigint => id !== null);
-
-    const clientesDetalle = clienteIds.length > 0
-      ? await prisma.clientes.findMany({
-          where:  { id: { in: clienteIds } },
-          select: { id: true, razon_social: true, ruc: true },
-        })
-      : [];
-
-    const clientesMap = new Map(clientesDetalle.map((c) => [c.id.toString(), c]));
-
-    const clientesRankingFinal = clientesRanking.map((c) => ({
-      cliente_id:      c.cliente_id?.toString() ?? null,
-      razon_social:    c.cliente_id ? clientesMap.get(c.cliente_id.toString())?.razon_social ?? 'N/A' : 'N/A',
-      ruc:             c.cliente_id ? clientesMap.get(c.cliente_id.toString())?.ruc ?? null : null,
-      total_ordenes:   c._count,
-      total_comprado:  Number(c._sum.total_estimado ?? 0),
-    }));
-
-    // ── Enriquecer pareto por categoría ──────────────────────
-    const productoIds = categoriasPareto
-      .map((p) => p.producto_id)
-      .filter((id): id is bigint => id !== null);
-
-    const productosDetalle = productoIds.length > 0
-      ? await prisma.productos.findMany({
-          where:   { id: { in: productoIds } },
-          include: { categorias: { select: { nombre: true } } },
-        })
-      : [];
-
-    const productosMap = new Map(productosDetalle.map((p) => [p.id.toString(), p]));
-
-    const categoriasParetoFinal = categoriasPareto.map((p) => {
-      const prod = p.producto_id ? productosMap.get(p.producto_id.toString()) : null;
-      return {
-        producto_id:    p.producto_id?.toString() ?? null,
-        nombre:         prod?.nombre              ?? 'N/A',
-        categoria:      prod?.categorias?.nombre  ?? 'Sin categoría',
-        cantidad_total: Number(p._sum?.cantidad   ?? 0),
-        pedidos_count:  p._count              ?? 0,
-      };
+    // ── 1. VENTAS: fuente correcta = pagos verificados ──────────────────────
+    // movimientos_inventario no tiene campo `monto` ni `referencia`.
+    // La tabla `pagos` sí tiene `monto`, `fecha_pago` y `estado`.
+    const pagosVerificados = await prisma.pagos.findMany({
+      where: {
+        estado: 'verificado',           // enum EstadoPago
+        fecha_pago: { gte: fechaLimite },
+      },
+      select: {
+        monto:     true,
+        fecha_pago: true,
+      },
+      orderBy: { fecha_pago: 'asc' },
     });
 
-    // ── Métricas finales ─────────────────────────────────────
-    const [ordenesAgg, ventasAgg, nuevosClientes, nuevosPedidos] = resumenGeneral;
+    const ventasPorDiaMap: Record<string, number> = {};
+    let totalVentasPeriodo = 0;
 
-    const totalVentas      = Number(ventasAgg._sum?.total      ?? 0);
-    const totalOrdenesComp = Number(ordenesAgg._sum?.total_orden ?? 0);
-    const crecimiento      = calculoCrecimiento(ventasTimeline, fechaDesde, fechaHasta);
-
-    // ── Inventario crítico (stock_actual <= stock_minimo) ────
-    const inventarioCritico = inventarioSnapshot.filter(
-      (i) => Number(i.stock_actual) <= Number(i.stock_minimo)
-    );
-
-    return NextResponse.json(
-      serializeBigInt({
-        metrics: {
-          total_ventas:        totalVentas,
-          total_ordenes_compra: totalOrdenesComp,
-          ventas_count:        ventasAgg._count   ?? 0,
-          nuevos_clientes:     nuevosClientes,
-          nuevos_pedidos:      nuevosPedidos,
-          crecimiento_pct:     Math.round(crecimiento),
-          produccion_en_curso: pedidosFiltrados.filter(
-            (p) => p.estado !== 'entregado'
-          ).length,
-          stock_alerta: inventarioCritico.length,
-        },
-        ventasDetalle:    stringifyBigInts(ventasFiltradas),
-        pedidosProduccion: stringifyBigInts(pedidosFiltrados),
-        inventarioCritico: stringifyBigInts(inventarioCritico),
-        clientesRanking:   clientesRankingFinal,
-        categoriasPareto:  categoriasParetoFinal,
-        ventasTimeline:    ventasTimelineProcesado,
-        pagosPorMetodo:    pagosDetalle.map((p) => ({
-          metodo:       p.metodo_pago,
-          monto_total:  Number(p._sum?.monto ?? 0),
-          count:        p._count         ?? 0,
-        })),
-      })
-    );
-  } catch (error: any) {
-    console.error('Error en reportes:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function agruparTimeline(ventas: any[], grupo: string) {
-  const map = new Map<string, number>();
-  for (const v of ventas) {
-    if (!v.created_at) continue;
-    let label: string;
-    if (grupo === 'mes') {
-      label = v.created_at.toLocaleDateString('es-PE', { month: 'short', year: 'numeric' });
-    } else if (grupo === 'semana') {
-      const weekNum = Math.ceil(v.created_at.getDate() / 7);
-      label = `Sem ${weekNum}`;
-    } else {
-      label = v.created_at.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+    for (let i = days - 1; i >= 0; i--) {
+      const dateStr = subDays(new Date(), i)
+        .toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+      ventasPorDiaMap[dateStr] = 0;
     }
-    map.set(label, (map.get(label) ?? 0) + Number(v.total));
-  }
-  return Array.from(map.entries()).map(([periodo, ventas]) => ({ periodo, ventas }));
-}
 
-function calculoCrecimiento(ventas: any[], fechaDesde: Date, fechaHasta: Date): number {
-  const duracion = fechaHasta.getTime() - fechaDesde.getTime();
-  const mitad    = new Date(fechaDesde.getTime() + duracion / 2);
-  let primeraMitad  = 0;
-  let segundaMitad  = 0;
-  for (const v of ventas) {
-    if (!v.created_at) continue;
-    const monto = Number(v.total);
-    if (new Date(v.created_at) < mitad) primeraMitad += monto;
-    else segundaMitad += monto;
+    pagosVerificados.forEach((pago) => {
+      const dateStr = new Date(pago.fecha_pago)
+        .toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+      const monto = Number(pago.monto ?? 0);
+      ventasPorDiaMap[dateStr] = (ventasPorDiaMap[dateStr] ?? 0) + monto;
+      totalVentasPeriodo += monto;
+    });
+
+    const ventasPorDia = Object.entries(ventasPorDiaMap).map(
+      ([fecha, ventas]) => ({ fecha, ventas })
+    );
+
+    // ── 2. PEDIDOS ACTIVOS ──────────────────────────────────────────────────
+    // El modelo se llama `pedidos`, no `orden`.
+    // Los valores del enum EstadoPedido van en minúscula.
+    const pedidosActivosContador = await prisma.pedidos.count({
+      where: {
+        estado: { in: ['pendiente', 'en_produccion', 'listo_para_despacho'] },
+      },
+    });
+
+    // ── 3. CAPITAL EN PROCESO ───────────────────────────────────────────────
+    // movimientos_inventario no tiene relación `ordenProduccion` ni campo `monto`.
+    // Aproximación correcta: suma del `total` de pedidos en producción.
+    const capitalAgregado = await prisma.pedidos.aggregate({
+      where: {
+        estado: 'en_produccion',        // enum EstadoPedido
+      },
+      _sum: {
+        total: true,
+      },
+    });
+    const totalCapitalProceso = Number(capitalAgregado._sum.total ?? 0);
+
+    // ── 4. CONCENTRACIÓN DE TALLAS ──────────────────────────────────────────
+    // El campo se llama `stock` (Int), no `cantidad`.
+    // `talla` es enum TallaProductos (XS | S | M | L | XL | XXL).
+    const stockPorTalla = await prisma.variantes_producto.groupBy({
+      by: ['talla'],
+      where: {
+        stock: { gt: 0 },
+        estado: 'activo',               // enum EstadoProducto
+      },
+      _sum: {
+        stock: true,
+      },
+      orderBy: {
+        talla: 'asc',
+      },
+    });
+
+    const concentracionTallas = stockPorTalla.map((item) => ({
+      name:  item.talla,
+      value: item._sum.stock ?? 0,
+    }));
+
+    // ── 5. VENTAS POR CATEGORÍA ─────────────────────────────────────────────
+    // No existe `lineaProducto`. La jerarquía correcta es:
+    // pedidos → pedido_items → productos → categorias
+    const pedidosConItems = await prisma.pedidos.findMany({
+      where: {
+        created_at: { gte: fechaLimite },
+        estado:     { not: 'cancelado' },
+      },
+      select: {
+        pedido_items: {
+          select: {
+            cantidad: true,
+            productos: {
+              select: {
+                precio: true,
+                categorias: { select: { nombre: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const ventasPorCategoriaMap: Record<string, number> = {};
+
+    pedidosConItems.forEach((pedido) => {
+      pedido.pedido_items.forEach((item) => {
+        const categoria = item.productos.categorias?.nombre ?? 'Sin categoría';
+        // precio unitario × cantidad como aproximación de ingreso por línea
+        const monto = item.cantidad * Number(item.productos.precio ?? 0);
+        ventasPorCategoriaMap[categoria] =
+          (ventasPorCategoriaMap[categoria] ?? 0) + monto;
+      });
+    });
+
+    const ventasPorCategoria = Object.entries(ventasPorCategoriaMap)
+      .map(([name, value]) => ({ name, value }))
+      .filter((cat) => cat.value > 0);
+
+    // ── Respuesta unificada ─────────────────────────────────────────────────
+    return NextResponse.json({
+      metrics: {
+        total:             totalVentasPeriodo,
+        pedidos:           pedidosActivosContador,
+        produccionEnCurso: totalCapitalProceso,
+      },
+      ventasPorDia,
+      concentracionTallas,
+      ventasPorCategoria,
+    });
+
+  } catch (error) {
+    console.error('Error base de datos reportes:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-  if (primeraMitad === 0) return segundaMitad > 0 ? 100 : 0;
-  return ((segundaMitad - primeraMitad) / primeraMitad) * 100;
 }

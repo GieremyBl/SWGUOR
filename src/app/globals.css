@@ -4,93 +4,98 @@
 
 @layer base {
   :root {
-    --background: 43 100% 94%;
-    --foreground: 14 14% 12%;
+    /* ── Tokens GUOR Warm Refined ── */
+    --guor-dark: #1a1410;
+    /* warm-black profundo     */
+    --guor-gold: #c4a35a;
+    /* champagne gold          */
+    --guor-gold-warm: #d4b472;
+    --guor-gold-pale: #e8d5a8;
+    --guor-gold-dust: #f4ecda;
+    --guor-cream: #fdf9f3;
+    /* fondo principal         */
+    --guor-cream-deep: #f5efe4;
+    --guor-stone: #ede8e0;
+    /* card / badge bg         */
+    --guor-stone-mid: #d8d0c4;
+    /* bordes sobre claro      */
 
-    --card: 43 100% 94%;
-    --card-foreground: 14 14% 12%;
+    /* ── Shadcn vars mapeadas a paleta cálida ── */
+    --background: 38 60% 97%;
+    /* #fdf9f3 cream             */
+    --foreground: 20 22% 9%;
+    /* #1a1410 warm-black        */
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 22% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 14 14% 12%;
+    --popover-foreground: 20 22% 9%;
 
-    --primary: 31 44% 50%;
-    --primary-foreground: 43 100% 94%;
+    /* Acento principal: champagne gold */
+    --primary: 37 50% 56%;
+    /* #c4a35a */
+    --primary-foreground: 20 22% 9%;
 
-    --secondary: 20 80% 91%;
-    --secondary-foreground: 14 14% 12%;
+    --secondary: 33 27% 91%;
+    /* #ede8e0 stone */
+    --secondary-foreground: 20 22% 20%;
 
-    --muted: 20 80% 91%;
-    --muted-foreground: 35 47% 54%;
+    --muted: 33 27% 91%;
+    --muted-foreground: 25 12% 45%;
 
-    --accent: 38 65% 72%;
-    --accent-foreground: 14 14% 12%;
+    --accent: 37 50% 56%;
+    --accent-foreground: 20 22% 9%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 43 100% 94%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 20 80% 91%;
-    --input: 20 80% 91%;
-    --ring: 31 44% 50%;
+    --border: 33 20% 85%;
+    /* #d8d0c4 stone-mid */
+    --input: 33 20% 85%;
+    --ring: 37 50% 56%;
 
-    --radius: 0.625rem;
+    --radius: 0.5rem;
   }
 
   .dark {
-    --background: 14 14% 12%;
-    --foreground: 43 100% 94%;
-    --card: 14 14% 12%;
-    --card-foreground: 43 100% 94%;
-    --popover: 14 14% 12%;
-    --popover-foreground: 43 100% 94%;
-    --primary: 38 65% 72%;
-    --primary-foreground: 14 14% 12%;
-    --secondary: 31 44% 30%;
-    --secondary-foreground: 43 100% 94%;
-    --muted: 31 44% 20%;
-    --muted-foreground: 38 65% 72%;
-    --accent: 31 44% 30%;
-    --accent-foreground: 43 100% 94%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 43 100% 94%;
-    --border: 31 44% 25%;
-    --input: 31 44% 25%;
-    --ring: 38 65% 72%;
+    --background: 20 22% 7%;
+    --foreground: 38 60% 97%;
+    --card: 20 22% 10%;
+    --card-foreground: 38 60% 95%;
+    --popover: 20 22% 10%;
+    --popover-foreground: 38 60% 95%;
+    --primary: 37 50% 62%;
+    --primary-foreground: 20 22% 9%;
+    --secondary: 20 22% 16%;
+    --secondary-foreground: 38 40% 88%;
+    --muted: 20 22% 14%;
+    --muted-foreground: 25 12% 58%;
+    --accent: 37 50% 60%;
+    --accent-foreground: 20 22% 9%;
+    --destructive: 0 63% 41%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 20 22% 18%;
+    --input: 20 22% 18%;
+    --ring: 37 50% 62%;
   }
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    /* Sin background aquí — cada página/layout define el suyo */
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .admin-shell {
-    --admin-bg: 36 58% 93%;
-    --admin-surface: 38 100% 96%;
-    --admin-line: 34 45% 82%;
-    --admin-ink: 25 19% 12%;
-    --admin-ink-soft: 33 19% 41%;
-    --admin-avatar: 28 22% 14%;
-
-    --background: var(--admin-bg);
-    --foreground: var(--admin-ink);
-    --card: var(--admin-surface);
-    --card-foreground: var(--admin-ink);
-    --popover: var(--admin-surface);
-    --popover-foreground: var(--admin-ink);
-    --muted: 35 70% 91%;
-    --muted-foreground: var(--admin-ink-soft);
-    --border: var(--admin-line);
-    --input: var(--admin-line);
-
-    color: hsl(var(--admin-ink));
-    background:
-      radial-gradient(circle at 8% 2%, rgb(255 255 255 / 0.6) 0%, transparent 30%),
-      linear-gradient(135deg, #fffaf2 0%, #f7ead8 58%, #f1dfc7 100%);
-  }
-
-  .admin-shell main {
-    color: hsl(var(--admin-ink));
+  /* Solo para páginas admin y auth que necesitan fondo claro */
+  body.light-surface {
+    background-color: var(--guor-cream);
+    color: var(--guor-dark);
   }
 }
 
@@ -98,7 +103,7 @@
   .admin-shell .admin-topbar {
     background-color: hsl(var(--admin-surface)) !important;
     border-color: hsl(var(--admin-line)) !important;
-    box-shadow: 0 10px 30px -20px rgb(77 52 30 / 0.45);
+    box-shadow: 0 1px 0 0 hsl(var(--admin-line));
   }
 
   .admin-shell .admin-user-name {
@@ -110,7 +115,7 @@
   }
 
   .admin-shell .admin-user-avatar {
-    background-color: hsl(var(--admin-avatar)) !important;
+    background-color: hsl(var(--admin-accent)) !important;
     color: white !important;
   }
 
@@ -130,6 +135,7 @@
   }
 }
 
+/* ── Radix / Shadcn overrides ── */
 [data-radix-popper-content-wrapper] {
   z-index: 9999 !important;
 }
@@ -138,11 +144,31 @@
 .SelectContent {
   background-color: white !important;
   opacity: 1 !important;
-  border: 1px solid #fbddd3 !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1) !important;
-  border-radius: 0.75rem;
+  border: 1px solid hsl(33 20% 85%) !important;
+  box-shadow: 0 4px 16px -4px rgb(26 20 16 / 0.10) !important;
+  border-radius: 0.5rem;
 }
 
-[role="dialog"] > button[aria-label="Close"] {
+[role="dialog"]>button[aria-label="Close"] {
   display: none;
+}
+
+/* ── Utilidades globales GUOR ── */
+.guor-divider {
+  height: 1px;
+  background: var(--guor-gold-pale);
+  opacity: 0.7;
+}
+
+.guor-badge {
+  display: inline-block;
+  padding: 0.375rem 1.125rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  background: var(--guor-stone);
+  color: #8a6d3b;
+  border: 1px solid var(--guor-gold-pale);
 }

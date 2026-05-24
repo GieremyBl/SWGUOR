@@ -23,7 +23,7 @@ export interface OrdenProduccion {
     producto_id: number;
     ficha_id: number;
     taller_id: number;
-    pedido_id: number | null;
+    pedido_id: number;
     cantidad_solicitada: number;
     fecha_entrega: string | null;
     notas: string | null;

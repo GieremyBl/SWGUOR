@@ -13,7 +13,7 @@ export async function fetchOrdenesProduccion(params?: {
   const query = new URLSearchParams();
   if (params?.producto_id) query.set('producto_id', params.producto_id);
   if (params?.search) query.set('search', params.search);
-  if (params?.etapa) query.set('etapa', params.etapa);
+  if (params?.etapa && params.etapa !== 'all') query.set('etapa', params.etapa);
   if (params?.page) query.set('page', params.page.toString());
   if (params?.limit) query.set('limit', params.limit.toString());
 

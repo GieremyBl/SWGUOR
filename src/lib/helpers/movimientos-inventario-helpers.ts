@@ -21,7 +21,7 @@ export async function registrarEntradaCompra(data: {
 
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'COMPRA',
+    referencia_tipo: 'ORDEN_COMPRA',
   });
 }
 
@@ -40,7 +40,7 @@ export async function registrarSalidaVenta(data: {
     motivo: `Venta OV-${data.numero_ov}`,
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'VENTA',
+    referencia_tipo: 'PEDIDO_CLIENTE',
   });
 }
 
@@ -58,7 +58,7 @@ export async function registrarSalidaProduccion(data: {
     motivo: `Producción CF-${data.confeccion_id}`,
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'ORDEN',
+    referencia_tipo: 'ORDEN_PRODUCCION',
   });
 }
 
@@ -76,7 +76,7 @@ export async function registrarEntradaDevolucionCliente(data: {
     motivo: `Devolución cliente DEV-${data.numero_devolucion}`,
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'VENTA',
+    referencia_tipo: 'PEDIDO_CLIENTE',
   });
 }
 
@@ -96,7 +96,7 @@ export async function registrarSalidaDevolucionProveedor(data: {
     motivo: `Devolución proveedor DEV-${data.numero_devolucion}`,
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'COMPRA',
+    referencia_tipo: 'ORDEN_COMPRA',
   });
 }
 
@@ -119,7 +119,7 @@ export async function registrarSalidaIncidencia(data: {
     motivo: `Incidencia (${data.tipo_incidencia}) INC-${data.numero_incidencia}`,
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'AJUSTE',
+    referencia_tipo: 'MERMA_INCIDENCIA',
   });
 }
 
@@ -143,7 +143,7 @@ export async function registrarAjusteManual(data: {
     motivo: `Ajuste: ${data.razon}`,
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
-    referencia_tipo: 'AJUSTE',
+    referencia_tipo: 'AJUSTE_MANUAL',
   });
 }
 

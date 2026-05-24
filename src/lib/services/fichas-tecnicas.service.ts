@@ -1,6 +1,7 @@
 import { prisma }          from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { EstadoFicha }     from '@prisma/client';
+import type { ReferenciaMovimiento } from '@prisma/client';
 import {
   calcularCostoFicha,
   insertarMovimiento,
@@ -180,7 +181,7 @@ export const FichasTecnicasService = {
       // tipoMovimiento (camelCase) es la clave correcta en InsertarMovimientoParams
       await insertarMovimiento({
         tipoMovimiento: 'ajuste',
-        referenciaType: 'AJUSTE',
+        referenciaType: 'AJUSTE' as ReferenciaMovimiento,
         referenciaId:   Number(id),
         cantidad:        0,
         motivo:          `Ficha técnica aprobada por usuario ${usId}`,

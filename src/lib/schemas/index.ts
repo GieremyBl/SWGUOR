@@ -12,7 +12,7 @@ export {
   crearAlmacenSchema,
   type Almacen,
   type CrearAlmacen,
-} from './almacenesSchema';
+} from './almacenes';
 
 export {
   reservaStockBaseSchema,
@@ -69,12 +69,12 @@ export {
   type AsientoContable,
   type CrearAsientoContable,
   type DetalleAsiento,
-} from './asientosContablesSchema';
+} from './asientos-contables';
 
 export {
   auditoriaBaseSchema,
   type Auditoria,
-} from './auditoriaSchema';
+} from './auditoria';
 
 export {
   comprobanteBaseSchema,

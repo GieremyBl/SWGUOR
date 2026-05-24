@@ -51,41 +51,48 @@ export default function OrdenEtapasPage() {
     );
 
     return (
-        <div className="p-8 space-y-6 max-w-4xl mx-auto">
-            {/* Back */}
-            <button
-                onClick={() => router.push("/admin/Panel-Administrativo/produccion")}
-                className="flex items-center gap-2 text-xs font-bold uppercase text-slate-400 hover:text-slate-700 transition-colors"
-            >
-                <ArrowLeft className="w-4 h-4" /> Volver a producción
-            </button>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+            <div className="p-6 md:p-10 space-y-8 max-w-5xl mx-auto">
+                {/* Back Button */}
+                <button
+                    onClick={() => router.push("/admin/Panel-Administrativo/ordenes-produccion")}
+                    className="flex items-center gap-2 text-sm font-bold uppercase text-slate-500 hover:text-slate-700 transition-colors hover:gap-3"
+                >
+                    <ArrowLeft className="w-4 h-4" /> Volver a producción
+                </button>
 
-            {/* Header */}
-            <div className="flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-                        Control de Etapas
-                    </h1>
-                    <p className="text-sm text-slate-400 mt-1">
-                        Orden <span className="font-bold text-slate-600">#{orden.id}</span>
-                        {" · "}{orden.producto?.nombre || "Producto no especificado"}
-                    </p>
+                {/* Header Section */}
+                <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h1 className="text-4xl font-black text-slate-900 uppercase tracking-tight">
+                                Control de Etapas
+                            </h1>
+                            <p className="text-slate-500 mt-2 flex items-center gap-2">
+                                <span className="font-mono text-sm bg-slate-100 px-3 py-1 rounded-lg">Orden #{orden.id}</span>
+                                <span>•</span>
+                                <span className="font-semibold">{orden.productos?.nombre || "Producto no especificado"}</span>
+                            </p>
+                        </div>
+                        <Badge
+                            label={ETAPA_LABELS[orden.seguimiento_produccion?.[0]?.etapa as keyof typeof ETAPA_LABELS] ?? "Pendiente"}
+                            color="bg-rose-50 text-rose-600 border border-rose-100"
+                        />
+                    </div>
                 </div>
-                <Badge
-                    label={ETAPA_LABELS[orden.etapa as keyof typeof ETAPA_LABELS] ?? orden.etapa}
-                    color="bg-rose-50 text-rose-600"
-                />
+
+                {/* Stepper */}
+                <OrdenStepper etapas={ETAPAS_PRODUCCION} etapaActual={orden.seguimiento_produccion?.[0]?.etapa || "diseno"} />
+
+                {/* Formulario según rol activo */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                    <FormSelector
+                        orden={orden}
+                        rol={rolActual}
+                        onComplete={() => refetch?.()}
+                    />
+                </div>
             </div>
-
-            {/* Stepper */}
-            <OrdenStepper etapas={ETAPAS_PRODUCCION} etapaActual={orden.etapa} />
-
-            {/* Formulario según rol activo */}
-            <FormSelector
-                orden={orden}
-                rol={rolActual}
-                onComplete={() => refetch?.()}
-            />
         </div>
     );
 }

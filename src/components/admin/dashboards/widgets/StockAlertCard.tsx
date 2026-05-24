@@ -3,88 +3,156 @@
 import { AlertTriangle, ArrowRight, Package } from 'lucide-react';
 import type { Database } from '@/types/database';
 import { useRouter } from 'next/navigation';
-import { ROLE_PALETTES, type RolPaleta } from './DashboardUtils';
 
 type Insumo = Database['public']['Tables']['insumo']['Row'];
 
 interface StockAlertCardProps {
   items: Insumo[];
-  /** Colorea la tarjeta con la paleta del rol activo */
-  rol?: RolPaleta;
+  rol?: string;
 }
 
-export default function StockAlertCard({ items, rol }: StockAlertCardProps) {
+const P = {
+  accent:  '#1d3fa6',
+  surface: '#f0f4ff',
+  border:  '#c0d0ff',
+  bg:      '#f4f6f9',
+  white:   '#ffffff',
+  text:    '#0f172a',
+  muted:   '#64748b',
+  danger:  '#dc2626',
+  dangerBg:'#fef2f2',
+  dangerBorder: '#fecaca',
+};
+
+export default function StockAlertCard({ items }: StockAlertCardProps) {
   const router = useRouter();
-  const p = rol ? ROLE_PALETTES[rol] : null;
-  const accentColor = p?.accent ?? '#ea580c';
-  const bgColor     = p?.bgSoft ?? '#fff7ed';
-  const borderColor = p?.border ?? '#fed7aa';
-  const midColor    = p?.mid    ?? '#f97316';
-  const textColor   = p?.text   ?? '#431407';
+
   return (
-    <div className="bg-white rounded-[2.5rem] p-8 shadow-xl h-full flex flex-col" style={{ border: `1px solid ${borderColor}` }}>
-      {/* HEADER DEL WIDGET */}
-      <div className="mb-8 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="p-3.5 rounded-2xl shadow-sm" style={{ background: bgColor, color: accentColor, border: `1px solid ${borderColor}` }}>
-            <AlertTriangle size={22} strokeWidth={1.8} />
+    <div style={{
+      background:   P.white,
+      border:       `1px solid ${P.border}`,
+      borderRadius: 12,
+      padding:      '20px 20px',
+      boxShadow:    '0 1px 3px 0 rgb(0 0 0 / 0.07)',
+      display:      'flex',
+      flexDirection:'column',
+      height:       '100%',
+    }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <div style={{
+            padding: 8, borderRadius: 8,
+            background: P.dangerBg, color: P.danger,
+            border: `1px solid ${P.dangerBorder}`,
+            display: 'flex', flexShrink: 0,
+          }}>
+            <AlertTriangle size={16} strokeWidth={2} />
           </div>
           <div>
-            <h3 className="font-black uppercase tracking-tight text-slate-800 text-lg leading-none">Stock Crítico</h3>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Insumos GUOR</p>
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: P.text,
+              textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+              Stock Crítico
+            </h3>
+            <p style={{ fontSize: 9, color: P.muted, textTransform: 'uppercase',
+              letterSpacing: '0.08em', marginTop: 2 }}>
+              Insumos por agotarse
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-600"></span>
-          </span>
-          <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: accentColor }}>
-            {items.length} Alerta{items.length !== 1 ? 's' : ''} Activa{items.length !== 1 ? 's' : ''}
+
+        {/* Badge cantidad */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          background: P.dangerBg, border: `1px solid ${P.dangerBorder}`,
+          borderRadius: 6, padding: '3px 8px',
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: P.danger, display: 'inline-block', flexShrink: 0,
+          }} />
+          <span style={{ fontSize: 9, fontWeight: 800, color: P.danger,
+            textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            {items.length} alerta{items.length !== 1 ? 's' : ''} activa{items.length !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
 
-      {/* CUERPO - LISTADO CON SCROLL */}
-      <div className="space-y-3 max-h-72 overflow-y-auto pr-2 custom-scrollbar flex-1">
+      {/* Lista */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 6,
+        maxHeight: 280, overflowY: 'auto', flex: 1,
+      }}>
         {items.length > 0 ? (
           items.map((item) => (
-            <div key={item.id} className="flex items-start justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-orange-200 hover:bg-white transition-all group">
-              <div className="flex items-start gap-3 flex-1">
-                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:bg-orange-50 transition-colors flex-shrink-0 border border-slate-200">
-                  <Package size={20} className="text-slate-400 group-hover:text-orange-600 transition-colors" />
+            <div key={item.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px',
+              background: P.dangerBg,
+              border: `1px solid ${P.dangerBorder}`,
+              borderRadius: 8,
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  background: P.white, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${P.dangerBorder}`, flexShrink: 0,
+                }}>
+                  <Package size={14} style={{ color: P.danger }} />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black text-slate-700 uppercase leading-tight truncate">{item.nombre}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="inline-block w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase">
-                      {item.stock_actual} {item.unidad_medida}
-                    </p>
-                  </div>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#991b1b',
+                    textTransform: 'uppercase', overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                    {item.nombre}
+                  </p>
+                  <p style={{ fontSize: 10, color: P.danger, fontWeight: 600, marginTop: 2 }}>
+                    {String(item.stock_actual)} {item.unidad_medida}
+                  </p>
                 </div>
               </div>
-              
-              <button className="p-2.5 bg-white text-orange-600 rounded-lg shadow-sm hover:bg-orange-600 hover:text-white transition-all flex-shrink-0 ml-2">
-                <ArrowRight size={16} />
+              <button style={{
+                padding: '5px 7px', borderRadius: 6,
+                background: P.white, color: P.danger,
+                border: `1px solid ${P.dangerBorder}`,
+                cursor: 'pointer', flexShrink: 0, display: 'flex',
+              }}>
+                <ArrowRight size={13} />
               </button>
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 opacity-50">
-            <Package size={48} className="mb-3 text-slate-300" />
-            <p className="text-slate-400 font-black uppercase text-[10px] tracking-tighter">Inventario completo</p>
+          <div style={{ display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '32px 0', opacity: 0.5 }}>
+            <Package size={36} style={{ color: P.border, marginBottom: 8 }} />
+            <p style={{ fontSize: 10, color: P.muted, fontWeight: 600,
+              textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Inventario completo ✓
+            </p>
           </div>
         )}
       </div>
 
-      {/* FOOTER - ACCIÓN GLOBAL */}
-      <button 
+      {/* Footer CTA */}
+      <button
         onClick={() => router.push('/admin/inventario')}
-        className="w-full mt-6 py-4 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-2" style={{ background: textColor }}
+        style={{
+          width: '100%', marginTop: 14,
+          padding: '9px 0',
+          background: P.text, color: P.white,
+          border: 'none', borderRadius: 8,
+          fontSize: 10, fontWeight: 800,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          cursor: 'pointer', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}
       >
         Reponer Inventario
-        <ArrowRight size={14} />
+        <ArrowRight size={13} />
       </button>
     </div>
   );

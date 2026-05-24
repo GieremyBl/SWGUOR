@@ -33,6 +33,8 @@ import type {
   notificaciones,
   fichas_tecnicas,
   movimientos_inventario,
+  ReferenciaNotificacion,
+  TipoNotificacion,
 } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
@@ -58,7 +60,7 @@ export interface CrearNotificacionInput {
   tipo: TipoNotificacionRPC;
   titulo: string;
   mensaje: string;
-  referenciaType?: string;
+  referenciaType?: ReferenciaNotificacion;  
   referenciaId?: number;
   urlDestino?: string;
 }
@@ -140,10 +142,10 @@ export async function crearNotificacion(
   return prisma.notificaciones.create({
     data: {
       usuario_id:      input.usuarioId,
-      tipo:            input.tipo as any,
+      tipo:            input.tipo as TipoNotificacion,
       titulo:          input.titulo,
       mensaje:         input.mensaje,
-      referencia_tipo: input.referenciaType ?? null,
+      referencia_tipo: (input.referenciaType ?? 'SISTEMA') as ReferenciaNotificacion,
       referencia_id:   input.referenciaId   ?? null,
       url_destino:     input.urlDestino      ?? null,
       leido:           false,
@@ -174,7 +176,7 @@ export async function obtenerNotificacionesNoLeidas(
     total,
     notificaciones: rows.map((n) => ({
       ...n,
-      usuarioEmail: (n.usuarios as any)?.email,
+      usuarioEmail: (n.usuarios)?.email,
     })) as NotificacionConDetalles[],
   };
 }
@@ -221,7 +223,7 @@ export async function notificarCotizacionExpirada(data: {
         tipo:          'cotizacion_expirada',
         titulo:        `Cotización expirada: ${data.cotizacionNumero}`,
         mensaje:       `La cotización ${data.cotizacionNumero} expiró sin aprobación.`,
-        referenciaType: 'cotizaciones',
+        referenciaType: 'COTIZACION',
         referenciaId:   data.cotizacionId,
         urlDestino:    `/admin/Panel-Administrativo/cotizaciones/${data.cotizacionId}`,
       }),
@@ -242,7 +244,7 @@ export async function notificarDevolucionSolicitada(data: {
         tipo:          'devolucion_solicitada',
         titulo:        'Nueva devolución solicitada',
         mensaje:       `El cliente solicitó devolución de: ${data.productoNombre}`,
-        referenciaType: 'devoluciones_cliente',
+        referenciaType: 'PEDIDO',
         referenciaId:   data.devolucionId,
         urlDestino:    `/admin/Panel-Administrativo/devoluciones/${data.devolucionId}`,
       }),
@@ -267,7 +269,7 @@ export async function notificarStockBajo(data: {
         tipo:          'stock_bajo',
         titulo:        `Stock bajo: ${data.itemNombre}`,
         mensaje:       `Stock de "${data.itemNombre}" bajó a ${data.stockActual} (mínimo: ${data.stockMinimo})`,
-        referenciaType: data.tipoItem,
+        referenciaType: 'PRODUCTO',
         referenciaId:   data.itemId,
         urlDestino:    '/admin/Panel-Administrativo/inventario',
       }),
@@ -288,7 +290,7 @@ export async function notificarPagoPendiente(data: {
         tipo:          'pago_pendiente',
         titulo:        `Pago pendiente: ${data.tallerNombre}`,
         mensaje:       `Confección #${data.confeccionId} completada. Pago pendiente: S/ ${data.monto}`,
-        referenciaType: 'confecciones',
+        referenciaType: 'PAGO',
         referenciaId:   data.confeccionId,
         urlDestino:    '/admin/Panel-Administrativo/talleres/pagos',
       }),
@@ -313,7 +315,7 @@ export async function notificarConfeccionCompletada(data: {
     tipo:          'confeccion_completada',
     titulo:        'Tu confección está lista',
     mensaje:       `La confección del pedido #${data.pedidoId} está lista para despacho.`,
-    referenciaType: 'confecciones',
+    referenciaType: 'ORDEN_PRODUCCION',
     referenciaId:   data.confeccionId,
   });
 }
@@ -458,7 +460,7 @@ export async function aprobarFichaTecnica(
 
   await insertarMovimiento({
     tipoMovimiento: 'ajuste',
-    referenciaType: 'AJUSTE',
+    referenciaType: 'AJUSTE_MANUAL' as ReferenciaMovimiento,
     referenciaId:   fichaId,
     cantidad:        0,
     motivo:          `Ficha técnica #${fichaId} aprobada por usuario ${usuarioId}`,

@@ -1,27 +1,25 @@
+'use client';
+
 import { useCallback } from "react";
 import { toast } from "sonner";
-
-interface RegistroMovimientoParams {
-  insumo_id?: string;
-  material_id?: string;
-  producto_id?: string;
-  cantidad: number;
-  tipo_movimiento: "entrada" | "salida" | "ajuste";
-  referencia_tipo: "ORDEN" | "COMPRA" | "VENTA" | "AJUSTE";
-  motivo: string;
-  costo_unitario?: number;
-}
+import type { CrearMovimientoInput } from "@/lib/schemas/movimientos-inventario";
 
 export function useMovimientosInventario() {
+  
   const registrarMovimiento = useCallback(
-    async (params: RegistroMovimientoParams) => {
+    async (params: CrearMovimientoInput) => {
       try {
+        // Filtrar valores null/undefined antes de enviar
+        const dataLimpia = Object.fromEntries(
+          Object.entries(params).filter(([_, value]) => value !== null && value !== undefined)
+        );
+
         const response = await fetch("/api/admin/movimientos-inventario", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(params),
+          body: JSON.stringify(dataLimpia),
         });
 
         if (!response.ok) {
@@ -30,7 +28,7 @@ export function useMovimientosInventario() {
         }
 
         const data = await response.json();
-        toast.success("Movimiento registrado exitosamente");
+        toast.success("Movimiento de inventario registrado");
         return data.data;
       } catch (error: any) {
         console.error("Error registrando movimiento:", error);
@@ -41,144 +39,169 @@ export function useMovimientosInventario() {
     []
   );
 
+  /**
+   * Registro de Compras (Ingreso de insumos o materiales)
+   */
   const registrarCompra = useCallback(
     async (params: {
-      insumo_id?: string;
-      material_id?: string;
+      almacen_id: string | number;
+      insumo_id?: string | number;
+      material_id?: string | number;
       cantidad: number;
-      costo_unitario: number;
-      orden_compra_id?: string;
       motivo?: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "entrada",
-        referencia_tipo: "COMPRA",
-        motivo: params.motivo || "Compra a proveedor",
-        costo_unitario: params.costo_unitario,
+        tipo_movimiento: "entrada", // Mapea a 'entrada' pura de compra
+        referencia_tipo: "ORDEN_COMPRA",
+        motivo: params.motivo || "Ingreso por compra a proveedor",
       });
     },
     [registrarMovimiento]
   );
 
+  /**
+   * Devolución a Proveedor (Egreso físico de stock defectuoso)
+   */
   const registrarDevolucionProveedor = useCallback(
     async (params: {
-      insumo_id?: string;
-      material_id?: string;
+      almacen_id: string | number;
+      insumo_id?: string | number;
+      material_id?: string | number;
       cantidad: number;
-      costo_unitario: number;
-      devolucion_id?: string;
       motivo: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "salida",
-        referencia_tipo: "COMPRA",
+        tipo_movimiento: "devolucion_a_proveedor", // Sincronizado con Supabase Enum
+        referencia_tipo: "DEVOLUCION",
         motivo: `Devolución a proveedor: ${params.motivo}`,
-        costo_unitario: params.costo_unitario,
       });
     },
     [registrarMovimiento]
   );
 
+  /**
+   * Venta / Despacho a Cliente (Salida de productos terminados)
+   */
   const registrarVenta = useCallback(
     async (params: {
-      producto_id: string;
+      almacen_id: string | number;
+      producto_id: string | number;
       cantidad: number;
-      pedido_id?: string;
       motivo?: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         producto_id: params.producto_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "salida",
-        referencia_tipo: "VENTA",
-        motivo: params.motivo || "Venta de producto",
+        tipo_movimiento: "salida", // Salida comercial común
+        referencia_tipo: "PEDIDO_CLIENTE",
+        motivo: params.motivo || "Salida por despacho de venta",
       });
     },
     [registrarMovimiento]
   );
 
+  /**
+   * Devolución de Cliente (Reingreso de producto al almacén)
+   */
   const registrarDevolucionCliente = useCallback(
     async (params: {
-      producto_id: string;
+      almacen_id: string | number;
+      producto_id: string | number;
       cantidad: number;
-      devolucion_id?: string;
       motivo: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         producto_id: params.producto_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "entrada",
-        referencia_tipo: "VENTA",
+        tipo_movimiento: "devolucion_a_cliente", // Sincronizado con Supabase Enum
+        referencia_tipo: "DEVOLUCION",
         motivo: `Devolución de cliente: ${params.motivo}`,
       });
     },
     [registrarMovimiento]
   );
 
+  /**
+   * Consumo en Fabricación (Salida de materia prima al área de confección)
+   */
   const registrarConsumoFabricacion = useCallback(
     async (params: {
-      insumo_id?: string;
-      material_id?: string;
+      almacen_id: string | number;
+      insumo_id?: string | number;
+      material_id?: string | number;
       cantidad: number;
-      confeccion_id?: string;
       motivo?: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "salida",
-        referencia_tipo: "AJUSTE",
-        motivo: params.motivo || "Consumo en fabricación",
+        tipo_movimiento: "consumo_orden_produccion", // Sincronizado con Supabase Enum
+        referencia_tipo: "ORDEN_PRODUCCION",
+        motivo: params.motivo || "Materia prima enviada a línea de confección",
       });
     },
     [registrarMovimiento]
   );
 
+  /**
+   * Ajuste de Inventario Manual (Ingreso directo de regularización)
+   */
   const registrarIngresoStock = useCallback(
     async (params: {
-      insumo_id?: string;
-      material_id?: string;
-      producto_id?: string;
+      almacen_id: string | number;
+      insumo_id?: string | number;
+      material_id?: string | number;
+      producto_id?: string | number;
       cantidad: number;
       motivo?: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         producto_id: params.producto_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "entrada",
-        referencia_tipo: "AJUSTE",
-        motivo: params.motivo || "Ingreso manual de stock",
+        tipo_movimiento: "ajuste", // Ajuste positivo
+        referencia_tipo: "AJUSTE_MANUAL",
+        motivo: params.motivo || "Corrección de stock mediante ajuste físico manual",
       });
     },
     [registrarMovimiento]
   );
 
+  /**
+   * Registro de Incidencias en Taller / Daños / Mermas
+   */
   const registrarIncidencia = useCallback(
     async (params: {
-      insumo_id?: string;
-      material_id?: string;
-      producto_id?: string;
+      almacen_id: string | number;
+      insumo_id?: string | number;
+      material_id?: string | number;
+      producto_id?: string | number;
       cantidad: number;
-      incidencia_id?: string;
       motivo: string;
     }) => {
       return registrarMovimiento({
+        almacen_id: params.almacen_id,
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         producto_id: params.producto_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "salida",
-        referencia_tipo: "AJUSTE",
-        motivo: `Incidencia: ${params.motivo}`,
+        tipo_movimiento: "incidencia_taller", // Sincronizado con Supabase Enum
+        referencia_tipo: "MERMA_INCIDENCIA",
+        motivo: `Incidencia en taller: ${params.motivo}`,
       });
     },
     [registrarMovimiento]

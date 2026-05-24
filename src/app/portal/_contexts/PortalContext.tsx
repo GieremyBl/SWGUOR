@@ -2,13 +2,15 @@
 
 import {
   createContext, useContext, useEffect, useState,
-  useCallback, useMemo, ReactNode,
+  useCallback, useMemo, useRef, ReactNode,
 } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
+import type { Notificacion } from '@/lib/schemas/notificaciones';
 
 // ── Tipos ────────────────────────────────────────────────────────
 export interface ClientePortal {
   id: number;
+  usuario_id: number;
   ruc: number;
   razon_social: string;
   nombre_comercial: string;
@@ -57,7 +59,6 @@ export const ZONAS_ENVIO: Record<ZonaEnvio, { label: string; costo: number }> = 
   lejana: { label: 'Zona lejana', costo: 25 },
 };
 
-// ── Tipo para reglas de descuento ────────────────────────────────
 interface ReglaDescuento {
   id: number;
   nombre: string;
@@ -86,6 +87,7 @@ export interface ResumenCotizacion {
   es_cliente_nuevo: boolean;
 }
 
+// ── Tipo del contexto — añadimos notificaciones ──────────────────
 interface PortalCtx {
   cliente: ClientePortal | null;
   loading: boolean;
@@ -106,15 +108,23 @@ interface PortalCtx {
     cantidad?: number;
   }) => void;
   stats: { cotizaciones_activas: number; ordenes_activas: number; despachos_en_ruta: number };
+  actualizarCliente: (updates: Partial<ClientePortal>) => void;
+  // ── Notificaciones (instancia única, sin duplicados) ──
+  notificaciones: Notificacion[];
+  unreadCount: number;
+  loadingNotifs: boolean;
+  markAsRead: (id: number) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  refetchNotifs: () => Promise<void>;
 }
 
-// ── Constantes ──────────────────────────────────────────────────
+// ── Constantes ───────────────────────────────────────────────────
 export const MOQ_MINIMO = 400;
 export const MAX_UNIDADES = 2000;
 const IGV = 0.18;
 const TIPO_CLIENTE_NUEVO = 'nuevo';
 
-// ── Lógica de negocio ───────────────────────────────────────────
+// ── Lógica de negocio ────────────────────────────────────────────
 function resolverDescuento(
   items: ItemCotizacion[],
   reglas: ReglaDescuento[],
@@ -188,6 +198,7 @@ function calcularResumen(
   };
 }
 
+// ── Context ──────────────────────────────────────────────────────
 const PortalContext = createContext<PortalCtx | null>(null);
 
 export function PortalProvider({ children }: { children: ReactNode }) {
@@ -201,6 +212,15 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   });
   const [costosEnvio, setCostosEnvio] = useState<CostoEnvioDb[]>([]);
 
+  // ── Estado de notificaciones (única fuente de verdad) ────────
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  // Ref estable para que el canal realtime nunca recree dependencias
+  const fetchNotifsRef = useRef<() => Promise<void>>(async () => {});
+
+  // ── Init: datos del cliente ──────────────────────────────────
   useEffect(() => {
     const init = async () => {
       const supabase = getSupabaseBrowserClient();
@@ -208,15 +228,12 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       if (authError || !user) { setLoading(false); return; }
 
       try {
-        // 1. Reglas
         const { data: reglasData } = await supabase.from('reglas_descuento').select('*').eq('activo', true);
         if (reglasData) setReglas(reglasData);
 
-        // 2. Usuario
         const { data: usuarioData } = await supabase.from('usuarios').select('id').eq('auth_id', user.id).maybeSingle();
         if (!usuarioData) { setLoading(false); return; }
 
-        // 3. Perfil Cliente
         const { data: perfilCompleto } = await supabase
           .from('usuarios')
           .select(`id, cliente_datos:clientes!clientes_usuario_id_fkey (*)`)
@@ -230,23 +247,23 @@ export function PortalProvider({ children }: { children: ReactNode }) {
         if (datosCliente) {
           setCliente({
             id: datosCliente.id,
+            usuario_id: usuarioData.id,
             ruc: Number(datosCliente.ruc),
             razon_social: datosCliente.razon_social || 'Sin Razón Social',
-            direccion: datosCliente.direccion_fiscal || undefined,
+            direccion: datosCliente.direccion_fiscal || 'Sin Dirección',
             email: datosCliente.email,
             telefono: datosCliente.telefono ? Number(datosCliente.telefono.replace(/\D/g, '')) : null,
             tipo_cliente: datosCliente.tipo_cliente || 'corporativo',
             nombre_comercial: datosCliente.nombre_comercial || 'Sin Nombre Comercial',
           });
 
-          // 4. Estadísticas y Costos
           const [cotRes, ordRes, dspRes, costosRes] = await Promise.all([
             supabase.from('cotizaciones').select('id', { count: 'exact', head: true })
               .eq('cliente_id', datosCliente.id).in('estado', ['borrador', 'enviada', 'aprobada']),
             supabase.from('pedidos').select('id', { count: 'exact', head: true })
               .eq('cliente_id', datosCliente.id).not('estado', 'in', '(finalizado,cancelado)'),
             supabase.from('despachos').select('id', { count: 'exact', head: true }).eq('estado', 'en_ruta'),
-            supabase.from('costo_envio').select('*').eq('activo', true).order('id')
+            supabase.from('costo_envio').select('*').eq('activo', true).order('id'),
           ]);
 
           setStats({
@@ -256,23 +273,17 @@ export function PortalProvider({ children }: { children: ReactNode }) {
           });
 
           if (costosRes.data) {
-            // Mapeo seguro para transformar valores de DB a ZonaEnvio (enum del código)
             const mapping: Record<string, ZonaEnvio> = {
-              'cercana_sjl': 'cercana_sjl',
-              'Cercana a SJL': 'cercana_sjl', // Por si la DB guarda el label
-              'media': 'media',
-              'Zona media': 'media',
-              'lejana': 'lejana',
-              'Zona lejana': 'lejana'
+              'cercana_sjl': 'cercana_sjl', 'Cercana a SJL': 'cercana_sjl',
+              'media': 'media', 'Zona media': 'media',
+              'lejana': 'lejana', 'Zona lejana': 'lejana',
             };
-
-            const formateados: CostoEnvioDb[] = costosRes.data.map(c => ({
+            setCostosEnvio(costosRes.data.map(c => ({
               id: c.id,
               zona: mapping[c.zona] || 'cercana_sjl',
               costo: Number(c.costo),
-              activo: c.activo
-            }));
-            setCostosEnvio(formateados);
+              activo: c.activo,
+            })));
           }
         }
       } catch (err) {
@@ -284,6 +295,114 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     init();
   }, []);
 
+  // ── userId estable para notificaciones ───────────────────────
+  const userId = cliente?.usuario_id;
+
+  // ── Fetch notificaciones ─────────────────────────────────────
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
+    setLoadingNotifs(true);
+    try {
+      const res = await fetch(`/api/admin/notificaciones?usuario_id=${userId}`);
+      if (!res.ok) return;
+      const response = await res.json();
+      const raw: any[] = Array.isArray(response.data) ? response.data : [];
+      const normalized: Notificacion[] = raw.map((n) => ({
+        ...n,
+        id: Number(n.id),
+        leido_at: n.leido_at ? new Date(n.leido_at) : null,
+      }));
+      setNotificaciones(normalized);
+      setUnreadCount(response.kpis?.sinLeer ?? normalized.filter((n) => !n.leido).length);
+    } catch (err) {
+      console.error('Error fetching notificaciones:', err);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, [userId]);
+
+  // Mantener ref siempre actualizada sin re-crear el canal
+  useEffect(() => {
+    fetchNotifsRef.current = fetchNotifications;
+  }, [fetchNotifications]);
+
+  // Polling + fetch inicial
+  useEffect(() => {
+    if (!userId) return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 45_000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications, userId]);
+
+  // ── Canal Realtime — UNA sola instancia en todo el portal ────
+  useEffect(() => {
+    if (!userId) return;
+
+    const supabase = getSupabaseBrowserClient();
+    const canalName = `notif_portal_${userId}`;
+
+    const canal = supabase
+      .channel(canalName)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notificaciones',
+          filter: `usuario_id=eq.${userId}`,
+        },
+        () => {
+          // Llama via ref — no genera dependencia en este efecto
+          fetchNotifsRef.current();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn(`[Portal] Error canal realtime ${canalName}`);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [userId]); // ✅ Solo userId — canal se crea una vez por sesión
+
+  // ── Acciones de notificaciones ───────────────────────────────
+  const markAsRead = useCallback(async (id: number) => {
+    try {
+      const res = await fetch(`/api/admin/notificaciones/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('No se pudo actualizar');
+      setNotificaciones(prev =>
+        prev.map(n => n.id === id ? { ...n, leido: true, leido_at: new Date() } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Error markAsRead:', err);
+    }
+  }, []);
+
+  const markAllAsRead = useCallback(async () => {
+    if (!userId || unreadCount === 0) return;
+    try {
+      const res = await fetch('/api/admin/notificaciones', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario_id: userId }),
+      });
+      if (!res.ok) throw new Error('Error al actualizar lote masivo');
+      setNotificaciones(prev =>
+        prev.map(n => !n.leido ? { ...n, leido: true, leido_at: new Date() } : n)
+      );
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error markAllAsRead:', err);
+    }
+  }, [userId, unreadCount]);
+
+  // ── Lógica cotización ────────────────────────────────────────
   const esClienteNuevo = cliente?.tipo_cliente === TIPO_CLIENTE_NUEVO;
 
   const resumen = useMemo(
@@ -313,10 +432,10 @@ export function PortalProvider({ children }: { children: ReactNode }) {
       if (idx >= 0) {
         return prev.map((i, n) => n === idx
           ? {
-            ...i,
-            cantidad: Math.min(MAX_UNIDADES, i.cantidad + (nuevoItem.cantidad || 1)),
-            subtotal: Math.min(MAX_UNIDADES, i.cantidad + (nuevoItem.cantidad || 1)) * i.precio_unitario,
-          }
+              ...i,
+              cantidad: Math.min(MAX_UNIDADES, i.cantidad + (nuevoItem.cantidad || 1)),
+              subtotal: Math.min(MAX_UNIDADES, i.cantidad + (nuevoItem.cantidad || 1)) * i.precio_unitario,
+            }
           : i
         );
       }
@@ -347,15 +466,30 @@ export function PortalProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const eliminarDelBorrador = useCallback((vid: number) => setItems(prev => prev.filter(i => i.variante_id !== vid)), []);
+  const eliminarDelBorrador = useCallback((vid: number) =>
+    setItems(prev => prev.filter(i => i.variante_id !== vid)), []);
+
   const limpiarBorrador = useCallback(() => setItems([]), []);
+
   const actualizarZonaEnvio = useCallback((zona: ZonaEnvio) => setZonaEnvio(zona), []);
+
+  const actualizarCliente = useCallback((updates: Partial<ClientePortal>) => {
+    setCliente((prev) => (prev ? { ...prev, ...updates } : prev));
+  }, []);
 
   return (
     <PortalContext.Provider value={{
-      cliente, loading, items, resumen, zonaEnvio, costosEnvio, // <-- Se incluyó costosEnvio
+      cliente, loading, items, resumen, zonaEnvio, costosEnvio,
       actualizarZonaEnvio, stats, agregarAlBorrador,
       actualizarCantidad, actualizarItem, eliminarDelBorrador, limpiarBorrador,
+      actualizarCliente,
+      // ── Notificaciones ──
+      notificaciones,
+      unreadCount,
+      loadingNotifs,
+      markAsRead,
+      markAllAsRead,
+      refetchNotifs: fetchNotifications,
     }}>
       {children}
     </PortalContext.Provider>

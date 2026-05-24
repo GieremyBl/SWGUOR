@@ -11,11 +11,12 @@ import { z } from "zod";
 
 export const TipoMovimientoEnum = z.enum(["entrada", "salida", "ajuste"]);
 export const ReferenciaMovimientoEnum = z.enum([
-  "COMPRA",
-  "VENTA",
-  "AJUSTE",
-  "ORDEN",
-  "PRODUCCION",
+  "ORDEN_COMPRA",
+  "PEDIDO_CLIENTE",
+  "ORDEN_PRODUCCION",
+  "AJUSTE_MANUAL",
+  "MERMA_INCIDENCIA",
+  "DEVOLUCION",
 ]);
 
 export const TipoNotificacionEnum = z.enum([

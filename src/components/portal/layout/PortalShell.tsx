@@ -34,10 +34,10 @@ export function PortalShell({ children }: PortalShellProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-guor-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm font-medium animate-pulse">Sincronizando portal...</p>
+          <div className="w-10 h-10 border-4 border-guor-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-guor-soft text-sm font-medium animate-pulse">Sincronizando portal...</p>
         </div>
       </div>
     );
@@ -46,7 +46,7 @@ export function PortalShell({ children }: PortalShellProps) {
   if (!cliente) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-hidden">
+    <div className="min-h-screen bg-guor-bg flex overflow-hidden">
       <PortalSidebar
         collapsed={collapsed}
         onToggle={() => setCollapsed((prev) => !prev)}
@@ -54,11 +54,11 @@ export function PortalShell({ children }: PortalShellProps) {
 
       <div
         className={cn(
-          'flex-1 flex flex-col transition-all duration-500 ease-in-out min-h-screen relative',
-          collapsed ? 'pl-20' : 'pl-72',
+          'flex-1 flex flex-col transition-all duration-300 ease-in-out min-h-screen relative',
+          collapsed ? 'pl-[68px]' : 'pl-[264px]',
         )}
       >
-        <Navbar empresa={cliente.razon_social ?? cliente.nombre_comercial ?? undefined} />
+        <Navbar empresa={cliente.nombre_comercial ?? cliente.razon_social ?? undefined} />
 
         <main className="flex-1 relative overflow-y-auto px-6 py-8">
           <div className="max-w-[1400px] mx-auto">
@@ -69,4 +69,4 @@ export function PortalShell({ children }: PortalShellProps) {
       </div>
     </div>
   );
-}
+}

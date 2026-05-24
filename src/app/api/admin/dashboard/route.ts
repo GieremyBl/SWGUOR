@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   if (!auth.success) {
     // Si no es exitoso, 'auth' tiene error y status
     return NextResponse.json(
-      { error: (auth as any).error || 'No autorizado' },
-      { status: (auth as any).status || 401 }
+      { error: (auth).error || 'No autorizado' },
+      { status: (auth).status || 401 }
     );
   }
 

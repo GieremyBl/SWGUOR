@@ -1,11 +1,14 @@
 import { prisma } from '@/lib/prisma';
+import type { almacenes } from '@prisma/client';
 
 export const almacenesService = {
-  crear: async (datos: any): Promise<any> => {
+  crear: async (datos: Partial<almacenes>): Promise<almacenes> => {
+    if (!datos.nombre) throw new Error('El nombre del almacén es obligatorio');
+
     return await prisma.almacenes.create({
       data: {
         nombre: datos.nombre,
-        estado: 'activo',
+        estado: true,
         descripcion: datos.descripcion,
         direccion: datos.direccion,
         telefono: datos.telefono,
@@ -16,22 +19,20 @@ export const almacenesService = {
     });
   },
 
-  obtenerTodos: async (filtros?: any): Promise<any[]> => {
-    const where: any = { estado: 'activo' };
-
+  obtenerTodos: async (): Promise<almacenes[]> => {
     return await prisma.almacenes.findMany({
-      where,
+      where: { estado: true },
       orderBy: { nombre: 'asc' },
     });
   },
 
-  obtenerPorId: async (id: string): Promise<any> => {
+  obtenerPorId: async (id: string): Promise<almacenes | null> => {
     return await prisma.almacenes.findUnique({
       where: { id: BigInt(id) },
     });
   },
 
-  actualizar: async (id: string, datos: any): Promise<any> => {
+  actualizar: async (id: string, datos: Partial<almacenes>): Promise<almacenes> => {
     return await prisma.almacenes.update({
       where: { id: BigInt(id) },
       data: {
@@ -58,15 +59,15 @@ export const almacenesService = {
     };
   },
 
-  actualizarCapacidad: async (id: string, _nuevoUso: number): Promise<any> => {
+  actualizarCapacidad: async (id: string, _nuevoUso: number): Promise<almacenes> => {
     return await prisma.almacenes.findUniqueOrThrow({
       where: { id: BigInt(id) },
     });
   },
 
-  obtenerAlmacenesCriticos: async (): Promise<any[]> => {
+  obtenerAlmacenesCriticos: async (): Promise<almacenes[]> => {
     return await prisma.almacenes.findMany({
-      where: { estado: 'activo' },
+      where: { estado: true },
     });
   },
 };
