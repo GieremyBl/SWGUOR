@@ -12,10 +12,11 @@ export * from './helpers/format-helpers';
 export * from './helpers/productos-helpers';
 export * from './helpers/ordenes-produccion-helpers';
 export * from './helpers/fichas-tecnicas-helpers';
-export * from './helpers/notificacionesHelpers';
+export * from './helpers/notificaciones-helpers';
 export * from './helpers/usuarios-helpers';
 export * from './helpers/ai-extraction';
-export * from './helpers/inventario-helpers';
+// Namespace the inventario helpers to avoid duplicate export name conflicts
+export * as inventarioHelpers from './helpers/inventario-helpers';
 export * from './helpers/asientos-contables-helpers';
 export * from './helpers/clientes-helpers';
 
@@ -34,7 +35,7 @@ export type * from './helpers/format-helpers';
 export type * from './helpers/productos-helpers';
 export type * from './helpers/ordenes-produccion-helpers';
 export type * from './helpers/fichas-tecnicas-helpers';
-export type * from './helpers/notificacionesHelpers';
+export type * from './helpers/notificaciones-helpers';
 export type * from './helpers/usuarios-helpers';
 export type * from './hooks/useAuth';
 export type * from './hooks/useInventario';

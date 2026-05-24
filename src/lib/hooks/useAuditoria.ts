@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Auditoria } from '@/lib/schemas/auditoriaSchema';
+import { Auditoria } from '@/lib/schemas/auditoria';
 
 export function useAuditoria() {
   const [registros, setRegistros] = useState<Auditoria[]>([]);

@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import { Rol } from '@prisma/client';
 
-// Cliente admin con service role — solo para operaciones server-side críticas
-// NUNCA exponer SUPABASE_SERVICE_ROLE_KEY al cliente
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -11,46 +8,37 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(request: Request) {
-  // IDs para rollback en caso de fallo parcial
   let authUserId: string | null = null;
   let usuarioId: number | null = null;
   let clienteId: number | null = null;
 
   try {
     const {
-      // Credenciales
       email,
       password,
-      // Datos de usuarios
-      nombre_completo,
       telefono,
-      // Datos de clientes
       ruc,
       razon_social,
       nombre_comercial,
-      direccion_fiscal,
-      tipo_cliente = 'corporativo', // default a corporativo si no se especifica
+      direccion,
+      tipo_cliente = 'corporativo',
     } = await request.json();
 
-    // --- Validaciones básicas ---
-    if (!email || !password || !nombre_completo || !ruc || !razon_social) {
+    if (!email || !password || !ruc || !razon_social) {
       return NextResponse.json(
-        { error: 'Faltan campos obligatorios: email, password, nombre_completo, ruc, razon_social' },
+        { error: 'Faltan campos obligatorios: email, password, ruc, razon_social' },
         { status: 400 }
       );
     }
 
     // -------------------------------------------------------
     // PASO 1: Crear usuario en Supabase Auth
-    //
-    // email_confirm: false → Supabase envía el correo de confirmación
-    // automáticamente a través del SMTP de Resend que configuraste.
-    // El usuario queda en estado "pendiente" hasta que confirme.
+    // email_confirm: true → cuenta activa inmediatamente, sin verificación
     // -------------------------------------------------------
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: false, // ← Resend enviará el email de confirmación
+      email_confirm: true, // ← Activo inmediatamente, sin correo de verificación
     });
 
     if (authError || !authData.user) {
@@ -73,7 +61,7 @@ export async function POST(request: Request) {
       .insert({
         auth_id: authUserId,
         email,
-        rol: Rol,
+        rol: 'cliente', // ← valor correcto del enum, no el tipo
         estado: 'activo',
       })
       .select('id')
@@ -91,15 +79,15 @@ export async function POST(request: Request) {
     const { data: nuevoCliente, error: clienteError } = await supabaseAdmin
       .from('clientes')
       .insert({
-        usuario_id:       usuarioId,
+        usuario_id: usuarioId,
         ruc,
         razon_social,
-        nombre_comercial: nombre_comercial,
+        nombre_comercial: nombre_comercial ?? null,
         email,
-        telefono:         telefono ?? null,
-        direccion_fiscal: direccion_fiscal ?? null,
-        tipo_cliente:     (tipo_cliente ?? 'corporativo') as any,
-        activo:           'activo' as any,
+        telefono: telefono ?? null,
+        direccion_fiscal: direccion ?? null,
+        tipo_cliente: (tipo_cliente ?? 'corporativo') as any,
+        activo: 'activo' as any,
       })
       .select('id')
       .single();
@@ -114,56 +102,39 @@ export async function POST(request: Request) {
       throw new Error(`Cliente insert error: ${clienteError?.message}`);
     }
 
-    // -------------------------------------------------------
-    // Todo OK — NO hacemos signInWithPassword aquí.
-    // El usuario debe confirmar su email primero (via Resend).
-    // Supabase redirigirá al usuario a tu /auth/callback
-    // una vez que haga clic en el enlace del correo.
-    // -------------------------------------------------------
+    clienteId = nuevoCliente.id; // ← ahora sí se asigna correctamente para el rollback
+
     return NextResponse.json(
       {
         success: true,
-        message: 'Revisa tu email para confirmar tu cuenta',
+        message: 'Cuenta creada exitosamente',
         user_id: usuarioId,
         cliente_id: clienteId,
       },
       { status: 201 }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en registro:', error);
 
-    // -------------------------------------------------------
-    // ROLLBACK MANUAL en orden inverso
-    // -------------------------------------------------------
-
-    // 1. Eliminar cliente si se creó
+    // Rollback en orden inverso
     if (clienteId) {
-      const { error: rollbackCliente } = await supabaseAdmin
-        .from('clientes')
-        .delete()
-        .eq('id', clienteId);
-      if (rollbackCliente) console.error('Rollback clientes falló:', rollbackCliente);
+      const { error: e } = await supabaseAdmin.from('clientes').delete().eq('id', clienteId);
+      if (e) console.error('Rollback clientes falló:', e);
     }
-
-    // 2. Eliminar usuario de la tabla usuarios
     if (usuarioId) {
-      const { error: rollbackUsuario } = await supabaseAdmin
-        .from('usuarios')
-        .delete()
-        .eq('id', usuarioId);
-      if (rollbackUsuario) console.error('Rollback usuarios falló:', rollbackUsuario);
+      const { error: e } = await supabaseAdmin.from('usuarios').delete().eq('id', usuarioId);
+      if (e) console.error('Rollback usuarios falló:', e);
     }
-
-    // 3. Eliminar usuario de Supabase Auth
     if (authUserId) {
-      const { error: rollbackAuth } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
-      if (rollbackAuth) console.error('Rollback auth falló:', rollbackAuth);
+      const { error: e } = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      if (e) console.error('Rollback auth falló:', e);
     }
 
-    return NextResponse.json(
-      { error: 'Error al crear la cuenta. Intente nuevamente.' },
-      { status: 500 }
-    );
+    const mensajeError = error?.message?.includes('RUC') || error?.message?.includes('usuario ya tiene')
+      ? error.message
+      : 'Error al crear la cuenta. Intente nuevamente.';
+
+    return NextResponse.json({ error: mensajeError }, { status: 500 });
   }
 }

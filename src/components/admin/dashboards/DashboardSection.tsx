@@ -4,80 +4,117 @@ import React from 'react';
 import { Shield, ChevronRight } from 'lucide-react';
 
 interface DashboardSectionProps {
-  title: string;
+  title:    string;
   subtitle?: string;
-  role: 'administrador' | 'gerente' | 'recepcionista' | 'disenador' | 'cortador' | 'ayudante' | 'representante_taller';
+  role:     'administrador' | 'gerente' | 'recepcionista' | 'disenador' | 'cortador' | 'ayudante' | 'representante_taller';
   actions?: React.ReactNode;
   children: React.ReactNode;
 }
 
-/**
- * PALETA DE COLORES DE LA EMPRESA
- * Crema: #FFF9F2 | Melocotón: #F2D2BD | Terracota: #E2725B 
- * Arcilla: #C05A31 | Dorado Pálido: #F0E4D0 | Oscuro Café: #2B1B12 
- * Beige (Fondo): #FAF7F2 | Blanco: #FFFFFF
- */
+const P = {
+  bg:     '#f4f6f9',
+  white:  '#ffffff',
+  border: '#d4dae5',
+  text:   '#0f172a',
+  muted:  '#64748b',
+  accent: '#1d3fa6',
+};
 
-export function DashboardSection({ 
-  title, 
-  subtitle, 
-  actions, 
-  children 
-}: DashboardSectionProps) {
-  
+export function DashboardSection({ title, subtitle, actions, children }: DashboardSectionProps) {
   return (
-    <div className="min-h-screen bg-white">
-      {/* HEADER INSTITUCIONAL */}
-      <header className="px-8 py-8 border-b border-[#F2D2BD]/30 bg-[#FAF7F2]/40">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          
-          <div className="flex items-center gap-5">
-            {/* Icono con identidad de marca */}
-            <div className="p-3 bg-white rounded-2xl shadow-sm border border-[#F2D2BD] text-[#E2725B]">
-              <Shield size={26} strokeWidth={2.5} />
+    <div style={{ minHeight: '100vh', background: P.bg }}>
+
+      {/* ── HEADER ──────────────────────────────────────────────────────────── */}
+      <header style={{
+        background:   P.white,
+        borderBottom: `1px solid ${P.border}`,
+        boxShadow:    '0 1px 0 0 #d4dae5',
+        padding:      '0 32px',
+      }}>
+        <div style={{
+          maxWidth: 1280, margin: '0 auto',
+          display: 'flex', flexWrap: 'wrap', gap: 12,
+          justifyContent: 'space-between', alignItems: 'center',
+          padding: '18px 0',
+        }}>
+
+          {/* Identidad */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+            <div style={{
+              flexShrink: 0,
+              padding: 8,
+              background: '#f0f4ff',
+              borderRadius: 8,
+              border: `1px solid #c0d0ff`,
+              color: P.accent,
+              display: 'flex',
+            }}>
+              <Shield size={20} strokeWidth={2.5} />
             </div>
 
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-black text-[#C05A31] tracking-[0.2em] uppercase">
-                  GUOR INTERNACIONAL
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 800, color: P.accent,
+                  textTransform: 'uppercase', letterSpacing: '0.18em', whiteSpace: 'nowrap',
+                }}>
+                  MODAS Y ESTILOS GUOR
                 </span>
-                <ChevronRight size={10} className="text-[#F2D2BD]" />
-                <span className="text-[10px] font-bold text-[#2B1B12]/40 uppercase tracking-wider">
+                <ChevronRight size={9} style={{ color: P.muted, flexShrink: 0 }} />
+                <span style={{
+                  fontSize: 9, fontWeight: 600, color: P.muted,
+                  textTransform: 'uppercase', letterSpacing: '0.1em', whiteSpace: 'nowrap',
+                }}>
                   Sistema de Gestión
                 </span>
               </div>
-              
-              <h1 className="text-3xl font-black text-[#2B1B12] tracking-tighter leading-none">
+
+              <h1 style={{
+                fontSize: 22, fontWeight: 800, color: P.text,
+                letterSpacing: '-0.02em', lineHeight: 1.2,
+                margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
                 {title}
               </h1>
-              
+
               {subtitle && (
-                <p className="text-sm text-[#2B1B12]/60 font-medium mt-2 max-w-md">
+                <p style={{
+                  fontSize: 12, color: P.muted, fontWeight: 400,
+                  marginTop: 3, maxWidth: 420,
+                }}>
                   {subtitle}
                 </p>
               )}
             </div>
           </div>
 
-          {/* ACCIONES (Botones, Filtros) */}
-          <div className="flex items-center gap-3">
-            {actions}
-          </div>
+          {/* Acciones */}
+          {actions && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {actions}
+            </div>
+          )}
         </div>
       </header>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="max-w-7xl mx-auto px-8 py-10">
-        <div className="flex flex-col gap-8">
+      {/* ── CONTENIDO ───────────────────────────────────────────────────────── */}
+      <main style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 32px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {children}
         </div>
       </main>
 
-      {/* Footer Sutil opcional */}
-      <footer className="max-w-7xl mx-auto px-8 py-6 border-t border-[#F2D2BD]/20">
-        <p className="text-[10px] text-center text-[#2B1B12]/30 font-bold uppercase tracking-widest">
-          © {new Date().getFullYear()} Guor Internacional - Panel de Control
+      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
+      <footer style={{
+        maxWidth: 1280, margin: '0 auto',
+        padding: '16px 32px',
+        borderTop: `1px solid ${P.border}`,
+      }}>
+        <p style={{
+          fontSize: 10, textAlign: 'center', color: P.muted,
+          fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em',
+        }}>
+          © {new Date().getFullYear()} Modas y Estilos GUOR — Panel de Control
         </p>
       </footer>
     </div>

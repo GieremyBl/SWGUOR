@@ -9,14 +9,19 @@ import {
   PERMISOS_RECURSO_POR_ROL 
 } from '@/lib/constants/roles';
 
+export interface PersonalInternoRelacion {
+  nombre_completo: string | null;
+}
+
 export interface UsuarioContext {
-  id: number;
-  email?: string;
-  rol: RolUsuario;
-  estado: string;
-  auth_id?: string | null;
-  ultimo_acceso?: string | null;
-  created_at?: string;
+  id: bigint;
+  email: string;
+  rol: string | null;
+  estado: string | null;
+  auth_id: string | null;
+  ultimo_acceso: Date | null;
+  created_at: Date | null;
+  personal_interno: PersonalInternoRelacion[];
 }
 
 export interface PermissionsContextType {
@@ -29,7 +34,16 @@ export interface PermissionsContextType {
   hasRole: (rol: RolUsuario | RolUsuario[]) => boolean;
 }
 
-const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
+// Inicialización limpia sin utilizar "undefined"
+const PermissionsContext = createContext<PermissionsContextType>({
+  usuario: null,
+  role: null,
+  isAdmin: false,
+  isLoading: false,
+  permissions: {},
+  can: () => false,
+  hasRole: () => false,
+});
 
 export function PermissionsProvider({ 
   usuario, 
@@ -42,8 +56,7 @@ export function PermissionsProvider({
 }) {
   const role = useMemo(() => {
     if (!usuario?.rol) return null;
-    // Normalizar rol si es necesario (ya viene normalizado del servidor usualmente)
-    return usuario.rol as RolUsuario;
+    return usuario.rol.toLowerCase() as RolUsuario;
   }, [usuario?.rol]);
 
   const isAdmin = useMemo(() => 
@@ -82,11 +95,5 @@ export function PermissionsProvider({
 }
 
 export function usePermissionsContext() {
-  const context = useContext(PermissionsContext);
-  if (context === undefined) {
-    // Si no hay context, devolvemos un estado por defecto para evitar crashes,
-    // pero idealmente siempre debería estar bajo un provider en la zona admin.
-    return null;
-  }
-  return context;
+  return useContext(PermissionsContext);
 }

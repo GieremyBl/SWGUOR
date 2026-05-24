@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, Bell, Inbox } from 'lucide-react';
+import { Search, Inbox } from 'lucide-react';
 import type { Notificacion } from '@/lib/schemas/notificaciones';
-import { TipoNotificacion } from '@prisma/client';
+import { NotificationItem } from '@/components/admin/notificaciones/NotificationItem';
 
-const TIPO_CONFIG: Record<TipoNotificacion, { label: string; color: string }> = {
+const TIPO_CONFIG = {
   stock_bajo: { label: 'Stock bajo', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   pedido_vencido: { label: 'Pedido vencido', color: 'bg-red-50 text-red-700 border-red-200' },
   pago_pendiente: { label: 'Pago pendiente', color: 'bg-rose-50 text-rose-700 border-rose-200' },
@@ -39,20 +39,19 @@ export default function NotificacionesTable({ data = [] }: { data: Notificacion[
         />
       </div>
 
-      <div className="overflow-hidden">
+      <div className="overflow-hidden border border-slate-100 rounded-2xl bg-white shadow-sm">
         <Table>
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Estado</TableHead>
-              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Información</TableHead>
-              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Categoría</TableHead>
-              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fecha</TableHead>
+              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-[120px]">Estado</TableHead>
+              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Notificación / Detalle</TableHead>
+              <TableHead className="py-4 px-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest w-[160px]">Categoría</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-16 text-center">
+                <TableCell colSpan={3} className="py-16 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <Inbox className="w-8 h-8 text-gray-200" />
                     <span className="text-gray-400 italic text-sm">No hay notificaciones</span>
@@ -60,30 +59,28 @@ export default function NotificacionesTable({ data = [] }: { data: Notificacion[
                 </TableCell>
               </TableRow>
             ) : filtered.map((n) => {
-              const conf = TIPO_CONFIG[n.tipo] ?? TIPO_CONFIG.sistema;
+              const conf = TIPO_CONFIG[n.tipo as keyof typeof TIPO_CONFIG] ?? TIPO_CONFIG.sistema;
               return (
-                <TableRow key={n.id} className={`group hover:bg-slate-50/50 transition-colors ${n.leido ? 'opacity-50' : ''}`}>
-                  <TableCell className="py-4 px-5">
-                    {n.leido
-                      ? <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider rounded-lg border-slate-200 text-slate-400">Leída</Badge>
-                      : <Badge className="text-[10px] uppercase font-bold tracking-wider rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-100">Nueva</Badge>
-                    }
+                <TableRow key={n.id} className="hover:bg-transparent">
+                  {/* Badge Izquierdo de Estado */}
+                  <TableCell className="py-4 px-5 align-middle">
+                    {n.leido ? (
+                      <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider rounded-lg border-slate-200 text-slate-400">Leída</Badge>
+                    ) : (
+                      <Badge className="text-[10px] uppercase font-bold tracking-wider rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-100">Nueva</Badge>
+                    )}
                   </TableCell>
-                  <TableCell className="py-4 px-5">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{n.titulo}</span>
-                      <p className="text-xs text-slate-500 max-w-md line-clamp-1">{n.mensaje}</p>
-                    </div>
+                  
+                  {/* Reutilización del Item para el cuerpo e información interna */}
+                  <TableCell className="p-0">
+                    <NotificationItem notificacion={n} compacto={false} />
                   </TableCell>
-                  <TableCell className="py-4 px-5">
-                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${conf.color}`}>
+                  
+                  {/* Categoría o Módulo Impactado */}
+                  <TableCell className="py-4 px-5 align-middle">
+                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border block text-center ${conf.color}`}>
                       {conf.label}
                     </span>
-                  </TableCell>
-                  <TableCell className="py-4 px-5 text-xs text-slate-400 font-medium whitespace-nowrap">
-                    {new Date(n.created_at).toLocaleDateString('es-PE', {
-                      day: '2-digit', month: 'short', year: 'numeric',
-                    })}
                   </TableCell>
                 </TableRow>
               );

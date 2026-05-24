@@ -20,8 +20,6 @@ export type TipoIncidenciaCliente =
 
 export type SeveridadIncidencia = 'baja' | 'media' | 'alta' | 'critica';
 
-// ── Tipos nuevos basados en despachos_grupos ──────────────────────────────────
-
 export interface SeguimientoDespacho {
   id: number;
   grupo_despacho_id: number;
@@ -53,10 +51,9 @@ export interface DespachoGrupo {
   seguimiento_despachos: SeguimientoDespacho[];
 }
 
-// Vista aplanada para los componentes
 export interface DespachoFlat {
   id: number;
-  codigo: string;           // "DES-0001"
+  codigo: string;
   estado: EstadoDespacho;
   direccion_entrega: string;
   fecha_despacho: string;
@@ -73,85 +70,34 @@ export interface CreateIncidenciaPayload {
   evidencia_url: string[];
 }
 
-// ─── Select base ──────────────────────────────────────────────────────────────
-
-const DESPACHO_GRUPO_SELECT = `
-  id,
-  direccion_entrega,
-  direccion_entrega_original,
-  estado,
-  fecha_despacho,
-  fecha_entrega,
-  created_at,
-  updated_at,
-  despachos_grupo_pedidos (
-    id,
-    grupo_despacho_id,
-    despacho_id,
-    pedido_id,
-    created_at
-  ),
-  seguimiento_despachos (
-    id,
-    grupo_despacho_id,
-    status,
-    notas,
-    creado_por,
-    created_at,
-    updated_at
-  )
-` as const;
-
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getDespachoActivos(clienteId?: number): Promise<DespachoGrupo[]> {
-  const supabase = getSupabaseBrowserClient();
+export async function getDespachoActivos(): Promise<DespachoGrupo[]> {
+  const res = await fetch('/api/portal/despachos', {
+    credentials: 'include',
+  });
 
-  let query = supabase
-    .from('despachos_grupos')
-    .select(DESPACHO_GRUPO_SELECT)
-    .not('estado', 'eq', 'entregado')
-    .order('id', { ascending: false });
-
-  // Si hay clienteId filtramos a través de la join table
-  if (clienteId) {
-    // Primero obtenemos los grupo_despacho_id que pertenecen al cliente
-    const { data: grupos, error: gErr } = await supabase
-      .from('despachos_grupo_pedidos')
-      .select('grupo_despacho_id, pedidos!inner(cliente_id)')
-      .eq('pedidos.cliente_id', clienteId);
-
-    if (gErr) throw new Error(gErr.message);
-
-    const ids = [...new Set((grupos ?? []).map((g: any) => g.grupo_despacho_id))];
-    if (ids.length === 0) return [];
-
-    query = supabase
-      .from('despachos_grupos')
-      .select(DESPACHO_GRUPO_SELECT)
-      .in('id', ids)
-      .not('estado', 'eq', 'entregado')
-      .order('id', { ascending: false });
+  if (!res.ok) {
+    const body = await res.json() as { error?: string };
+    throw new Error(body.error ?? `Error ${res.status}`);
   }
 
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []) as unknown as DespachoGrupo[];
+  return res.json() as Promise<DespachoGrupo[]>;
 }
 
 export async function getDespachoById(id: number): Promise<DespachoGrupo | null> {
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('despachos_grupos')
-    .select(DESPACHO_GRUPO_SELECT)
-    .eq('id', id)
-    .single();
+  const res = await fetch(`/api/portal/despachos/${id}`, {
+    credentials: 'include',
+  });
 
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw new Error(error.message);
+  if (res.status === 404) return null;
+
+  if (!res.ok) {
+    const body = await res.json() as { error?: string };
+    throw new Error(body.error ?? `Error ${res.status}`);
   }
-  return data as unknown as DespachoGrupo;
+
+  return res.json() as Promise<DespachoGrupo>;
 }
 
 // ─── Realtime ─────────────────────────────────────────────────────────────────
@@ -159,8 +105,9 @@ export async function getDespachoById(id: number): Promise<DespachoGrupo | null>
 export function subscribeToGrupo(
   grupoId: number,
   onUpdate: (seguimiento: SeguimientoDespacho) => void,
-) {
+): () => void {
   const supabase = getSupabaseBrowserClient();
+
   const channel = supabase
     .channel(`seguimiento-despacho-${grupoId}`)
     .on(
@@ -175,14 +122,14 @@ export function subscribeToGrupo(
     )
     .subscribe();
 
-  return () => supabase.removeChannel(channel);
+  return () => { supabase.removeChannel(channel); };
 }
 
 // ─── Incidencias ──────────────────────────────────────────────────────────────
 
 export async function uploadEvidencia(pedidoId: number, file: File): Promise<string> {
   const supabase = getSupabaseBrowserClient();
-  const ext = file.name.split('.').pop();
+  const ext = file.name.split('.').pop() ?? 'jpg';
   const path = `incidencias/${pedidoId}/${Date.now()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
@@ -199,6 +146,7 @@ export async function createIncidenciaCliente(
   payload: CreateIncidenciaPayload,
 ): Promise<void> {
   const supabase = getSupabaseBrowserClient();
+
   const { error } = await supabase.from('incidencias_cliente').insert({
     pedido_id: payload.pedido_id,
     tipo: payload.tipo,

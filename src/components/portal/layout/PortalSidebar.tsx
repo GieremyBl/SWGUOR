@@ -1,45 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, ShoppingBag, Truck,
-  PanelLeftClose, Package, PanelLeft, LogOut,
-  Settings, UserCircle, PackageOpen,
+  ChevronRight, Settings, Package, PackageOpen
 } from 'lucide-react';
 
-import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
-const MENU_GROUPS = [
-  {
-    group: 'Menú Principal',
-    items: [{ href: '/portal/dashboard', label: 'Inicio', icon: LayoutDashboard }],
-  },
-  {
-    group: 'Comercial',
-    items: [
-      { href: '/portal/productos', label: 'Catálogo', icon: ShoppingBag },
-      { href: '/portal/cotizaciones', label: 'Cotizaciones', icon: FileText },
-      { href: '/portal/pedidos', label: 'Mis Pedidos', icon: Package },
-    ],
-  },
-  {
-    group: 'Logística & Despachos',
-    items: [
-      { href: '/portal/seguimiento-pedido', label: 'Trazabilidad', icon: Truck },
-      { href: '/portal/despachos', label: 'Envíos', icon: PackageOpen },
-
-    ],
-  },
-  {
-    group: 'Cuenta',
-    items: [
-      { href: '/portal/perfil', label: 'Mi Perfil', icon: UserCircle },
-      { href: '/portal/configuracion', label: 'Ajustes', icon: Settings },
-    ],
-  },
+// ─── Estructura Plana de Navegación (Estilo ERP) ──────────────────────────────
+const NAV_ITEMS = [
+  { href: '/portal/dashboard', label: 'Inicio', icon: LayoutDashboard },
+  { href: '/portal/productos', label: 'Catálogo', icon: ShoppingBag },
+  { href: '/portal/cotizaciones', label: 'Cotizaciones', icon: FileText },
+  { href: '/portal/pedidos', label: 'Mis Pedidos', icon: Package },
+  { href: '/portal/seguimiento-pedido', label: 'Trazabilidad', icon: Truck },
+  { href: '/portal/despachos', label: 'Envíos', icon: PackageOpen },
+  { href: '/portal/configuracion', label: 'Ajustes', icon: Settings },
 ];
 
 interface PortalSidebarProps {
@@ -49,106 +27,94 @@ interface PortalSidebarProps {
 
 export function PortalSidebar({ collapsed, onToggle }: PortalSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    await getSupabaseBrowserClient().auth.signOut();
-    router.replace('/auth/login');
-  };
-
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 h-full flex flex-col z-40 transition-all duration-500 ease-in-out',
-        'bg-[#0f172a] text-slate-200 border-r border-white/5',
-        collapsed ? 'w-20' : 'w-72',
+        'flex flex-col h-screen border-r border-slate-200/80',
+        'fixed left-0 top-0 z-40 bg-white',
+        'transition-[width] duration-300 ease-in-out overflow-hidden',
+        collapsed ? 'w-[68px]' : 'w-[264px]',
       )}
     >
-      {/* ── Logo Section ── */}
-      <div className="flex items-center h-24 px-6 mb-4">
-        {!collapsed ? (
-          <div className="flex items-center gap-4 flex-1 animate-in fade-in slide-in-from-left-4 duration-500">
-            <div className="relative w-12 h-12 bg-white/5 rounded-2xl p-2 border border-white/10">
-              <Image src="/logo.png" alt="Logo" fill className="object-contain p-1" priority />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-white font-bold text-lg tracking-tight leading-none">GUOR <span className="text-[#d4af37]">PRO</span></span>
-              <span className="text-slate-500 text-[10px] font-medium tracking-[0.2em] uppercase mt-1">Portal Corporativo</span>
-            </div>
-          </div>
-        ) : (
-          <div className="relative w-10 h-10 mx-auto bg-white/5 rounded-xl p-1.5 border border-white/10">
-            <Image src="/logo.png" alt="Logo" fill className="object-contain" priority />
+      {/* ── Logo Section (Mismo tamaño y bordes que el ERP) ── */}
+      <div className={cn(
+        'flex items-center border-b border-slate-100 shrink-0 overflow-hidden transition-all duration-300',
+        collapsed ? 'h-20 px-3 justify-center' : 'h-20 px-5 gap-3.5 justify-start',
+      )}>
+        <div className="w-11 h-11 rounded-full border border-rose-500/30 bg-white flex items-center justify-center shrink-0 overflow-hidden p-0.5 shadow-sm">
+          <img src="/logo.png" alt="GUOR" className="w-full h-full object-cover rounded-full" />
+        </div>
+        {!collapsed && (
+          <div className="flex-1 min-w-0 overflow-hidden text-left animate-in fade-in duration-200">
+            <p className="font-black text-slate-900 text-sm leading-none tracking-tight">Portal <span className="text-rose-500">Corporativo</span></p>
           </div>
         )}
       </div>
 
-      {/* ── Navigation ── */}
-      <nav className="flex-1 px-4 py-4 overflow-y-auto custom-scrollbar space-y-8">
-        {MENU_GROUPS.map((group) => (
-          <div key={group.group} className="space-y-2">
-            {!collapsed && (
-              <h3 className="text-[10px] uppercase font-bold text-slate-500 tracking-[0.15em] mb-3 px-3 opacity-80">
-                {group.group}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {group.items.map((item) => {
-                const active = pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl text-[13.5px] font-medium transition-all duration-300 relative group',
-                      active
-                        ? 'bg-gradient-to-r from-[#d4af37]/20 to-transparent text-white border-l-2 border-[#d4af37]'
-                        : 'text-slate-400 hover:text-white hover:bg-white/5',
-                    )}
-                  >
-                    <item.icon
-                      size={18}
-                      className={cn(
-                        'transition-transform duration-300 group-hover:scale-110',
-                        active ? 'text-[#d4af37]' : 'text-slate-500 group-hover:text-slate-300',
-                      )}
-                    />
-                    {!collapsed && (
-                      <span className="flex-1 truncate">{item.label}</span>
-                    )}
-                    {active && !collapsed && (
-                      <div className="absolute right-4 w-1.5 h-1.5 rounded-full bg-[#d4af37] shadow-[0_0_10px_#d4af37]" />
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      {/* ── Navigation (Fluida, sin subtítulos molestos) ── */}
+      <nav className={cn(
+        'flex-1 overflow-y-auto overflow-x-hidden py-4 text-left',
+        collapsed ? 'px-2 space-y-2' : 'px-4 space-y-1.5',
+      )}>
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname.startsWith(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center rounded-xl transition-all duration-200 cursor-pointer select-none w-full text-left',
+                collapsed ? 'justify-center p-3' : 'justify-start gap-x-4 px-4 py-2.5',
+                isActive
+                  ? 'bg-rose-50 text-rose-600'
+                  : 'text-slate-600 hover:bg-slate-50/80 hover:text-slate-900',
+              )}
+            >
+              <Icon
+                size={19}
+                strokeWidth={isActive ? 2.3 : 1.6}
+                className="shrink-0"
+              />
+              {!collapsed && (
+                <span className={cn(
+                  'flex-1 text-[13.5px] font-medium truncate tracking-wide',
+                  isActive && 'font-semibold text-rose-700',
+                )}>
+                  {item.label}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* ── Footer / Logout ── */}
-      <div className="p-4 mt-auto">
+      {/* ── Footer / Toggle y Cerrar Sesión (Idéntico al ERP) ── */}
+      <div className="shrink-0 border-t border-slate-100 p-2 space-y-1 text-left">
+
+        {/* Botón de Contraer/Expandir del ERP */}
         <button
           onClick={onToggle}
-          className="w-full flex items-center justify-center p-2 mb-2 rounded-lg bg-white/5 text-slate-500 hover:text-white transition-colors"
+          className={cn(
+            'hidden lg:flex items-center w-full rounded-xl px-4 py-3 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all duration-200',
+            collapsed ? 'justify-center p-3' : 'justify-start gap-3.5',
+          )}
+          title={collapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
         >
-          {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+          <div className="relative w-4 h-4 shrink-0 flex items-center justify-center">
+            <ChevronRight
+              size={16}
+              className={cn(
+                'absolute transition-all duration-300',
+                collapsed ? 'opacity-100 rotate-0' : 'opacity-100 rotate-180',
+              )}
+            />
+          </div>
+          {!collapsed && (
+            <span className="text-xs font-medium">Contraer</span>
+          )}
         </button>
-
-        <div className="pt-4 border-t border-white/5">
-          <button
-            onClick={handleLogout}
-            className={cn(
-              'flex items-center gap-3 px-4 py-3 w-full rounded-xl text-sm font-semibold transition-all duration-300',
-              'text-slate-500 hover:text-rose-400 hover:bg-rose-400/5',
-              collapsed && 'justify-center',
-            )}
-          >
-            <LogOut size={18} className="flex-shrink-0" />
-            {!collapsed && <span>Cerrar sesión</span>}
-          </button>
-        </div>
       </div>
     </aside>
   );

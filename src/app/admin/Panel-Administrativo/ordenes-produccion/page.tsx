@@ -50,11 +50,11 @@ export default function OrdenesProduccionPage() {
 
   // Manejadores de Rutas Dinámicas para Detalle y Etapas
   const handleViewDetalle = (id: string | number) => {
-    router.push(`/admin/Panel-Administrativo/produccion/${id}`);
+    router.push(`/admin/Panel-Administrativo/ordenes-produccion/${id}`);
   };
 
   const handleViewEtapas = (id: string | number) => {
-    router.push(`/admin/Panel-Administrativo/produccion/${id}/etapas`);
+    router.push(`/admin/Panel-Administrativo/ordenes-produccion/${id}/etapas`);
   };
 
   if (isLoading && ordenes.length === 0) {

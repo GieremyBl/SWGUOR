@@ -6,37 +6,19 @@ interface StatCardProps {
   value: string | number;
   icon: LucideIcon;
   isActive?: boolean;
-  color?: "pink" | "emerald" | "orange" | "blue" | "slate";
+  color?: "indigo" | "slate" | "emerald" | "amber" | "pink" | "orange" | "blue";
   onClick?: () => void;
   disabled?: boolean;
 }
 
 const colorStyles = {
-  pink: {
-    active: "border-pink-500 ring-pink-50 bg-white",
-    iconActive: "bg-pink-600 text-white",
-    textActive: "text-pink-600",
-  },
-  emerald: {
-    active: "border-emerald-500 ring-emerald-50 bg-white",
-    iconActive: "bg-emerald-600 text-white",
-    textActive: "text-emerald-600",
-  },
-  orange: {
-    active: "border-orange-500 ring-orange-50 bg-white",
-    iconActive: "bg-orange-600 text-white",
-    textActive: "text-orange-600",
-  },
-  blue: {
-    active: "border-blue-500 ring-blue-50 bg-white",
-    iconActive: "bg-blue-600 text-white",
-    textActive: "text-blue-600",
-  },
-  slate: {
-    active: "border-slate-500 ring-slate-50 bg-white",
-    iconActive: "bg-slate-600 text-white",
-    textActive: "text-slate-600",
-  },
+  indigo: { iconBg: "bg-slate-50 text-indigo-600 border border-slate-100" },
+  slate: { iconBg: "bg-slate-50 text-slate-600 border border-slate-100" },
+  emerald: { iconBg: "bg-slate-50 text-emerald-600 border border-slate-100" },
+  amber: { iconBg: "bg-slate-50 text-amber-600 border border-slate-100" },
+  pink: { iconBg: "bg-slate-50 text-indigo-600 border border-slate-100" },
+  orange: { iconBg: "bg-slate-50 text-amber-600 border border-slate-100" },
+  blue: { iconBg: "bg-slate-50 text-indigo-600 border border-slate-100" },
 };
 
 export default function StatCard({
@@ -48,42 +30,27 @@ export default function StatCard({
   onClick,
   disabled,
 }: StatCardProps) {
-  const s = colorStyles[color];
+  const s = colorStyles[color] || colorStyles.slate;
 
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
+    <div
       className={cn(
-        "group p-4 rounded-xl border transition-all duration-300 flex items-center gap-4 text-left w-full",
-        isActive
-          ? cn("ring-4 shadow-xl scale-[1.02] z-10", s.active)
-          : "bg-white border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-95 disabled:cursor-default disabled:opacity-60"
+        // Curvatura idéntica a las tarjetas de tu Dashboard (rounded-[2rem])
+        "p-6 rounded-[2rem] border border-slate-100/80 bg-white flex items-center gap-5 w-full shadow-[0_4px_20px_-4px_rgba(148,163,184,0.06)] transition-all duration-300"
       )}
     >
-      <div
-        className={cn(
-          "p-3 rounded-lg transition-all duration-300",
-          isActive
-            ? cn(s.iconActive, "rotate-3")
-            : "bg-gray-100 text-gray-600 group-hover:rotate-3"
-        )}
-      >
-        <Icon className="w-6 h-6" />
+      <div className={cn("p-3.5 rounded-2xl flex-shrink-0", s.iconBg)}>
+        <Icon className="w-5 h-5 stroke-[2.2]" />
       </div>
-      <div>
-        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+      
+      <div className="space-y-0.5">
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
           {title}
         </p>
-        <p
-          className={cn(
-            "text-2xl font-black tracking-tight",
-            isActive ? s.textActive : "text-gray-800"
-          )}
-        >
+        <p className="text-2xl font-black text-slate-900 tracking-tight font-sans">
           {value}
         </p>
       </div>
-    </button>
+    </div>
   );
 }

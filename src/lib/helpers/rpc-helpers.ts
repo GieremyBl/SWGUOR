@@ -4,7 +4,8 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { TipoMovimiento, ReferenciaMovimiento } from "@prisma/client";
+import type { TipoMovimiento, ReferenciaMovimiento, ReferenciaNotificacion, TipoNotificacion } from "@prisma/client";
+
 
 // ============================================================================
 // TIPOS DE PARÁMETROS Y RESPUESTAS PARA RPC
@@ -225,7 +226,7 @@ export async function crearNotificacion(data: {
   tipo: string;
   titulo: string;
   mensaje: string;
-  referenciaType?: string;
+  referenciaType: ReferenciaNotificacion; 
   referenciaId?: number;
   urlDestino?: string;
 }): Promise<any> {
@@ -233,10 +234,10 @@ export async function crearNotificacion(data: {
     return await prisma.notificaciones.create({
       data: {
         usuario_id: data.usuarioId,
-        tipo: data.tipo as any,
+        tipo: data.tipo as TipoNotificacion,
         titulo: data.titulo,
         mensaje: data.mensaje,
-        referencia_tipo: data.referenciaType,
+        referencia_tipo: (data.referenciaType ?? 'SISTEMA') as ReferenciaNotificacion,
         url_destino: data.urlDestino,
       },
     });

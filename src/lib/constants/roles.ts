@@ -316,6 +316,9 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_insumo', 'crear_insumo', 'editar_insumo',
     'ver_materiales', 'crear_materiales', 'editar_materiales',
     'ver_almacenes', 'ver_notificaciones', 'ver_perfil', 'editar_perfil',
+    'ver_movimiento_inventario', 'actualizar_stock_almacen',
+    'ver_notificaciones', 'ver_perfil', 'editar_perfil',
+
   ],
 
   cliente: [

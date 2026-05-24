@@ -2,48 +2,93 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
-import { Download } from 'lucide-react';
+import { Download, RefreshCw, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Componentes Base
-import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
-
-// Componentes del Módulo
 import {
   ReportFilters,
   ReportStats,
   RevenueChart,
   CategoryProfitability,
   SizeAnalysis,
-  LoadingSpinner
+  LoadingSpinner,
 } from '@/components/admin/reportes';
 
-const formatCurrency = (val: number) => 
-  new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 }).format(val);
+// ── Tipos ────────────────────────────────────────────────────────────────────
+interface ReportMetrics {
+  total: number;
+  pedidos: number;
+  produccionEnCurso: number;
+}
 
+interface DiaVenta     { fecha: string; ventas: number }
+interface ItemTalla    { name: string;  value: number  }
+interface ItemCategoria{ name: string;  value: number  }
+
+// ── Utilidades ───────────────────────────────────────────────────────────────
+const formatCurrency = (val: number) =>
+  new Intl.NumberFormat('es-PE', {
+    style:                 'currency',
+    currency:              'PEN',
+    minimumFractionDigits: 1,
+  }).format(val);
+
+// ── Tooltip compartido ───────────────────────────────────────────────────────
+const CustomTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  const data  = payload[0].payload;
+  const value = payload[0].value as number;
+
+  return (
+    <div className="bg-white p-4 border border-stone-100 rounded-2xl shadow-xl min-w-[160px]">
+      <p className="text-[9px] font-black text-rose-600 uppercase tracking-wider mb-2">
+        Control Interno
+      </p>
+      <p className="text-xs font-bold text-stone-800 mb-2">
+        {data.name ?? data.fecha}
+      </p>
+      <div className="space-y-1 border-t border-stone-100 pt-2 text-xs">
+        <div className="flex justify-between items-center gap-4">
+          <span className="text-stone-400 text-[10px]">Monto:</span>
+          <span className="font-black text-stone-900">
+            S/ {value.toLocaleString('es-PE')}
+          </span>
+        </div>
+        {data.quantity && (
+          <div className="flex justify-between items-center gap-4">
+            <span className="text-stone-400 text-[10px]">Unidades:</span>
+            <span className="font-bold text-stone-700">{data.quantity} und.</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function ReportesPage() {
   const { can, isLoading: authLoading } = usePermissions();
-  const [loading, setLoading] = useState(true);
-  const [range, setRange] = useState('30');
-  const [isMounted, setIsMounted] = useState(false);
 
-  const [metrics, setMetrics] = useState<any>(null);
-  const [dataVentas, setDataVentas] = useState([]);
-  const [dataTallas, setDataTallas] = useState([]);
-  const [dataCategorias, setDataCategorias] = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [range,          setRange]          = useState('30');
+  const [isMounted,      setIsMounted]      = useState(false);
+  const [metrics,        setMetrics]        = useState<ReportMetrics | null>(null);
+  const [dataVentas,     setDataVentas]     = useState<DiaVenta[]>([]);
+  const [dataTallas,     setDataTallas]     = useState<ItemTalla[]>([]);
+  const [dataCategorias, setDataCategorias] = useState<ItemCategoria[]>([]);
 
   const loadReportData = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/reportes?days=${range}`);
-      if (!response.ok) throw new Error('Error de conexión');
-      const res = await response.json();
-      
-      setMetrics(res.metrics);
-      setDataVentas(res.ventasPorDia || []);
-      setDataTallas(res.concentracionTallas || []);
-      setDataCategorias(res.ventasPorCategoria || []);
-    } catch (error) {
+      const res = await fetch(`/api/admin/reportes?days=${range}`);
+      if (!res.ok) throw new Error('Error de conexión');
+      const data = await res.json();
+
+      setMetrics(data.metrics);
+      setDataVentas(data.ventasPorDia       ?? []);
+      setDataTallas(data.concentracionTallas ?? []);
+      setDataCategorias(data.ventasPorCategoria ?? []);
+    } catch {
       toast.error('Error al sincronizar datos del reporte');
     } finally {
       setLoading(false);
@@ -51,6 +96,7 @@ export default function ReportesPage() {
   }, [range]);
 
   useEffect(() => { setIsMounted(true); }, []);
+
   useEffect(() => {
     if (!authLoading && can('view', 'reportes')) loadReportData();
   }, [authLoading, can, loadReportData]);
@@ -58,82 +104,73 @@ export default function ReportesPage() {
   if (authLoading || (loading && !metrics)) return <LoadingSpinner />;
 
   return (
-    <div className="p-4 md:p-8 space-y-8 bg-gray-50/50 min-h-screen font-sans">
-      <div className="max-w-[1600px] mx-auto space-y-8">
-        
-        {/* Header & Filters */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <AdminPageHeader
-            title="Intelligence Suite"
-            description="Análisis integral de rendimiento financiero y operativo en tiempo real"
-            actionLabel="Exportar Reporte"
-            onAction={() => { toast.success('Preparando descarga...'); }}
-            icon={Download}
-          />
+    <div className="space-y-6 w-full p-1">
 
-          <ReportFilters 
-            range={range} 
-            setRange={setRange} 
-            onRefresh={loadReportData} 
-            isLoading={loading} 
+      {/* ── Cabecera ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-stone-200">
+        <div className="flex items-start gap-3">
+          {/* Ícono decorativo */}
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 border border-rose-100">
+            <BarChart2 className="h-5 w-5 text-rose-600" />
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">
+              Modas y Estilos Guor · Panel Administrativo
+            </p>
+            <h1 className="text-2xl font-black text-stone-900 tracking-tight mt-0.5">
+              Reportes Administrativos
+            </h1>
+            <p className="text-xs text-stone-400 font-medium mt-0.5">
+              Análisis de rendimiento financiero y operativo · últimos {range} días
+            </p>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => toast.success('Preparando descarga corporativa…')}
+            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-xs font-bold text-white tracking-wide shadow-sm transition-colors hover:bg-rose-700 active:scale-95"
+          >
+            <Download size={14} />
+            Exportar datos
+          </button>
+
+          <ReportFilters
+            range={range}
+            setRange={setRange}
+            onRefresh={loadReportData}
+            isLoading={loading}
+          />
+        </div>
+      </div>
+
+      {/* ── KPIs ─────────────────────────────────────────────────────────── */}
+      <ReportStats metrics={metrics} formatCurrency={formatCurrency} />
+
+      {/* ── Gráficos ─────────────────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Columna principal */}
+        <div className="lg:col-span-8 space-y-6">
+          <RevenueChart
+            data={dataVentas}
+            totalPeriodo={metrics?.total ?? 0}
+            formatCurrency={formatCurrency}
+            isMounted={isMounted}
+            CustomTooltip={CustomTooltip}
+          />
+          <CategoryProfitability
+            data={dataCategorias}
+            CustomTooltip={CustomTooltip}
           />
         </div>
 
-        {/* KPIs */}
-        <ReportStats metrics={metrics} formatCurrency={formatCurrency} />
-
-        {/* Dashboards */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          <div className="lg:col-span-8 space-y-8">
-            <RevenueChart 
-              data={dataVentas} 
-              totalPeriodo={metrics?.total || 0} 
-              formatCurrency={formatCurrency} 
-              isMounted={isMounted}
-              CustomTooltip={CustomTooltip}
-            />
-
-            <CategoryProfitability 
-              data={dataCategorias} 
-              CustomTooltip={CustomTooltip}
-            />
-          </div>
-
-          <div className="lg:col-span-4 lg:sticky lg:top-8">
-            <SizeAnalysis data={dataTallas} />
-          </div>
-
-        </section>
-      </div>
+        {/* Columna lateral fija */}
+        <div className="lg:col-span-4 lg:sticky lg:top-6">
+          <SizeAnalysis data={dataTallas} />
+        </div>
+      </section>
     </div>
   );
 }
-
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const value = payload[0].value;
-    const formatted = formatCurrency(value);
-    
-    return (
-      <div className="bg-slate-900 p-5 rounded-2xl shadow-2xl border border-white/5 backdrop-blur-xl">
-        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-3">Registro de Datos</p>
-        <p className="text-slate-400 text-[11px] font-bold mb-2">{data.name || data.fecha}</p>
-        <div className="space-y-1 border-t border-white/10 pt-3">
-          <div className="flex justify-between items-center gap-8">
-            <span className="text-[9px] text-slate-500 uppercase tracking-wider">Monto:</span>
-            <span className="text-white text-sm font-black">{formatted}</span>
-          </div>
-          {data.quantity && (
-            <div className="flex justify-between items-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-wider">Cantidad:</span>
-              <span className="text-slate-300 text-sm font-bold">{data.quantity} und.</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-  return null;
-};

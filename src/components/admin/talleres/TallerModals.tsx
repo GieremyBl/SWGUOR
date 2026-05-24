@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-
-// GUOR PRO Modal Design — Talleres
 import { Factory, Loader2, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -14,9 +12,9 @@ import { toast } from 'sonner';
 // ─────────────────────────────────────────────────────────────
 
 interface SuspendProps {
-  taller:     any;
-  onClose:    () => void;
-  onSuccess:  () => void;
+  taller: any;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 export function TallerSuspendModal({ taller, onClose, onSuccess }: SuspendProps) {
@@ -86,32 +84,32 @@ export function TallerSuspendModal({ taller, onClose, onSuccess }: SuspendProps)
 // ─────────────────────────────────────────────────────────────
 
 const STATUS_MAP: Record<string, string> = {
-  activo:     'Activo',
-  inactivo:   'Inactivo',
+  activo: 'Activo',
+  inactivo: 'Inactivo',
   suspendido: 'Suspendido',
 };
 
 interface DetailProps {
-  taller:  any;
+  taller: any;
   onClose: () => void;
 }
 
 export function TallerDetailModal({ taller, onClose }: DetailProps) {
   const fields = [
-    { label: 'RUC',          value: taller.ruc },
-    { label: 'Nombre',       value: taller.nombre },
-    { label: 'Contacto',     value: taller.contacto },
-    { label: 'Teléfono',     value: taller.telefono },
-    { label: 'Email',        value: taller.email },
-    { label: 'Dirección',    value: taller.direccion },
+    { label: 'RUC', value: taller.ruc },
+    { label: 'Nombre', value: taller.nombre },
+    { label: 'Contacto', value: taller.contacto },
+    { label: 'Teléfono', value: taller.telefono },
+    { label: 'Email', value: taller.email },
+    { label: 'Dirección', value: taller.direccion },
     { label: 'Especialidad', value: taller.especialidad },
-    { label: 'Estado',       value: STATUS_MAP[taller.estado] ?? taller.estado },
+    { label: 'Estado', value: STATUS_MAP[taller.estado] ?? taller.estado },
   ];
 
   const createdAt = taller.created_at
     ? new Date(taller.created_at).toLocaleDateString('es-PE', {
-        day: '2-digit', month: 'long', year: 'numeric',
-      })
+      day: '2-digit', month: 'long', year: 'numeric',
+    })
     : null;
 
   return (

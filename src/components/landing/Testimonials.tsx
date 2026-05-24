@@ -52,14 +52,14 @@ export default function Testimonials() {
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
-          <motion.span 
+          <motion.span
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             className="inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-4 bg-white border border-guor-gold text-guor-brown"
           >
             Voces de Confianza
           </motion.span>
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -81,7 +81,7 @@ export default function Testimonials() {
                 className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-10 md:p-16 shadow-2xl shadow-guor-brown/5 relative"
               >
                 <Quote className="absolute top-10 right-10 w-20 h-20 text-guor-peach/30 -z-10" />
-                
+
                 <div className="flex flex-col items-center text-center">
                   {/* Star Meter */}
                   <div className="flex gap-1 mb-8">
@@ -109,13 +109,13 @@ export default function Testimonials() {
           {/* Controls */}
           {testimonials.length > 1 && (
             <>
-              <button 
+              <button
                 onClick={prev}
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-12 w-12 h-12 rounded-full bg-white border border-guor-gold/20 flex items-center justify-center text-guor-dark hover:bg-guor-dark hover:text-white transition-all shadow-lg z-20"
               >
                 <ChevronLeft size={24} />
               </button>
-              <button 
+              <button
                 onClick={next}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-12 w-12 h-12 rounded-full bg-white border border-guor-gold/20 flex items-center justify-center text-guor-dark hover:bg-guor-dark hover:text-white transition-all shadow-lg z-20"
               >
@@ -130,9 +130,8 @@ export default function Testimonials() {
               <button
                 key={i}
                 onClick={() => setCurrentIndex(i)}
-                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                  i === currentIndex ? 'bg-guor-dark w-8' : 'bg-guor-gold/30'
-                }`}
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${i === currentIndex ? 'bg-guor-dark w-8' : 'bg-guor-gold/30'
+                  }`}
               />
             ))}
           </div>

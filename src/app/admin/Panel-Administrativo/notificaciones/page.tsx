@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { toast } from 'sonner';
 import NotificacionesTable from '@/components/admin/notificaciones/NotificacionesTable';
-import NotificacionDialog from '@/components/admin/notificaciones/NotificacionDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import type { Notificacion } from '@/lib/schemas/notificaciones';
@@ -97,12 +96,6 @@ export default function NotificacionesPage() {
       ) : (
         <NotificacionesTable data={notificaciones} />
       )}
-
-      <NotificacionDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSave={handleSave}
-      />
     </div>
   );
 }

@@ -22,7 +22,7 @@ interface UseDespachoState {
   refetch: () => Promise<void>;
 }
 
-export function useDespachos(clienteId?: number): UseDespachoState {
+export function useDespachos(): UseDespachoState {
   const [despachos, setDespachos] = useState<DespachoFlat[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function useDespachos(clienteId?: number): UseDespachoState {
     setCargando(true);
     setError(null);
     try {
-      const raw = await getDespachoActivos(clienteId);
+      const raw = await getDespachoActivos();
       const plano = raw.map(aplanarDespacho);
       setDespachos(plano);
     } catch (err: unknown) {
@@ -41,7 +41,7 @@ export function useDespachos(clienteId?: number): UseDespachoState {
     } finally {
       setCargando(false);
     }
-  }, [clienteId]);
+  }, []);
 
   // Realtime: escucha nuevos seguimientos en cada grupo activo
   useEffect(() => {

@@ -10,7 +10,7 @@ export interface RegistrarParams {
   cantidad: number;
   tipo_movimiento: TipoMovimiento;
   referencia_tipo: ReferenciaMovimiento;
-  referencia_id?: number;       // opcional — se pasa como referenciaId al RPC
+  referencia_id?: number;       
   motivo: string;
   usuario_id?: string | number;
   almacen_id?: string | number;
@@ -30,7 +30,7 @@ export interface ListarParams {
   limite?: number;
 }
 
-// Lista completa del enum TipoMovimiento definido en el schema de Prisma / DB
+// Lista oficial indexada de tu enum en Supabase
 const TODOS_LOS_TIPOS: TipoMovimiento[] = [
   'entrada',
   'salida',
@@ -66,13 +66,11 @@ export const MovimientosInventarioService = {
     if (cantidad <= 0)
       throw new Error('La cantidad debe ser mayor a 0');
 
-    // insertarMovimiento llama a fn_insertar_movimiento que hace el INSERT;
-    // los triggers tr_procesar_movimiento_insumo y trg_actualizar_almacen_stock
-    // se disparan automáticamente desde ese INSERT.
+    // Delegamos la persistencia en el RPC que activa los triggers nativos
     await insertarMovimiento({
-      tipoMovimiento: tipo_movimiento,    // TipoMovimiento completo — FIX error TS 2322
+      tipoMovimiento: tipo_movimiento,    
       referenciaType: referencia_tipo,
-      referenciaId: referencia_id,      // opcional — FIX error TS 2345
+      referenciaId: referencia_id,      
       cantidad,
       motivo,
       productoId: producto_id ? Number(producto_id) : undefined,
@@ -88,11 +86,12 @@ export const MovimientosInventarioService = {
   async listar(params?: ListarParams) {
     const where: Record<string, unknown> = {};
 
-    if (params?.desde || params?.hasta)
+    if (params?.desde || params?.hasta) {
       where.created_at = {
         ...(params?.desde && { gte: params.desde }),
         ...(params?.hasta && { lte: params.hasta }),
       };
+    }
 
     if (params?.tipo_movimiento) where.tipo_movimiento = params.tipo_movimiento;
     if (params?.referencia_tipo) where.referencia_tipo = params.referencia_tipo;
@@ -131,7 +130,9 @@ export const MovimientosInventarioService = {
     return resultado;
   },
 
-  // Cubre todos los tipos del enum — antes solo contaba entrada/salida/ajuste
+  /**
+   * Optimización Avanzada: Reduce 12 consultas independientes a 1 sola agregación agrupada
+   */
   async obtenerResumen(params?: {
     tipo_movimiento?: TipoMovimiento;
     desde?: Date;
@@ -140,32 +141,43 @@ export const MovimientosInventarioService = {
     const whereBase: Record<string, unknown> = {};
 
     if (params?.tipo_movimiento) whereBase.tipo_movimiento = params.tipo_movimiento;
-    if (params?.desde || params?.hasta)
+    if (params?.desde || params?.hasta) {
       whereBase.created_at = {
         ...(params?.desde && { gte: params.desde }),
         ...(params?.hasta && { lte: params.hasta }),
       };
+    }
 
-    const totalMovimientos = await prisma.movimientos_inventario.count({ where: whereBase });
-
-    const conteos = await Promise.all(
-      TODOS_LOS_TIPOS.map(async tipo => {
-        const count = await prisma.movimientos_inventario.count({
-          where: { ...whereBase, tipo_movimiento: tipo },
-        });
-        return [tipo, count] as const;
+    // 1. Ejecutamos el conteo global y la agregación por lotes en paralelo (solo 2 promesas)
+    const [totalMovimientos, agrupacionPorTipo] = await Promise.all([
+      prisma.movimientos_inventario.count({ where: whereBase }),
+      prisma.movimientos_inventario.groupBy({
+        by: ['tipo_movimiento'],
+        where: whereBase,
+        _count: { tipo_movimiento: true }
       })
-    );
+    ]);
 
-    const porTipo = Object.fromEntries(conteos) as Record<TipoMovimiento, number>;
+    // 2. Inicializamos el mapa con todos los tipos en cero para garantizar consistencia estructural
+    const porTipo = TODOS_LOS_TIPOS.reduce((acc, tipo) => {
+      acc[tipo] = 0;
+      return acc;
+    }, {} as Record<TipoMovimiento, number>);
+
+    // 3. Volcamos los resultados agrupados de la base de datos en nuestro mapa base
+    agrupacionPorTipo.forEach((grupo) => {
+      if (grupo.tipo_movimiento in porTipo) {
+        porTipo[grupo.tipo_movimiento] = grupo._count.tipo_movimiento;
+      }
+    });
 
     return {
       totalMovimientos,
-      // Alias de compatibilidad con código anterior
+      // Fallbacks de compatibilidad hacia atrás
       totalEntradas: porTipo.entrada,
       totalSalidas: porTipo.salida,
       totalAjustes: porTipo.ajuste,
-      // Desglose completo de los 12 tipos
+      // Desglose limpio de los 12 tipos reales de Supabase
       porTipo,
     };
   },

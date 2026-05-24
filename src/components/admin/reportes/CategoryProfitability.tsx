@@ -1,12 +1,16 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, Cell 
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const COLORS = ['#4f46e5', '#e11d48', '#10b981', '#f59e0b', '#8b5cf6'];
+// Paleta rose-warm: acento principal + tonos complementarios cálidos
+const CORPORATE_COLORS = [
+  '#e11d48', // rose-600  — acento principal
+  '#fb7185', // rose-400  — tono medio
+  '#fda4af', // rose-300  — tono suave
+  '#f43f5e', // rose-500  — intermedio
+  '#be123c', // rose-700  — peso
+];
 
 interface CategoryProfitabilityProps {
   data: any[];
@@ -15,31 +19,41 @@ interface CategoryProfitabilityProps {
 
 export default function CategoryProfitability({ data, CustomTooltip }: CategoryProfitabilityProps) {
   return (
-    <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-      <div className="mb-8 px-2">
-        <h3 className="text-xl font-black text-slate-800 tracking-tight">Rentabilidad por Categoría</h3>
-        <p className="text-sm text-slate-400 font-medium">Volumen de ventas segmentado por línea</p>
+    <Card className="border border-border shadow-sm rounded-[2rem] bg-card p-6">
+      <div className="mb-6">
+        <h3 className="text-base font-bold text-foreground tracking-tight">
+          Rentabilidad por Categoría
+        </h3>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Distribución monetaria por líneas de producción
+        </p>
       </div>
-      <div className="h-[300px]">
+      <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis 
-              dataKey="name" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{fontSize: 10, fill: '#64748b', fontWeight: 600}}
+          <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="hsl(var(--border))" />
+            <XAxis
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 500 }}
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{fontSize: 10, fill: '#64748b', fontWeight: 600}}
-              tickFormatter={(v) => `S/${(v/1000).toFixed(0)}k`}
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 500 }}
+              tickFormatter={(v) => `S/${(v / 1000).toFixed(0)}k`}
             />
-            <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomTooltip />} />
-            <Bar dataKey="value" radius={[12, 12, 12, 12]} barSize={40}>
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} fillOpacity={0.9} />
+            <Tooltip
+              cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
+              content={<CustomTooltip />}
+            />
+            <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={32}>
+              {data.map((_, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={CORPORATE_COLORS[index % CORPORATE_COLORS.length]}
+                />
               ))}
             </Bar>
           </BarChart>

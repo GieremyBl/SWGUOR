@@ -12,26 +12,32 @@ interface ReportStatsProps {
   formatCurrency: (val: number) => string;
 }
 
-export default function ReportStats({ metrics, formatCurrency }: ReportStatsProps) {
+function formatCompact(value: number): string {
+  if (value >= 1_000_000) return `S/ ${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000)     return `S/ ${(value / 1_000).toFixed(1)}K`;
+  return `S/ ${value.toFixed(2)}`;
+}
+
+export default function ReportStats({ metrics }: ReportStatsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard
         title="Ventas Totales"
-        value={formatCurrency(metrics?.total || 0)}
+        value={formatCompact(metrics?.total ?? 0)}
         icon={TrendingUp}
-        color="pink"
+        color="indigo"
         disabled
       />
       <StatCard
         title="Pedidos Activos"
-        value={metrics?.pedidos || 0}
+        value={metrics?.pedidos ?? 0}
         icon={ShoppingBag}
         color="slate"
         disabled
       />
       <StatCard
         title="Capital en Proceso"
-        value={formatCurrency(metrics?.produccionEnCurso || 0)}
+        value={formatCompact(metrics?.produccionEnCurso ?? 0)}
         icon={Zap}
         color="emerald"
         disabled
@@ -40,7 +46,7 @@ export default function ReportStats({ metrics, formatCurrency }: ReportStatsProp
         title="Eficiencia Global"
         value="94.2%"
         icon={Target}
-        color="orange"
+        color="amber"
         disabled
       />
     </div>

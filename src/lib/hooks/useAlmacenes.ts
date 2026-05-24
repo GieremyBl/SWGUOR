@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CrearAlmacen, Almacen, ActualizarAlmacen } from '@/lib/schemas/almacenesSchema';
+import { CrearAlmacen, Almacen, ActualizarAlmacen } from '@/lib/schemas/almacenes';
 
 export function useAlmacenes() {
   const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
@@ -13,7 +13,7 @@ export function useAlmacenes() {
       const params = new URLSearchParams(filtros || {});
       const response = await fetch(`/api/almacenes?${params}`);
       if (!response.ok) throw new Error('Error al obtener almacenes');
-      
+
       const data: Almacen[] = await response.json();
       setAlmacenes(data);
       return data;
@@ -33,7 +33,7 @@ export function useAlmacenes() {
         body: JSON.stringify(datos),
       });
       if (!response.ok) throw new Error('Error al crear almacén');
-      
+
       const nuevoAlmacen: Almacen = await response.json();
       setAlmacenes(prev => [...prev, nuevoAlmacen]);
       return nuevoAlmacen;
@@ -51,9 +51,9 @@ export function useAlmacenes() {
         body: JSON.stringify(datos),
       });
       if (!response.ok) throw new Error('Error al actualizar almacén');
-      
+
       const almacenActualizado: Almacen = await response.json();
-      setAlmacenes(prev => prev.map(a => a.id === Number(id) ? almacenActualizado : a));
+      setAlmacenes(prev => prev.map(a => BigInt(a.id) === BigInt(id) ? almacenActualizado : a));
       return almacenActualizado;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');

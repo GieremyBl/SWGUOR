@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { asientoContableBaseSchema as asientosContablesUpdateSchema } from '@/lib/schemas/asientosContablesSchema';
+import { asientoContableBaseSchema as asientosContablesUpdateSchema } from '@/lib/schemas/asientos-contables';
 import { asientosContablesService } from '@/lib/services';
 import { requireServerRole } from '@/lib/auth/server';
 import type { RolUsuario } from '@/lib/constants/roles';

@@ -1,6 +1,5 @@
 'use client';
 
-// GUOR PRO Modal Design — Talleres
 import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,33 +7,33 @@ import { Input } from '@/components/ui/input';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-type EstadoTaller       = 'activo' | 'inactivo' | 'suspendido';
+type EstadoTaller = 'activo' | 'inactivo' | 'suspendido';
 type EspecialidadTaller = 'corte' | 'costura' | 'confeccion' | 'bordado' | 'estampado' | 'acabados' | 'otro';
 
 const ESPECIALIDADES: { value: EspecialidadTaller; label: string }[] = [
-  { value: 'corte',       label: 'Corte'       },
-  { value: 'costura',     label: 'Costura'     },
-  { value: 'confeccion',  label: 'Confección'  },
-  { value: 'bordado',     label: 'Bordado'     },
-  { value: 'estampado',   label: 'Estampado'   },
-  { value: 'acabados',    label: 'Acabados'    },
-  { value: 'otro',        label: 'Otro'        },
+  { value: 'corte', label: 'Corte' },
+  { value: 'costura', label: 'Costura' },
+  { value: 'confeccion', label: 'Confección' },
+  { value: 'bordado', label: 'Bordado' },
+  { value: 'estampado', label: 'Estampado' },
+  { value: 'acabados', label: 'Acabados' },
+  { value: 'otro', label: 'Otro' },
 ];
 
 interface TallerForm {
-  nombre:       string;
-  ruc:          string;
-  contacto:     string;
-  telefono:     string;
-  email:        string;
-  direccion:    string;
+  nombre: string;
+  ruc: string;
+  contacto: string;
+  telefono: string;
+  email: string;
+  direccion: string;
   especialidad: EspecialidadTaller | '';
-  estado:       EstadoTaller;
+  estado: EstadoTaller;
 }
 
 interface Props {
-  taller?:    any | null;
-  onClose:   () => void;
+  taller?: any | null;
+  onClose: () => void;
   onSuccess: () => void;
 }
 
@@ -52,14 +51,14 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
   useEffect(() => {
     if (taller) {
       setForm({
-        nombre:       taller.nombre       ?? '',
-        ruc:          taller.ruc          ?? '',
-        contacto:     taller.contacto     ?? '',
-        telefono:     taller.telefono     ?? '',
-        email:        taller.email        ?? '',
-        direccion:    taller.direccion    ?? '',
+        nombre: taller.nombre ?? '',
+        ruc: taller.ruc ?? '',
+        contacto: taller.contacto ?? '',
+        telefono: taller.telefono ?? '',
+        email: taller.email ?? '',
+        direccion: taller.direccion ?? '',
         especialidad: taller.especialidad ?? '',
-        estado:       taller.estado       ?? 'activo',
+        estado: taller.estado ?? 'activo',
       });
     } else {
       setForm(EMPTY);
@@ -74,9 +73,9 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (!form.nombre.trim())     e.nombre       = 'El nombre es requerido';
-    if (!form.ruc.trim())        e.ruc          = 'El RUC es requerido';
-    if (!form.especialidad)      e.especialidad = 'Seleccione una especialidad';
+    if (!form.nombre.trim()) e.nombre = 'El nombre es requerido';
+    if (!form.ruc.trim()) e.ruc = 'El RUC es requerido';
+    if (!form.especialidad) e.especialidad = 'Seleccione una especialidad';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -109,7 +108,7 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
         if (error) throw error;
         toast.success('Datos del taller actualizados');
       }
-      
+
       onSuccess();
       onClose();
     } catch (err: any) {
@@ -176,9 +175,8 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
               <select
                 value={form.especialidad}
                 onChange={e => handleChange('especialidad', e.target.value)}
-                className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 ${
-                  errors.especialidad ? 'border-red-400' : 'border-gray-200'
-                }`}
+                className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 ${errors.especialidad ? 'border-red-400' : 'border-gray-200'
+                  }`}
               >
                 <option value="">Seleccionar...</option>
                 {ESPECIALIDADES.map(esp => (

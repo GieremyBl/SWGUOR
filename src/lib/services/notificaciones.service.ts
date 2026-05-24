@@ -13,16 +13,17 @@ interface FiltrosNotificacion {
 
 export const notificacionesService = {
   crear: async (datos: CrearNotificacionData): Promise<notificaciones> => {
-    return prisma.notificaciones.create({
-      data: {
-        usuario_id: datos.usuario_id,
-        tipo:       datos.tipo,
-        titulo:     datos.titulo,
-        mensaje:    datos.mensaje,
-        leido:      false,
-      },
-    });
-  },
+  return prisma.notificaciones.create({
+    data: {
+      usuario_id:      datos.usuario_id,
+      tipo:            datos.tipo,
+      titulo:          datos.titulo,
+      mensaje:         datos.mensaje,
+      referencia_tipo: datos.referencia_tipo,
+      leido:           false,
+    },
+  });
+},
 
   obtenerPorUsuario: async (
     usuarioId: number,

@@ -3,55 +3,80 @@
 import { Layers, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
 
 interface SizeAnalysisProps {
   data: any[];
 }
 
 export default function SizeAnalysis({ data }: SizeAnalysisProps) {
+  const router = useRouter();
+  const maxVal = Math.max(...data.map((d) => d.value), 1);
+
   return (
-    <Card className="border-none bg-slate-900 text-white shadow-2xl rounded-[3rem] p-10 flex flex-col min-h-[620px] justify-between relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[80px] -mr-16 -mt-16 rounded-full" />
-      
-      <div className="relative z-10">
-        <div className="flex justify-between items-center mb-10">
+    <Card className="border border-border bg-card shadow-sm rounded-[2rem] p-6 flex flex-col justify-between min-h-[620px] relative overflow-hidden">
+      <div>
+        {/* Cabecera */}
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h3 className="text-2xl font-black tracking-tight uppercase">Análisis de Tallas</h3>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Demanda operativa actual</p>
+            <h3 className="text-base font-bold text-foreground tracking-tight">
+              Análisis de Tallas
+            </h3>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
+              Demanda operativa activa
+            </p>
           </div>
-          <div className="p-3 bg-white/10 rounded-2xl border border-white/5">
-            <Layers className="text-indigo-400" size={24} />
+          <div className="p-2.5 bg-rose-50 rounded-xl border border-rose-100 text-rose-600">
+            <Layers size={18} />
           </div>
         </div>
 
-        <div className="space-y-8">
-          {data.length > 0 ? data.slice(0, 6).map((item: any) => (
-            <div key={item.name} className="group">
-              <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 group-hover:text-white transition-colors">
-                <span>Talla {item.name}</span>
-                <span className="text-white bg-indigo-500/20 border border-indigo-500/30 px-2 py-0.5 rounded-md">{item.value} und.</span>
-              </div>
-              <div className="h-3 bg-slate-800/50 rounded-full overflow-hidden p-0.5 border border-white/5">
-                <div 
-                  className="h-full bg-gradient-to-r from-indigo-600 to-indigo-400 rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(79,70,229,0.3)]" 
-                  style={{ width: `${Math.min(Math.max((item.value / 100) * 100, 5), 100)}%` }}
-                />
-              </div>
-            </div>
-          )) : (
-            <div className="py-20 text-center opacity-40">
-              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sin registros</p>
+        {/* Barras */}
+        <div className="space-y-6">
+          {data.length > 0 ? (
+            data.slice(0, 6).map((item: any) => {
+              const pct = Math.min(Math.max((item.value / maxVal) * 100, 4), 100);
+              return (
+                <div key={item.name} className="group">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2 group-hover:text-foreground transition-colors">
+                    <span>Talla {item.name}</span>
+                    <span className="text-rose-600 font-bold">
+                      {item.value.toLocaleString('es-PE')} und.
+                    </span>
+                  </div>
+                  <div className="h-3 bg-muted rounded-full overflow-hidden p-0.5 border border-border">
+                    <div
+                      className="h-full rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${pct}%`,
+                        background: 'linear-gradient(to right, #e11d48, #fb7185)',
+                        boxShadow: '0 0 8px rgba(225,29,72,0.2)',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-20 text-center text-muted-foreground/50">
+              <p className="font-medium text-xs">Sin registros históricos</p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="relative z-10 mt-12">
-        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-[1.5rem] py-8 font-black text-lg transition-all group border-none shadow-xl shadow-indigo-900/40">
-          Panel de Inventario
-          <ChevronRight size={22} className="ml-2 group-hover:translate-x-1 transition-transform" />
+      {/* Footer */}
+      <div className="mt-8 space-y-4">
+        <Button
+          onClick={() => router.push('/admin/inventario')}
+          className="w-full bg-rose-600 hover:bg-rose-700 text-white rounded-xl py-5 font-bold text-sm transition-all shadow-md shadow-rose-500/10 flex items-center justify-center gap-1 border-none"
+        >
+          Gestionar Inventario
+          <ChevronRight size={16} />
         </Button>
-        <p className="text-center text-[9px] text-slate-500 font-black uppercase mt-6 tracking-[0.3em] animate-pulse">Sincronización en tiempo real</p>
+        <p className="text-center text-[9px] text-muted-foreground font-bold uppercase tracking-widest animate-pulse">
+          Sincronización en tiempo real
+        </p>
       </div>
     </Card>
   );

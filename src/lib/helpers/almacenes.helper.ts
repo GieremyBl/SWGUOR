@@ -1,4 +1,4 @@
-import { Almacen } from '@/lib/schemas/almacenesSchema';
+import { Almacen } from '@/lib/schemas/almacenes';
 
 export const almacenesHelpers = {
   obtenerDisponible: (almacen: Almacen): number =>

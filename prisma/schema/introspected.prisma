@@ -537,7 +537,6 @@ model almacen_zonas {
   @@schema("public")
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model almacenes {
   id                     BigInt                   @id @default(autoincrement())
@@ -549,7 +548,7 @@ model almacenes {
   responsable_id         BigInt?
   capacidad_total        Decimal?                 @db.Decimal
   unidad_capacidad       String?                  @default("unidades")
-  estado                 String                   @default("activo")
+  estado                 Boolean                  @default(true)
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
   almacen_stock          almacen_stock[]
@@ -1315,7 +1314,7 @@ model notificaciones {
   mensaje         String
   leido           Boolean          @default(false)
   leido_at        DateTime?        @db.Timestamptz(6)
-  referencia_tipo String?
+  referencia_tipo ReferenciaNotificacion
   referencia_id   BigInt?
   url_destino     String?
   created_at      DateTime         @default(now()) @db.Timestamptz(6)
@@ -1475,6 +1474,17 @@ model ordenes_produccion_items {
   @@unique([orden_produccion_id, pedido_item_id])
   @@index([orden_produccion_id], map: "idx_op_items_orden")
   @@index([pedido_item_id], map: "idx_op_items_pedido_item")
+  @@schema("public")
+}
+
+model otp_tokens {
+  id          BigInt @id @default(autoincrement())
+  email       String   @db.VarChar(255)
+  otp         String   @db.VarChar(6)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  expires_at  DateTime @db.Timestamptz(6)
+  used        Boolean  @default(false)
+
   @@schema("public")
 }
 
@@ -2321,10 +2331,23 @@ enum PrioridadPedido {
 }
 
 enum ReferenciaMovimiento {
-  ORDEN
-  COMPRA
-  VENTA
-  AJUSTE
+  ORDEN_COMPRA
+  PEDIDO_CLIENTE
+  ORDEN_PRODUCCION
+  AJUSTE_MANUAL
+  MERMA_INCIDENCIA
+  DEVOLUCION
+
+  @@schema("public")
+}
+
+enum ReferenciaNotificacion {
+  PRODUCTO
+  COTIZACION
+  ORDEN_PRODUCCION
+  PAGO
+  PEDIDO
+  SISTEMA
 
   @@schema("public")
 }

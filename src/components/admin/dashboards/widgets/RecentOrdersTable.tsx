@@ -4,141 +4,221 @@ import React from 'react';
 import { Eye, Clock, CheckCircle2, AlertCircle, Truck, XCircle } from 'lucide-react';
 import type { pedidos, clientes } from '@prisma/client';
 import { EstadoPedido } from '@prisma/client';
-import { ROLE_PALETTES, type RolPaleta } from './DashboardUtils';
 
-// ── Tipos correctos según schema.prisma ────────────────────────────────────
 type Pedido = pedidos & {
   clientes: Pick<clientes, 'razon_social'> | null;
 };
 
 interface RecentOrdersTableProps {
   orders: Pedido[];
-  rol?: RolPaleta;
+  rol?:   string;
 }
 
-// ── Estados reales del enum EstadoPedido ───────────────────────────────────
-const STATUS_CONFIG: Record<EstadoPedido, { cls: string; icon: React.ReactNode; label: string }> = {
-  pendiente: { cls: 'bg-blue-50 text-blue-600 border-blue-100', icon: <Clock size={11} />, label: 'Pendiente' },
-  en_produccion: { cls: 'bg-orange-50 text-orange-600 border-orange-100', icon: <AlertCircle size={11} />, label: 'En producción' },
-  listo_para_despacho: { cls: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: <Truck size={11} />, label: 'Listo despacho' },
-  entregado: { cls: 'bg-slate-100 text-slate-600 border-slate-200', icon: <CheckCircle2 size={11} />, label: 'Entregado' },
-  cancelado: { cls: 'bg-rose-50 text-rose-600 border-rose-100', icon: <XCircle size={11} />, label: 'Cancelado' },
-  pagado: { cls: 'bg-violet-50 text-violet-600 border-violet-100', icon: <CheckCircle2 size={11} />, label: 'Pagado' },
+// ─── Paleta ERP ───────────────────────────────────────────────────────────────
+const P = {
+  accent:  '#1d3fa6',
+  surface: '#f0f4ff',
+  border:  '#d4dae5',
+  bg:      '#f4f6f9',
+  white:   '#ffffff',
+  text:    '#0f172a',
+  muted:   '#64748b',
 };
 
-const FALLBACK_STATUS = {
-  cls: 'bg-gray-50 text-gray-600 border-gray-100',
-  icon: null,
-  label: 'Sin estado',
+// ─── Estado badges — colores semánticos neutros ───────────────────────────────
+const STATUS_CONFIG: Record<EstadoPedido, {
+  bg: string; color: string; border: string;
+  icon: React.ReactNode; label: string;
+}> = {
+  pendiente: {
+    bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe',
+    icon: <Clock size={10} />, label: 'Pendiente',
+  },
+  en_produccion: {
+    bg: '#fff7ed', color: '#c2410c', border: '#fed7aa',
+    icon: <AlertCircle size={10} />, label: 'En producción',
+  },
+  listo_para_despacho: {
+    bg: '#f0fdf4', color: '#15803d', border: '#bbf7d0',
+    icon: <Truck size={10} />, label: 'Listo despacho',
+  },
+  entregado: {
+    bg: '#f8fafc', color: '#475569', border: '#e2e8f0',
+    icon: <CheckCircle2 size={10} />, label: 'Entregado',
+  },
+  cancelado: {
+    bg: '#fef2f2', color: '#dc2626', border: '#fecaca',
+    icon: <XCircle size={10} />, label: 'Cancelado',
+  },
+  pagado: {
+    bg: '#faf5ff', color: '#7c3aed', border: '#e9d5ff',
+    icon: <CheckCircle2 size={10} />, label: 'Pagado',
+  },
 };
 
-// ── Componente ─────────────────────────────────────────────────────────────
-export default function RecentOrdersTable({ orders, rol }: RecentOrdersTableProps) {
-  const p = rol ? ROLE_PALETTES[rol] : null;
-  const headColor = p?.mid ?? '#94a3b8';
-  const titleColor = p?.text ?? '#1e293b';
-  const btnBg = p?.text ?? '#0f172a';
+const FALLBACK = {
+  bg: '#f8fafc', color: '#64748b', border: '#e2e8f0',
+  icon: null, label: 'Sin estado',
+};
 
-  // "pendiente" es el estado inicial real según el schema
+export default function RecentOrdersTable({ orders }: RecentOrdersTableProps) {
   const pendientes = orders.filter((o) => o.estado === 'pendiente').length;
 
   return (
-    <div className="bg-white rounded-[2.5rem] p-6 shadow-xl border border-slate-100 w-full overflow-hidden">
+    <div style={{
+      background:   P.white,
+      border:       `1px solid ${P.border}`,
+      borderRadius: 12,
+      padding:      '20px 24px',
+      boxShadow:    '0 1px 3px 0 rgb(0 0 0 / 0.07)',
+      width:        '100%',
+      overflow:     'hidden',
+    }}>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h3
-            className="font-black uppercase tracking-tight text-base leading-none"
-            style={{ color: titleColor }}
-          >
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: P.text,
+            textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
             Pedidos Recientes
           </h3>
-          <p className="text-slate-400 text-xs font-medium mt-1.5">
+          <p style={{ fontSize: 11, color: P.muted, marginTop: 3 }}>
             Monitor en tiempo real del flujo operativo
           </p>
         </div>
-        <button
-          className="text-[10px] font-black uppercase text-white px-3 py-2 rounded-xl transition-all shadow-sm shrink-0"
-          style={{ background: btnBg }}
-        >
+        <button style={{
+          fontSize: 10, fontWeight: 800, textTransform: 'uppercase',
+          letterSpacing: '0.06em', color: P.white,
+          background: P.text, border: 'none',
+          padding: '6px 14px', borderRadius: 7, cursor: 'pointer',
+        }}>
           Ver todos
         </button>
       </div>
 
-      {/* Table */}
+      {/* Tabla */}
       {orders.length === 0 ? (
-        <div className="py-10 text-center text-slate-300 text-sm">
+        <div style={{ padding: '40px 0', textAlign: 'center',
+          fontSize: 12, color: P.muted, fontWeight: 500 }}>
           Sin pedidos recientes
         </div>
       ) : (
-        <table className="w-full text-left border-separate border-spacing-y-2 table-fixed">
+        <table style={{ width: '100%', borderCollapse: 'separate',
+          borderSpacing: '0 4px', tableLayout: 'fixed' }}>
           <colgroup>
-            <col className="w-[15%]" />
-            <col className="w-[35%]" />
-            <col className="w-[18%]" />
-            <col className="w-[22%]" />
-            <col className="w-[10%]" />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '34%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '24%' }} />
+            <col style={{ width: '10%' }} />
           </colgroup>
           <thead>
-            <tr
-              className="text-[9px] font-black uppercase tracking-widest"
-              style={{ color: headColor }}
-            >
-              <th className="pb-3 pl-3">ID</th>
-              <th className="pb-3">Cliente</th>
-              <th className="pb-3">Total</th>
-              <th className="pb-3">Estado</th>
-              <th className="pb-3 text-right pr-3">Ver</th>
+            <tr style={{ fontSize: 9, fontWeight: 800, color: P.muted,
+              textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <th style={{ paddingBottom: 8, paddingLeft: 12, textAlign: 'left', fontWeight: 800 }}>ID</th>
+              <th style={{ paddingBottom: 8, textAlign: 'left', fontWeight: 800 }}>Cliente</th>
+              <th style={{ paddingBottom: 8, textAlign: 'left', fontWeight: 800 }}>Total</th>
+              <th style={{ paddingBottom: 8, textAlign: 'left', fontWeight: 800 }}>Estado</th>
+              <th style={{ paddingBottom: 8, textAlign: 'right', paddingRight: 12, fontWeight: 800 }}>Ver</th>
             </tr>
           </thead>
           <tbody>
             {orders.map((order) => {
               const cfg = order.estado
-                ? (STATUS_CONFIG[order.estado] ?? FALLBACK_STATUS)
-                : FALLBACK_STATUS;
+                ? (STATUS_CONFIG[order.estado] ?? FALLBACK)
+                : FALLBACK;
 
               return (
-                <tr key={String(order.id)} className="group">
-                  <td className="py-3 pl-3 bg-slate-50 group-hover:bg-white rounded-l-2xl border-y border-l border-transparent group-hover:border-slate-200 transition-all">
-                    <span className="font-black text-slate-900 text-[11px] italic">
+                <tr key={String(order.id)} style={{ transition: 'all 0.15s' }}>
+                  {/* ID */}
+                  <td style={{
+                    padding: '10px 0 10px 12px',
+                    background: P.bg, borderRadius: '8px 0 0 8px',
+                    border: `1px solid transparent`,
+                    borderRight: 'none',
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 800,
+                      color: P.accent, fontStyle: 'italic' }}>
                       #{String(order.id).padStart(5, '0')}
                     </span>
                   </td>
 
-                  <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">
-                    <p className="font-bold text-slate-700 text-xs uppercase truncate pr-2">
+                  {/* Cliente */}
+                  <td style={{
+                    padding: '10px 8px 10px 0',
+                    background: P.bg,
+                    borderTop: `1px solid transparent`,
+                    borderBottom: `1px solid transparent`,
+                  }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: P.text,
+                      textTransform: 'uppercase', overflow: 'hidden',
+                      textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      margin: 0, paddingRight: 8 }}>
                       {order.clientes?.razon_social || 'Consumidor General'}
                     </p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                    <p style={{ fontSize: 9, color: P.muted, fontWeight: 600,
+                      textTransform: 'uppercase', marginTop: 2 }}>
                       {order.created_at
                         ? new Date(order.created_at).toLocaleDateString('es-PE', {
-                          day: 'numeric',
-                          month: 'short',
-                        })
+                            day: 'numeric', month: 'short',
+                          })
                         : 'Sin fecha'}
                     </p>
                   </td>
 
-                  <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">
-                    <span className="font-black text-slate-900 text-xs">
-                      {/* total es Decimal en Prisma, se convierte a Number para mostrar */}
+                  {/* Total */}
+                  <td style={{
+                    padding: '10px 8px',
+                    background: P.bg,
+                    borderTop: `1px solid transparent`,
+                    borderBottom: `1px solid transparent`,
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: P.text }}>
                       S/ {Number(order.total ?? 0).toLocaleString('es-PE')}
                     </span>
                   </td>
 
-                  <td className="py-3 bg-slate-50 group-hover:bg-white border-y border-transparent group-hover:border-slate-200 transition-all">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase border ${cfg.cls}`}
-                    >
+                  {/* Estado */}
+                  <td style={{
+                    padding: '10px 8px',
+                    background: P.bg,
+                    borderTop: `1px solid transparent`,
+                    borderBottom: `1px solid transparent`,
+                  }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '3px 8px', borderRadius: 5,
+                      fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+                      background: cfg.bg, color: cfg.color,
+                      border: `1px solid ${cfg.border}`,
+                      maxWidth: 120, overflow: 'hidden',
+                    }}>
                       {cfg.icon}
-                      <span className="truncate max-w-[70px]">{cfg.label}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap' }}>
+                        {cfg.label}
+                      </span>
                     </span>
                   </td>
 
-                  <td className="py-3 pr-3 rounded-r-2xl border-y border-r border-transparent group-hover:border-slate-200 bg-slate-50 group-hover:bg-white transition-all text-right">
-                    <button className="p-2 hover:bg-slate-900 hover:text-white text-slate-400 rounded-xl transition-all inline-flex">
-                      <Eye size={14} strokeWidth={1.5} />
+                  {/* Ver */}
+                  <td style={{
+                    padding: '10px 12px 10px 0',
+                    background: P.bg,
+                    borderRadius: '0 8px 8px 0',
+                    border: `1px solid transparent`,
+                    borderLeft: 'none',
+                    textAlign: 'right',
+                  }}>
+                    <button style={{
+                      padding: '5px 6px', borderRadius: 6,
+                      background: P.white, color: P.muted,
+                      border: `1px solid ${P.border}`,
+                      cursor: 'pointer', display: 'inline-flex',
+                      transition: 'all 0.15s',
+                    }}>
+                      <Eye size={13} strokeWidth={1.5} />
                     </button>
                   </td>
                 </tr>
@@ -148,15 +228,22 @@ export default function RecentOrdersTable({ orders, rol }: RecentOrdersTableProp
         </table>
       )}
 
-      {/* Footer — solo se muestra si hay pendientes */}
+      {/* Footer — pendientes */}
       {pendientes > 0 && (
-        <div className="mt-5 p-3 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-3">
-          <AlertCircle size={14} className="text-blue-600 shrink-0" />
+        <div style={{
+          marginTop: 14, padding: '10px 14px',
+          background: '#eff6ff', borderRadius: 8,
+          border: '1px solid #bfdbfe',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <AlertCircle size={13} style={{ color: '#1d4ed8', flexShrink: 0 }} />
           <div>
-            <p className="text-[9px] font-black text-blue-900 uppercase tracking-wider">
+            <p style={{ fontSize: 10, fontWeight: 800, color: '#1e3a8a',
+              textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>
               {pendientes} Pedido{pendientes !== 1 ? 's' : ''} pendiente{pendientes !== 1 ? 's' : ''}
             </p>
-            <p className="text-[8px] text-blue-600 font-bold uppercase">
+            <p style={{ fontSize: 9, color: '#1d4ed8', fontWeight: 600,
+              textTransform: 'uppercase', marginTop: 1 }}>
               Requieren atención
             </p>
           </div>

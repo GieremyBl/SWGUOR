@@ -75,41 +75,26 @@ export async function PATCH(req: Request) {
 
     const body = await req.json();
 
-    const CAMPOS_PERMITIDOS = ['razon_social', 'ruc', 'telefono', 'email', 'direccion_fiscal', 'tipo_cliente'];
+    const CAMPOS_PERMITIDOS = ['nombre_comercial', 'direccion_fiscal'];
 
     const dataCliente: Record<string, unknown> = {};
     for (const campo of CAMPOS_PERMITIDOS) {
       if (body[campo] !== undefined) dataCliente[campo] = body[campo];
     }
 
-    if (dataCliente.ruc !== undefined) {
-      const rucNum = Number(body.ruc);
-      if (isNaN(rucNum) || rucNum.toString().length !== 11) {
-        return NextResponse.json(
-          { success: false, error: 'El RUC debe tener 11 dígitos numéricos' },
-          { status: 400 }
-        );
-      }
-      dataCliente.ruc = String(rucNum);
-
-      const rucExistente = await prisma.clientes.findFirst({
-        where: { ruc: String(rucNum), id: { not: sesion.cliente_id } },
-      });
-      if (rucExistente) {
-        return NextResponse.json({ success: false, error: 'Ese RUC ya está registrado' }, { status: 409 });
-      }
+    if (typeof dataCliente.nombre_comercial === 'string') {
+      dataCliente.nombre_comercial = dataCliente.nombre_comercial.trim();
     }
 
-    if (body.telefono !== undefined && body.telefono !== null) {
-      dataCliente.telefono = String(body.telefono); // telefono en clientes es varchar
+    if (typeof dataCliente.direccion_fiscal === 'string') {
+      dataCliente.direccion_fiscal = dataCliente.direccion_fiscal.trim();
     }
 
-    if (body.email !== undefined && body.email !== null) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(body.email)) {
-        return NextResponse.json({ success: false, error: 'Formato de email inválido' }, { status: 400 });
-      }
-      dataCliente.email = body.email;
+    if (Object.keys(dataCliente).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No se enviaron campos editables' },
+        { status: 400 }
+      );
     }
 
     const clienteActualizado = await prisma.clientes.update({
@@ -117,17 +102,11 @@ export async function PATCH(req: Request) {
       data:  dataCliente,
     });
 
-    // Si cambia razón_social, actualizar nombre_completo en personal_interno (no en usuarios)
-    // Para clientes, razon_social ya queda en clientes — no hay nada que actualizar en usuarios.
-
     return NextResponse.json({ success: true, data: serializeBigInt(clienteActualizado) });
   } catch (error: any) {
     console.error('[Portal] Error en PATCH perfil:', error);
     if (error.code === 'P2025') {
       return NextResponse.json({ success: false, error: 'Cliente no encontrado' }, { status: 404 });
-    }
-    if (error.code === 'P2002') {
-      return NextResponse.json({ success: false, error: 'Email duplicado' }, { status: 409 });
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

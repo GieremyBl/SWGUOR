@@ -1,9 +1,14 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer 
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from 'recharts';
 
 interface RevenueChartProps {
@@ -14,61 +19,78 @@ interface RevenueChartProps {
   CustomTooltip: React.ComponentType<any>;
 }
 
-export default function RevenueChart({ 
-  data, 
-  totalPeriodo, 
-  formatCurrency, 
+export default function RevenueChart({
+  data,
+  totalPeriodo,
+  formatCurrency,
   isMounted,
-  CustomTooltip
+  CustomTooltip,
 }: RevenueChartProps) {
   return (
-    <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden p-2">
-      <CardHeader className="p-8 pb-0">
+    <Card className="border border-border shadow-sm rounded-[2rem] bg-card overflow-hidden">
+      <CardHeader className="p-6 pb-2">
         <div className="flex justify-between items-end">
           <div>
-            <CardTitle className="text-xl font-black text-slate-800 tracking-tight">Rendimiento Financiero</CardTitle>
-            <p className="text-sm text-slate-400 font-medium mt-1">Comparativa de ventas diarias</p>
+            <CardTitle className="text-base font-bold text-foreground tracking-tight">
+              Rendimiento Financiero
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Historial acumulado de operaciones reales
+            </p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-black text-slate-900 leading-none">{formatCurrency(totalPeriodo)}</p>
-            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest mt-2">Acumulado Periodo</p>
+            <p className="text-2xl font-black text-foreground tracking-tight">
+              {formatCurrency(totalPeriodo)}
+            </p>
+            <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-1">
+              Total Periodo
+            </p>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-8 h-[400px]">
+
+      <CardContent className="p-6 h-[340px]">
         {isMounted && (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
+                {/* Gradiente rose en lugar de indigo */}
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                  <stop offset="5%"  stopColor="#e11d48" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#e11d48" stopOpacity={0}    />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="fecha" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fontSize: 10, fill: '#94a3b8', fontWeight: 600}} 
-                dy={10}
+              <CartesianGrid
+                strokeDasharray="4 4"
+                vertical={false}
+                stroke="hsl(var(--border))"
               />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fontSize: 10, fill: '#94a3b8', fontWeight: 600}} 
-                tickFormatter={(v) => `S/${(v/1000).toFixed(0)}k`}
+              <XAxis
+                dataKey="fecha"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 500 }}
+                dy={8}
               />
-              <Tooltip content={<CustomTooltip />} />
-              <Area 
-                type="monotone" 
-                dataKey="ventas" 
-                stroke="#4f46e5" 
-                strokeWidth={4} 
-                fillOpacity={1} 
-                fill="url(#colorSales)" 
-                dot={{ r: 4, fill: '#4f46e5', strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 500 }}
+                tickFormatter={(v) => `S/${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
+              />
+              <Area
+                type="monotone"
+                dataKey="ventas"
+                stroke="#e11d48"
+                strokeWidth={2.5}
+                fillOpacity={1}
+                fill="url(#colorSales)"
+                dot={{ r: 3, fill: '#e11d48', strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+                activeDot={{ r: 5, strokeWidth: 0, fill: '#e11d48' }}
               />
             </AreaChart>
           </ResponsiveContainer>
