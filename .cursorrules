@@ -1,28 +1,17 @@
-
-
 # Contexto del Proyecto: SWGUOR ERP
-Eres un experto en Next.js 15, TypeScript y Prisma. Estás construyendo un mini ERP contable con un enfoque en el sector textil/confecciones.
-## Reglas de Ejecución y Terminal (CRÍTICO)
-- **NO ejecutes comandos de construcción:** Tienes ESTRICTAMENTE PROHIBIDO ejecutar `npm run build`, `npm run dev`, `next build` o `next dev`.
-- **Tu único trabajo es escribir código:** El desarrollador humano se encargará de levantar el servidor y probar la aplicación. No intentes compilar el proyecto por tu cuenta para "verificar" el código.
-- **Uso de RAM:** Eres un asistente de escritura de código, no un entorno de ejecución. Limítate a analizar los archivos y proponer los cambios en los componentes o acciones de servidor.
+Eres un experto en Next.js 15, TypeScript, Tailwind CSS y Prisma. Estás trabajando en un ERP avanzado (sector textil/confecciones) y tu objetivo actual es asistir en la programación de los casos de uso: CUS_51 (Órdenes de Compra), CUS_41 (Promociones y Ofertas), CUS_44 (Extracción de Cotizaciones IA) y CUS_47 (Reserva de Stock).
 
-## Reglas de Oro de Base de Datos
-- **Tipos de Datos**: Todas las llaves primarias (ID) y foráneas (FK) deben ser `BigInt` (en Prisma) para mapear correctamente a `int8` en Supabase/PostgreSQL.
-- **Precisión Monetaria**: NUNCA uses `Float` para dinero. Usa siempre `Decimal` con precisión `@db.Decimal(12, 2)`.
-- **Esquemas de Prisma**: El proyecto usa Multi-Schema en Prisma. Todas las tablas deben tener la anotación `@@schema("public")`.
-- **Ubicación de Modelos**: Los modelos están divididos en archivos dentro de `prisma/schema/`. No crees un solo `schema.prisma` gigante.
+## 🚫 REGLAS CRÍTICAS (DE CUMPLIMIENTO OBLIGATORIO) 🚫
+1. **EL CÓDIGO ACTUAL ES LA FUENTE DE VERDAD ABSOLUTA:** Sigue estrictamente los patrones de diseño, estructura y nomenclatura que ya existen en el proyecto. Este es un proyecto académico con una arquitectura específica impuesta por la gerencia que NO puede ser alterada. No intentes refactorizar globalmente, reestructurar carpetas o imponer una "arquitectura ideal". Adáptate y mimetízate con el código existente.
 
-## Lógica Contable (Núcleo Sólido)
-- **Inmutabilidad**: Las ventas y movimientos de inventario no se borran, se anulan o se compensan con registros inversos.
-- **Trazabilidad**: Todo movimiento de inventario en `movimientos_inventario` debe registrar `costo_unitario`, `stock_anterior` y `stock_posterior`.
-- **Partida Doble**: Cada pago registrado en `pagos_orden` debe impactar el `saldo_pendiente` de la tabla `ordenes`.
+2. **PROHIBIDO MODIFICAR MODELOS DE PRISMA:** Tienes ROTUNDAMENTE PROHIBIDO tocar, alterar, agregar o eliminar código dentro de la carpeta `prisma/schema/`. Debes adaptarte y trabajar estrictamente con el esquema existente.
+3. **NO EJECUTAR COMANDOS DE BUILD:** No puedes ejecutar bajo ninguna circunstancia `npm run build`, `npm run dev`, `next build`, `next dev` o similares. Tu única función es escribir y analizar código. El humano levantará y probará la app.
+4. **LÍMITE DE 600 LÍNEAS:** Ningún archivo (componente, servicio, helper, etc.) debe superar las 600 líneas de código. Si te acercas a este límite, debes modularizar y dividir la lógica en archivos más pequeños.
+5. **CERO HARDCODEO:** Está estrictamente prohibido quemar (hardcodear) valores, URLs, credenciales o estados fijos en el código. Utiliza variables de entorno, constantes definidas (ej. en `lib/constants/`) o datos dinámicos de la BD.
+6. **SIEMPRE SOFT DELETE:** NUNCA realices borrados físicos en la base de datos (NO uses `prisma.modelo.delete`). Cualquier eliminación debe ser lógica (Soft Delete), actualizando el campo de estado (ej. a 'ELIMINADO', 'INACTIVO', 'ANULADO') o usando un campo tipo `deleted_at`.
 
-## Preferencias de Código
-- Usa componentes de servidor (Server Components) por defecto.
-- Para el manejo de estados complejos en formularios, prefiere `react-hook-form` y `zod`.
-- Los Server Actions deben manejar las transacciones de Prisma para asegurar que si falla el registro contable, se haga rollback de la venta.
+## Lógica de Negocio y Base de Datos (Núcleo Sólido)
+- **Tipos de Datos Críticos:** Maneja correctamente los IDs que sean `BigInt` (recuerda serializarlos para JSON) y los montos monetarios que deben ser manejados como `Decimal` (`@db.Decimal(12, 2)`).
 
-## Estándares de Código y Limpieza
-- **Modularización**: Ningún archivo (especialmente en `prisma/schema/` o componentes de React) debe superar las 550 líneas de código. 
-- **Estrategia**: Si un archivo excede este límite, debe dividirse en módulos lógicos más pequeños (ej. mover enums a archivos separados, o dividir servicios grandes en sub-servicios).
+## Desarrollo Frontend y Backend
+- **Simplicidad:** Escribe código limpio, simple y directo. Evita la sobreingeniería.

@@ -4,6 +4,11 @@
 
 @layer base {
   :root {
+    --admin-surface: 0 0% 100%;       /* blanco */
+    --admin-line:    220 13% 91%;     /* slate-200 */
+    --admin-ink:     222 47% 11%;     /* slate-900 */
+    --admin-ink-soft: 215 16% 47%;   /* slate-500 */
+    --admin-accent:  346 77% 50%;    /* rose-500  */
     /* ── Tokens GUOR Warm Refined ── */
     --guor-dark: #1a1410;
     /* warm-black profundo     */
@@ -130,7 +135,7 @@
     color: hsl(var(--admin-ink));
   }
 
-  .admin-shell :is(.text-slate-600, .text-slate-500, .text-gray-600, .text-gray-500, .text-gray-400) {
+  .admin-shell :is(.text-slate-600, .text-slate-500, .text-slate-400, .text-gray-600, .text-gray-500) {
     color: hsl(var(--admin-ink-soft));
   }
 }

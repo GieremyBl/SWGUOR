@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Loader2, Package, SlidersHorizontal, X, Info, Palette, Ruler, ShoppingCart } from 'lucide-react';
+import { Search, Package, SlidersHorizontal, X, Info, Tag, Gift } from 'lucide-react';
+import type {
+  CampanaCatalogoItem,
+  ProductoCampanaBadge,
+} from '@/lib/services/portal-promociones-catalogo.service';
+import { formatFechaCorta } from '@/lib/helpers/portal-promociones-display';
 import { createBrowserClient } from '@supabase/ssr';
 import { ProductoCard } from '@/components/portal/ProductoCard';
 import { cn } from '@/lib/utils';
@@ -118,6 +123,11 @@ export default function ProductosPage() {
   const [categoriaSel, setCategoriaSel] = useState('Todos');
   const [tallaSel, setTallaSel] = useState('Todas');
   const [colorSel, setColorSel] = useState('Todos');
+  const [promocionSel, setPromocionSel] = useState('Todas');
+  const [campanas, setCampanas] = useState<CampanaCatalogoItem[]>([]);
+  const [productoPromos, setProductoPromos] = useState<
+    Record<string, ProductoCampanaBadge[]>
+  >({});
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -146,7 +156,23 @@ export default function ProductosPage() {
       }
       setLoading(false);
     }
+
+    async function cargarPromociones() {
+      try {
+        const res = await fetch('/api/portal/promociones-catalogo', { cache: 'no-store' });
+        const json = await res.json();
+        if (json.success && json.data) {
+          setCampanas(json.data.campanas ?? []);
+          setProductoPromos(json.data.productos ?? {});
+        }
+      } catch {
+        setCampanas([]);
+        setProductoPromos({});
+      }
+    }
+
     cargarDatos();
+    cargarPromociones();
   }, []);
 
   const categoriasLista = useMemo(() => ['Todos', ...new Set(productos.map(p => p.categoria))], [productos]);
@@ -154,14 +180,25 @@ export default function ProductosPage() {
   const coloresLista = useMemo(() => ['Todos', ...new Set(productos.flatMap(p => p.colores))], [productos]);
 
   const productosFiltrados = useMemo(() => {
-    return productos.filter(p => {
-      const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.sku.toLowerCase().includes(busqueda.toLowerCase());
+    return productos.filter((p) => {
+      const matchBusqueda =
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        p.sku.toLowerCase().includes(busqueda.toLowerCase());
       const matchCat = categoriaSel === 'Todos' || p.categoria === categoriaSel;
       const matchTalla = tallaSel === 'Todas' || p.tallas.includes(tallaSel);
       const matchColor = colorSel === 'Todos' || p.colores.includes(colorSel);
-      return matchBusqueda && matchCat && matchTalla && matchColor;
+
+      let matchPromo = true;
+      if (promocionSel !== 'Todas') {
+        const badges = productoPromos[String(p.id)] ?? [];
+        matchPromo = badges.some(
+          (b) => `${b.tipo}-${b.campana_id}` === promocionSel,
+        );
+      }
+
+      return matchBusqueda && matchCat && matchTalla && matchColor && matchPromo;
     });
-  }, [busqueda, categoriaSel, tallaSel, colorSel, productos]);
+  }, [busqueda, categoriaSel, tallaSel, colorSel, promocionSel, productos, productoPromos]);
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-8">
@@ -188,6 +225,54 @@ export default function ProductosPage() {
         {/* PANEL DE FILTROS */}
         <aside className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-slate-200 space-y-8 sticky top-8">
+            {campanas.length > 0 && (
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">
+                  Promociones y ofertas
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPromocionSel('Todas')}
+                    className={cn('px-3 py-1.5 rounded-full text-xs font-bold transition-all')}
+                    style={{
+                      backgroundColor: promocionSel === 'Todas' ? BRAND.ocre : '#f1f5f9',
+                      color: promocionSel === 'Todas' ? '#fff' : '#64748b',
+                    }}
+                  >
+                    Todas
+                  </button>
+                  {campanas.map((c) => {
+                    const key = `${c.tipo}-${c.id}`;
+                    const activa = promocionSel === key;
+                    const Icon = c.tipo === 'oferta' ? Gift : Tag;
+                    return (
+                      <button
+                        key={c.key}
+                        type="button"
+                        title={`${c.nombre} · ${formatFechaCorta(c.fecha_inicio)}${c.fecha_fin ? ` — ${formatFechaCorta(c.fecha_fin)}` : ''}`}
+                        onClick={() => setPromocionSel(key)}
+                        className={cn(
+                          'inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold transition-all max-w-full',
+                        )}
+                        style={{
+                          backgroundColor: activa
+                            ? c.tipo === 'oferta'
+                              ? BRAND.negro
+                              : BRAND.ocre
+                            : '#f1f5f9',
+                          color: activa ? '#fff' : '#64748b',
+                        }}
+                      >
+                        <Icon size={12} />
+                        <span className="truncate">{c.nombre}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div>
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Categorías</h3>
               <div className="flex flex-wrap gap-2">
@@ -295,9 +380,10 @@ export default function ProductosPage() {
                     animationDelay: `${index * 50}ms`
                   }}
                 >
-                  <ProductoCard 
-                    producto={prod} 
-                    onOpenDetails={() => setProductoSeleccionado(prod)} 
+                  <ProductoCard
+                    producto={prod}
+                    promociones={productoPromos[String(prod.id)] ?? []}
+                    onOpenDetails={() => setProductoSeleccionado(prod)}
                   />
                 </div>
               ))}
@@ -307,7 +393,13 @@ export default function ProductosPage() {
               <Package size={48} className="mb-4 opacity-20" />
               <p className="font-medium text-sm">No se encontraron productos para esta búsqueda.</p>
               <button 
-                onClick={() => { setBusqueda(''); setCategoriaSel('Todos'); setTallaSel('Todas'); setColorSel('Todos'); }} 
+                onClick={() => {
+                  setBusqueda('');
+                  setCategoriaSel('Todos');
+                  setTallaSel('Todas');
+                  setColorSel('Todos');
+                  setPromocionSel('Todas');
+                }} 
                 className="mt-4 text-sm font-bold uppercase underline decoration-2 underline-offset-4 transition-colors"
                 style={{ color: BRAND.ocre }}
                 onMouseEnter={(e) => (e.currentTarget as HTMLButtonElement).style.color = BRAND.ocreDark}

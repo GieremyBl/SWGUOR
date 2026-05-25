@@ -33,6 +33,10 @@ export default function TalleresPage() {
   const [currentPage, setCurrentPage]   = useState(0);
   const [statusFilter, setStatusFilter] = useState<"todos" | "activo" | "inactivo" | "suspendido">("todos");
   
+  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+
   const pageSize = 10;
 
   const loadData = useCallback(async () => {
@@ -93,6 +97,42 @@ export default function TalleresPage() {
     return filteredTalleres.slice(start, start + pageSize);
   }, [filteredTalleres, currentPage]);
 
+  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
+  const handleExportExcel = async () => {
+    if (filteredTalleres.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
+    try {
+      setExportingExcel(true);
+      await exportToExcel(filteredTalleres, { filename: "Talleres" });
+      toast.success("Excel descargado correctamente");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al exportar a Excel");
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (filteredTalleres.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
+    const toastId = toast.loading("Preparando reporte PDF...");
+    try {
+      setExportingPDF(true);
+      await exportToPDF(filteredTalleres, [], { title: "Reporte de Talleres", filename: "Talleres_GUOR" });
+      toast.success("PDF generado correctamente", { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al generar el PDF", { id: toastId });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   if (authLoading) return <LoadingTalleres />;
   if (!can('view', 'talleres')) return <AccessDenied />;
 
@@ -111,20 +151,29 @@ export default function TalleresPage() {
 
           <div className="flex items-center gap-3">
             {can('export', 'talleres') && (
-              <div className="hidden sm:flex gap-2">
+              <>
+                {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
                 <Button
-                  onClick={() => exportToPDF(filteredTalleres, [], { title: "Reporte de Talleres", filename: "Talleres_GUOR" })}
-                  variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 gap-2 h-11 font-bold"
+                  variant="outline"
+                  onClick={handleExportExcel}
+                  disabled={exportingExcel || loading}
+                  className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
                 >
-                  <FileText className="w-5 h-5" /> PDF
+                  <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                  {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
                 </Button>
+
+                {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
                 <Button
-                  onClick={() => exportToExcel(filteredTalleres, { filename: "Talleres" })}
-                  variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-2 h-11 font-bold"
+                  variant="outline"
+                  onClick={handleExportPDF}
+                  disabled={exportingPDF || loading}
+                  className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
                 >
-                  <FileSpreadsheet className="w-5 h-5" /> Excel
+                  <FileText className="w-4 h-4 mr-2 text-red-600" />
+                  {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
                 </Button>
-              </div>
+              </>
             )}
 
             {can('create', 'talleres') && (
@@ -140,9 +189,9 @@ export default function TalleresPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="TOTAL"       value={stats.total}       icon={<Factory />}       isActive={statusFilter === "todos"}      color="pink"  onClick={() => { setStatusFilter("todos");      setCurrentPage(0); }} />
-          <StatCard title="ACTIVOS"     value={stats.activos}     icon={<CheckCircle />}   isActive={statusFilter === "activo"}     color="green" onClick={() => { setStatusFilter("activo");     setCurrentPage(0); }} />
-          <StatCard title="INACTIVOS"   value={stats.inactivos}   icon={<XCircle />}       isActive={statusFilter === "inactivo"}   color="gray"  onClick={() => { setStatusFilter("inactivo");   setCurrentPage(0); }} />
+          <StatCard title="TOTAL"       value={stats.total}       icon={<Factory />}       isActive={statusFilter === "todos"}      color="pink"  onClick={() => { setStatusFilter("todos"); setCurrentPage(0); }} />
+          <StatCard title="ACTIVOS"     value={stats.activos}     icon={<CheckCircle />}   isActive={statusFilter === "activo"}     color="green" onClick={() => { setStatusFilter("activo"); setCurrentPage(0); }} />
+          <StatCard title="INACTIVOS"   value={stats.inactivos}   icon={<XCircle />}       isActive={statusFilter === "inactivo"}   color="gray"  onClick={() => { setStatusFilter("inactivo"); setCurrentPage(0); }} />
           <StatCard title="SUSPENDIDOS" value={stats.suspendidos} icon={<AlertTriangle />} isActive={statusFilter === "suspendido"} color="red"   onClick={() => { setStatusFilter("suspendido"); setCurrentPage(0); }} />
         </div>
 

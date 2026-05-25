@@ -7,7 +7,7 @@ import { SchemaType, Tool } from '@google/generative-ai';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { requireServerAuth } from '@/lib/auth/server';
-import { model } from '@/lib/gemini';
+import { getDefaultGeminiModel } from '@/lib/gemini';
 
 const tools: Tool[] = [
   {
@@ -93,6 +93,7 @@ export async function POST(req: Request) {
       - Mantén un tono profesional, directo y formal orientado a negocios B2B.
       - Responde siempre en español.`;
 
+    const model = await getDefaultGeminiModel();
     const chat = model.startChat({
       tools,
       history: [

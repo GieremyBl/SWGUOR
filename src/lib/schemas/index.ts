@@ -52,8 +52,12 @@ export {
 export {
   ordenCompraBaseSchema,
   crearOrdenCompraSchema,
+  crearOrdenDesdeCotizacionSchema,
+  ordenCompraItemSchema,
   type OrdenCompra,
   type CrearOrdenCompra,
+  type CrearOrdenDesdeCotizacion,
+  type OrdenCompraItemInput,
 } from './ordenes-compra';
 
 export {

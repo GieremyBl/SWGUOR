@@ -1,4 +1,4 @@
-import { model } from '@/lib/gemini';
+import { getDefaultGeminiModel } from '@/lib/gemini';
 
 export async function analizarCotizaciónConIA(datosCotizacion: any) {
   const prompt = `
@@ -20,6 +20,7 @@ export async function analizarCotizaciónConIA(datosCotizacion: any) {
     Responde estrictamente en formato JSON: { "analisis": "texto profesional", "sugerencia_comercial": "consejo estrategico" }
   `;
 
+  const model = await getDefaultGeminiModel();
   const result = await model.generateContent(prompt);
   const response = await result.response;
   return JSON.parse(response.text());

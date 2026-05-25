@@ -151,3 +151,27 @@ export const ESTADOS_CONFECCION: Record<string, { label: string; color: string; 
   cancelada: { label: 'Cancelada', color: 'text-red-700', bgColor: 'bg-red-100' },
 };
 export const LISTA_ESTADOS_CONFECCION = Object.keys(ESTADOS_CONFECCION);
+
+// ─── COTIZACIONES PROVEEDOR (re-export sin ciclos de importación) ────────────
+export {
+  ESTADO_COTIZACION_PROVEEDOR,
+  ESTADOS_COTIZACION_PROVEEDOR,
+  ESTADOS_COTIZACION_PARA_GENERAR_OC,
+  TRANSICIONES_COTIZACION_PROVEEDOR,
+  type EstadoCotizacionProveedor,
+} from '@/lib/constants/cotizacion-proveedor-estados';
+
+// ─── ÓRDENES DE COMPRA (CUS-50) ───────────────────────────────────────────────
+export const ESTADOS_ORDEN_COMPRA: Record<string, { label: string; color: string; bgColor: string }> = {
+  pendiente: { label: 'Pendiente', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  confirmada: { label: 'Confirmada', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  parcialmente_recibida: { label: 'Parcial', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
+  completada: { label: 'Completada', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+  cancelada: { label: 'Cancelada', color: 'text-red-700', bgColor: 'bg-red-100' },
+};
+
+export const ESTADOS_PAGO_ORDEN_COMPRA: Record<string, { label: string; color: string; bgColor: string }> = {
+  pendiente: { label: 'Pago pendiente', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  parcial: { label: 'Pago parcial', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  pagado: { label: 'Pagado', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
+};

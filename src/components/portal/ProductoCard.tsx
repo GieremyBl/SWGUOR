@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/helpers/format-helpers';
 import { usePortal } from '@/app/portal/_contexts/PortalContext';
 import { toast } from 'sonner';
+import { PromocionProductoBadge } from '@/components/portal/PromocionProductoBadge';
+import type { ProductoCampanaBadge } from '@/lib/services/portal-promociones-catalogo.service';
 
 // ── Brand colors ──────────────────────────────────────────────────
 const BRAND = {
@@ -31,9 +33,10 @@ export interface Producto {
 interface ProductoCardProps {
   producto: Producto;
   onOpenDetails: () => void;
+  promociones?: ProductoCampanaBadge[];
 }
 
-export function ProductoCard({ producto, onOpenDetails }: ProductoCardProps) {
+export function ProductoCard({ producto, onOpenDetails, promociones = [] }: ProductoCardProps) {
   const { agregarAlBorrador } = usePortal();
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -114,6 +117,8 @@ export function ProductoCard({ producto, onOpenDetails }: ProductoCardProps) {
             {producto.categoria}
           </span>
         </div>
+
+        {promociones.length > 0 && <PromocionProductoBadge badges={promociones} />}
       </div>
 
       {/* Contenido del Card */}

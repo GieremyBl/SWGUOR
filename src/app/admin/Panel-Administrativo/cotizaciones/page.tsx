@@ -37,13 +37,16 @@ export default function CotizacionesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>(null);
   const [currentPage, setCurrentPage] = useState(0);
-
   const [stats, setStats] = useState({
     pendientes: 0,
     aprobadas: 0,
     expiradas: 0,
     totalValor: 0,
   });
+
+  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   // ── Carga de datos ────────────────────────────────────────────────────────
   const loadCotizaciones = useCallback(async () => {
@@ -86,40 +89,51 @@ export default function CotizacionesPage() {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
-
   const resetPage = () => setCurrentPage(0);
 
-  // ── Exportar ──────────────────────────────────────────────────────────────
+  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
   const handleExportPDF = async () => {
     if (filtered.length === 0) return toast.error('No hay datos para exportar');
     const toastId = toast.loading('Preparando PDF...');
     try {
+      setExportingPDF(true);
       await exportCotizacionesToPDF(filtered, {
         title: 'REPORTE DE COTIZACIONES',
         filename: `Cotizaciones_GUOR_${new Date().toISOString().split('T')[0]}`,
       });
       toast.success('PDF generado correctamente', { id: toastId });
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error('Error al generar el PDF', { id: toastId });
+    } finally {
+      setExportingPDF(false);
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filtered.length === 0) return toast.error('No hay datos para exportar');
-    const data = filtered.map((c) => ({
-      'N° Cotización': c.cotizacion_id,
-      'Cliente': c.cliente ?? '---',
-      'Monto (S/.)': c.monto,
-      'Estado': c.estado.toUpperCase(),
-      'Vencimiento': c.fecha_vencimiento,
-      'Creación': c.fecha_creacion,
-      'Descripción': c.descripcion ?? '---',
-    }));
-    exportToExcel(data, {
-      filename: `Cotizaciones_GUOR_${new Date().toISOString().split('T')[0]}`,
-      sheetName: 'Cotizaciones',
-    });
-    toast.success('Excel generado correctamente');
+    try {
+      setExportingExcel(true);
+      const data = filtered.map((c) => ({
+        'N° Cotización': c.cotizacion_id,
+        'Cliente': c.cliente ?? '---',
+        'Monto (S/.)': c.monto,
+        'Estado': c.estado.toUpperCase(),
+        'Vencimiento': c.fecha_vencimiento,
+        'Creación': c.fecha_creacion,
+        'Descripción': c.descripcion ?? '---',
+      }));
+      exportToExcel(data, {
+        filename: `Cotizaciones_GUOR_${new Date().toISOString().split('T')[0]}`,
+        sheetName: 'Cotizaciones',
+      });
+      toast.success('Excel generado correctamente');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al exportar a Excel');
+    } finally {
+      setExportingExcel(false);
+    }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -128,29 +142,34 @@ export default function CotizacionesPage() {
       <div className="max-w-7xl mx-auto space-y-8">
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <AdminPageHeader
             title="Cotizaciones"
             description="Gestión de propuestas comerciales de Modas y Estilos GUOR"
             actionLabel="Nueva Cotización"
             onAction={undefined}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
             <Button
-              onClick={handleExportPDF}
               variant="outline"
-              className="border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-10 rounded-xl text-xs transition-all active:scale-95"
-            >
-              <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">PDF</span>
-            </Button>
-            <Button
               onClick={handleExportExcel}
-              variant="outline"
-              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-10 rounded-xl text-xs transition-all active:scale-95"
+              disabled={exportingExcel || loading}
+              className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span className="hidden sm:inline">Excel</span>
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+              {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
+            </Button>
+
+            {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={exportingPDF || loading}
+              className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+            >
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
             </Button>
           </div>
         </div>

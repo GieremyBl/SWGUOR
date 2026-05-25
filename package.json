@@ -2,6 +2,7 @@
   "name": "sistema-guor-v2",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@8.0.0",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -19,7 +20,7 @@
     "@ai-sdk/groq": "^2.0.33",
     "@ai-sdk/react": "^2.0.118",
     "@google/generative-ai": "^0.24.1",
-    "@hookform/resolvers": "^5.2.2",
+    "@hookform/resolvers": "^3.10.0",
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/config": "^7.8.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -37,6 +38,7 @@
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.104.1",
+    "@prisma/client": "^7.7.0",
     "@tanstack/react-query": "^5.90.21",
     "ai": "^5.0.116",
     "class-variance-authority": "^0.7.1",
@@ -56,7 +58,7 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.1",
     "react-dom": "19.2.1",
-    "react-hook-form": "^7.68.0",
+    "react-hook-form": "7.72.1",
     "react-icons": "^5.6.0",
     "recharts": "^3.7.0",
     "replicate": "^1.4.0",
@@ -66,7 +68,6 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@prisma/client": "^7.7.0",
     "@prisma/config": "^7.8.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20.19.39",
