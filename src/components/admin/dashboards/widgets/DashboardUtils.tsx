@@ -23,7 +23,7 @@ export interface PaletaColors {
   beige: string;
   white: string;
   surface?: string;
-  green?: string;
+  green: string;
 }
 
 // ─── PALETA CORPORATIVA ROSE MEJORADA ────────────────────────────────────────
