@@ -5,9 +5,8 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useProductos } from "@/lib/hooks/useProductos";
 import { Button } from "@/components/ui/button";
 import {
-  ShieldAlert, RefreshCw, Download, Plus,
-  ChevronLeft,
-  ChevronRight
+  ShieldAlert, RefreshCw, Plus, ChevronLeft, ChevronRight,
+  FileSpreadsheet, FileText
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -18,7 +17,6 @@ import { useProductoStockResumen } from "@/lib/hooks/useStockResumen";
 import { cn } from "@/lib/utils";
 import AdminPageHeader from "@/components/admin/common/AdminPageHeader";
 import ProductosStats from "@/components/admin/productos/ProductosStats";
-
 import {
   exportProductosToExcel,
   exportInventarioToPDF
@@ -42,6 +40,10 @@ export default function ProductosPage() {
 
   const pageSize = 10;
   const { data: stockResumen } = useProductoStockResumen();
+
+  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   const { productos, categorias, isLoading, refetch, toggleEstado, remove } = useProductos({
     categoriaId: selectedCategoria !== "all" ? selectedCategoria : undefined,
@@ -84,32 +86,48 @@ export default function ProductosPage() {
     setCurrentPage(0);
   }, [searchTerm, selectedCategoria, colorFilter, sizeFilter, sortOrder, statusFilter]);
 
+  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
+
   const handleExportExcel = async () => {
+    if (productosProcesados.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
     const toastId = toast.loading("Generando Excel...");
     try {
+      setExportingExcel(true);
       await exportProductosToExcel(
         productosProcesados,
         stockResumen ?? [],
         "Inventario"
       );
-      toast.success("Excel descargado", { id: toastId });
+      toast.success("Excel descargado correctamente", { id: toastId });
     } catch (e: any) {
       console.error("[Excel export]", e);
       toast.error(e?.message ?? "Error al generar Excel", { id: toastId });
+    } finally {
+      setExportingExcel(false);
     }
   };
 
   const handleExportPDF = async () => {
+    if (productosProcesados.length === 0) {
+      toast.error("No hay datos para exportar");
+      return;
+    }
     const toastId = toast.loading("Generando PDF...");
     try {
+      setExportingPDF(true);
       await exportInventarioToPDF(productosProcesados, categorias, {
         filename: "Inventario",
         title: "REPORTE DE INVENTARIO",
       });
-      toast.success("PDF descargado", { id: toastId });
+      toast.success("PDF descargado correctamente", { id: toastId });
     } catch (e: any) {
       console.error("[PDF export]", e);
       toast.error(e?.message ?? "Error al generar PDF", { id: toastId });
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -129,14 +147,27 @@ export default function ProductosPage() {
             window.location.href = "/admin/Panel-Administrativo/productos/nuevo";
           }}
         >
-          <div className="flex gap-2">
-            <Button onClick={handleExportPDF} variant="outline" className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 rounded-xl shadow-sm">
-              <Download className="w-5 h-5" />
-              <span className="hidden sm:inline">PDF</span>
+          <div className="flex items-center gap-3">
+            {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
+            <Button
+              variant="outline"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || isLoading}
+              className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+              {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
             </Button>
-            <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 rounded-xl shadow-sm">
-              <Download className="w-5 h-5" />
-              <span className="hidden sm:inline">Excel</span>
+
+            {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={exportingPDF || isLoading}
+              className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+            >
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
             </Button>
           </div>
         </AdminPageHeader>

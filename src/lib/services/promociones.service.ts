@@ -1,0 +1,122 @@
+import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
+import type { CampanaForm } from '@/lib/schemas/promociones-ofertas';
+
+export interface CampanaFilters {
+  activo?: boolean;
+  busqueda?: string;
+  page?: number;
+  limit?: number;
+}
+
+const INCLUDE_REGLAS = {
+  promocion_reglas: {
+    orderBy: { prioridad: 'asc' as const },
+    include: {
+      reglas_descuento: {
+        include: { categorias: { select: { id: true, nombre: true } } },
+      },
+    },
+  },
+} as const;
+
+function toDate(value: string): Date {
+  return new Date(value);
+}
+
+function mapCampanaData(input: CampanaForm) {
+  return {
+    nombre: input.nombre.trim(),
+    descripcion: input.descripcion?.trim() || null,
+    activo: input.activo ?? true,
+    fecha_inicio: toDate(input.fecha_inicio),
+    fecha_fin: input.fecha_fin ? toDate(input.fecha_fin) : null,
+  };
+}
+
+async function syncReglas(
+  tx: Prisma.TransactionClient,
+  promocionId: bigint,
+  reglas: CampanaForm['reglas'],
+) {
+  await tx.promocion_reglas.deleteMany({ where: { promocion_id: promocionId } });
+  if (!reglas?.length) return;
+  await tx.promocion_reglas.createMany({
+    data: reglas.map((r, idx) => ({
+      promocion_id: promocionId,
+      regla_id: BigInt(r.regla_id),
+      prioridad: r.prioridad ?? idx + 1,
+    })),
+  });
+}
+
+export const promocionesService = {
+  async listar(filters: CampanaFilters = {}) {
+    const page = Math.max(filters.page ?? 1, 1);
+    const limit = Math.min(Math.max(filters.limit ?? 20, 1), 100);
+    const skip = (page - 1) * limit;
+    const where: Prisma.promocionesWhereInput = {};
+
+    if (filters.activo !== undefined) where.activo = filters.activo;
+    if (filters.busqueda) {
+      where.nombre = { contains: filters.busqueda, mode: 'insensitive' };
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.promociones.findMany({
+        where,
+        include: {
+          promocion_reglas: { select: { regla_id: true, prioridad: true } },
+        },
+        orderBy: [{ activo: 'desc' }, { fecha_inicio: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.promociones.count({ where }),
+    ]);
+
+    return { data, total, page, totalPages: Math.ceil(total / limit) };
+  },
+
+  async obtenerPorId(id: bigint) {
+    return prisma.promociones.findUnique({
+      where: { id },
+      include: INCLUDE_REGLAS,
+    });
+  },
+
+  async crear(input: CampanaForm) {
+    return prisma.$transaction(async (tx) => {
+      const promocion = await tx.promociones.create({
+        data: mapCampanaData(input),
+      });
+      await syncReglas(tx, promocion.id, input.reglas);
+      return tx.promociones.findUnique({
+        where: { id: promocion.id },
+        include: INCLUDE_REGLAS,
+      });
+    });
+  },
+
+  async actualizar(id: bigint, input: CampanaForm) {
+    return prisma.$transaction(async (tx) => {
+      await tx.promociones.update({
+        where: { id },
+        data: mapCampanaData(input),
+      });
+      await syncReglas(tx, id, input.reglas);
+      return tx.promociones.findUnique({
+        where: { id },
+        include: INCLUDE_REGLAS,
+      });
+    });
+  },
+
+  async desactivar(id: bigint) {
+    return prisma.promociones.update({
+      where: { id },
+      data: { activo: false },
+      include: INCLUDE_REGLAS,
+    });
+  },
+};

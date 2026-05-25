@@ -93,6 +93,10 @@ export type PermissionKey =
   | 'ver_configuracion' | 'editar_configuracion'
   // Proveedores
   | 'ver_proveedores' | 'crear_proveedores' | 'editar_proveedores' | 'descontinuar_proveedores' | 'exportar_proveedores'
+  // Órdenes de compra (CUS-50)
+  | 'ver_ordenes_compra' | 'crear_ordenes_compra' | 'editar_ordenes_compra' | 'cancelar_ordenes_compra'
+  // Promociones y ofertas (CUS-41)
+  | 'ver_promociones' | 'crear_promociones' | 'editar_promociones' | 'descontinuar_promociones'
   // Notificaciones
   | 'ver_notificaciones'
   // Feedback Cliente
@@ -198,6 +202,8 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_configuracion', 'editar_configuracion',
     'ver_almacen', 'crear_almacen', 'editar_almacen', 'exportar_almacen', 'actualizar_stock_almacen',
     'ver_proveedores', 'exportar_proveedores',
+    'ver_ordenes_compra', 'crear_ordenes_compra', 'editar_ordenes_compra', 'cancelar_ordenes_compra',
+    'ver_promociones', 'crear_promociones', 'editar_promociones', 'descontinuar_promociones',
     'ver_incidencias_taller', 'exportar_incidencias_taller', 'ver_detalle_incidencias_taller',
     'ver_incidencias_clientes', 'exportar_incidencias_clientes', 'ver_detalle_incidencias_clientes',
     'ver_feedback_cliente', 'exportar_feedback_cliente',
@@ -230,6 +236,8 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_devoluciones_proveedor', 'crear_devoluciones_proveedor', 'exportar_devoluciones_proveedor',
     'ver_devoluciones_cliente', 'exportar_devoluciones_cliente',
     'ver_proveedores', 'crear_proveedores', 'editar_proveedores', 'descontinuar_proveedores', 'exportar_proveedores',
+    'ver_ordenes_compra', 'crear_ordenes_compra', 'editar_ordenes_compra', 'cancelar_ordenes_compra',
+    'ver_promociones', 'crear_promociones', 'editar_promociones', 'descontinuar_promociones',
     'ver_incidencias_taller', 'exportar_incidencias_taller', 'ver_detalle_incidencias_taller',
     'ver_incidencias_clientes', 'exportar_incidencias_clientes', 'ver_detalle_incidencias_clientes',
     'ver_feedback_cliente', 'exportar_feedback_cliente',
@@ -317,8 +325,8 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_materiales', 'crear_materiales', 'editar_materiales',
     'ver_almacenes', 'ver_notificaciones', 'ver_perfil', 'editar_perfil',
     'ver_movimiento_inventario', 'actualizar_stock_almacen',
-    'ver_notificaciones', 'ver_perfil', 'editar_perfil',
-
+    'ver_proveedores',
+    'ver_ordenes_compra', 'crear_ordenes_compra', 'editar_ordenes_compra', 'cancelar_ordenes_compra',
   ],
 
   cliente: [

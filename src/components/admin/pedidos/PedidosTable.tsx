@@ -29,8 +29,7 @@ export default function PedidosTable({
       en_proceso: "bg-pink-50 text-pink-600 border-pink-100",
       finalizado: "bg-slate-50 text-slate-600 border-slate-100",
       cancelado: "bg-rose-50 text-rose-600 border-rose-100",
-    };
-
+      };
     const label: Record<string, string> = {
       solicitud: "Solicitud",
       cotizado: "Cotizado",
@@ -39,6 +38,7 @@ export default function PedidosTable({
       en_proceso: "En Taller",
       finalizado: "Completado",
       cancelado: "Anulado",
+
     };
 
     return (

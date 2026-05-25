@@ -7,19 +7,11 @@ import {
 } from 'recharts';
 import { TrendingUp, ShoppingCart, Package } from 'lucide-react';
 import type { RolPaleta } from './widgets/DashboardUtils';
+import { COMPANY_PALETTE } from './widgets/DashboardUtils';
 import { fmtCompact } from './widgets/DashboardWidgets';
 
 // ─── Paleta ERP ───────────────────────────────────────────────────────────────
-const P = {
-  accent:  '#1d3fa6',
-  accent2: '#3358e8',
-  bg:      '#ffffff',
-  surface: '#f4f6f9',
-  border:  '#d4dae5',
-  text:    '#0f172a',
-  muted:   '#64748b',
-  green:   '#16a34a',
-};
+const P = COMPANY_PALETTE;
 
 interface DashboardChartsProps {
   minimal?:  boolean;

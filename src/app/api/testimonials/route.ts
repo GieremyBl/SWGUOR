@@ -1,30 +1,60 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, prismaAvailable } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 
 export async function GET() {
+  // Check DATABASE_URL first
+  if (!process.env.DATABASE_URL) {
+    console.error('[testimonials] DATABASE_URL is not set');
+    return NextResponse.json(
+      { error: 'Database not configured' },
+      { status: 503 }
+    );
+  }
+
+  if (!prismaAvailable) {
+    console.error('[testimonials] Prisma client unavailable');
+    return NextResponse.json(
+      { error: 'Database client not initialized' },
+      { status: 503 }
+    );
+  }
+
   try {
     const testimonials = await prisma.feedback_cliente.findMany({
       where: {
-        puntuacion: 5
+        estado: 'revisado',
+        puntuacion: { gte: 4 },
+        comentarios: { not: null },
       },
       include: {
         clientes: {
           select: {
             nombre_comercial: true,
-            ruc: true,
-          }
-        }
+          },
+        },
       },
-      take: 10,
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: 'desc',
+      },
+      take: 20,
     });
 
-    return NextResponse.json(serializeBigInt(testimonials));
-  } catch (error) {
-    console.error('Error fetching testimonials:', error);
-    return NextResponse.json({ error: 'Failed to fetch testimonials' }, { status: 500 });
+    return NextResponse.json(serializeBigInt(testimonials), {
+      headers: {
+        'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+      },
+    });
+  } catch (error: any) {
+    console.error('[testimonials] Query error:', {
+      message: error?.message,
+      code: error?.code,
+      clientVersion: error?.clientVersion,
+    });
+    console.error('[testimonials] Full error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch testimonials', details: error?.message },
+      { status: 500 }
+    );
   }
 }

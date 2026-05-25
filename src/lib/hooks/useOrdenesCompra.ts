@@ -1,110 +1,140 @@
-import { useState, useCallback } from 'react';
-import { CrearOrdenCompra, OrdenCompra, ActualizarOrdenCompra } from '@/lib/schemas/ordenes-compra';
+'use client';
 
-export function useOrdenesCompra() {
-  const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  fetchOrdenesCompra,
+  fetchOrdenCompraById,
+  crearOrdenCompra,
+  crearOrdenDesdeCotizacion,
+  actualizarOrdenCompra,
+  confirmarOrdenCompra,
+  cancelarOrdenCompra,
+} from '@/lib/helpers/ordenes-compra-helpers';
+import type {
+  CrearOrdenCompra,
+  CrearOrdenDesdeCotizacion,
+  ActualizarOrdenCompra,
+} from '@/lib/schemas/ordenes-compra';
 
-  const obtenerOrdenes = useCallback(async (filtros?: any) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams(filtros || {});
-      const response = await fetch(`/api/ordenes-compra?${params}`);
-      if (!response.ok) throw new Error('Error al obtener órdenes');
+export const ORDENES_COMPRA_KEY = 'ordenes-compra';
 
-      const data: OrdenCompra[] = await response.json();
-      setOrdenes(data);
-      return data;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+interface UseOrdenesCompraOptions {
+  proveedor_id?: string;
+  estado?: string;
+  enabled?: boolean;
+}
 
-  const crearOrden = useCallback(async (datos: CrearOrdenCompra) => {
-    try {
-      const response = await fetch('/api/ordenes-compra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datos),
-      });
-      if (!response.ok) throw new Error('Error al crear orden');
+export function useOrdenesCompra(options: UseOrdenesCompraOptions = {}) {
+  const queryClient = useQueryClient();
+  const { proveedor_id, estado, enabled = true } = options;
 
-      const nuevaOrden: OrdenCompra = await response.json();
-      setOrdenes(prev => [...prev, nuevaOrden]);
-      return nuevaOrden;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-      throw err;
-    }
-  }, []);
+  const params: Record<string, string> = {};
+  if (proveedor_id) params.proveedor_id = proveedor_id;
+  if (estado) params.estado = estado;
 
-  const actualizarOrden = useCallback(async (id: string, datos: ActualizarOrdenCompra) => {
-    try {
-      const response = await fetch(`/api/ordenes-compra/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datos),
-      });
-      if (!response.ok) throw new Error('Error al actualizar orden');
+  const query = useQuery({
+    queryKey: [ORDENES_COMPRA_KEY, params],
+    queryFn: async () => {
+      const res = await fetchOrdenesCompra(params);
+      if (!res.success) throw new Error(res.error);
+      return res.data ?? [];
+    },
+    enabled,
+    refetchOnWindowFocus: false,
+  });
 
-      const ordenActualizada: OrdenCompra = await response.json();
-      setOrdenes(prev => prev.map(o => o.id === Number(id) ? ordenActualizada : o));
-      return ordenActualizada;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-      throw err;
-    }
-  }, []);
+  const crearMutation = useMutation({
+    mutationFn: crearOrdenCompra,
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error || 'Error al crear orden');
+        return;
+      }
+      toast.success('Orden de compra creada');
+      queryClient.invalidateQueries({ queryKey: [ORDENES_COMPRA_KEY] });
+    },
+    onError: () => toast.error('Error de conexión'),
+  });
 
-  const aprobarOrden = useCallback(async (ordenId: string, aprobadoPor: string, observaciones?: string) => {
-    try {
-      const response = await fetch(`/api/ordenes-compra/${ordenId}/aprobar`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aprobadoPor, observaciones }),
-      });
-      if (!response.ok) throw new Error('Error al aprobar orden');
+  const desdeCotizacionMutation = useMutation({
+    mutationFn: crearOrdenDesdeCotizacion,
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error || 'Error al generar orden');
+        return;
+      }
+      toast.success('Orden de compra generada desde cotización');
+      queryClient.invalidateQueries({ queryKey: [ORDENES_COMPRA_KEY] });
+    },
+    onError: () => toast.error('Error de conexión'),
+  });
 
-      const ordenActualizada: OrdenCompra = await response.json();
-      setOrdenes(prev => prev.map(o => o.id === Number(ordenId) ? ordenActualizada : o));
-      return ordenActualizada;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-      throw err;
-    }
-  }, []);
+  const confirmarMutation = useMutation({
+    mutationFn: confirmarOrdenCompra,
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error || 'Error al confirmar');
+        return;
+      }
+      toast.success('Orden confirmada');
+      queryClient.invalidateQueries({ queryKey: [ORDENES_COMPRA_KEY] });
+    },
+  });
 
-  const recibirOrden = useCallback(async (ordenId: string, cantidadRecibida: number, observacionesRecepcion?: string) => {
-    try {
-      const response = await fetch(`/api/ordenes-compra/${ordenId}/recibir`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cantidadRecibida, observacionesRecepcion }),
-      });
-      if (!response.ok) throw new Error('Error al recibir orden');
-
-      const ordenActualizada: OrdenCompra = await response.json();
-      setOrdenes(prev => prev.map(o => o.id === Number(ordenId) ? ordenActualizada : o));
-      return ordenActualizada;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-      throw err;
-    }
-  }, []);
+  const cancelarMutation = useMutation({
+    mutationFn: cancelarOrdenCompra,
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error || 'Error al cancelar');
+        return;
+      }
+      toast.success('Orden cancelada');
+      queryClient.invalidateQueries({ queryKey: [ORDENES_COMPRA_KEY] });
+    },
+  });
 
   return {
-    ordenes,
-    loading,
-    error,
-    obtenerOrdenes,
-    crearOrden,
-    actualizarOrden,
-    aprobarOrden,
-    recibirOrden,
+    ordenes: query.data ?? [],
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+    crear: (datos: CrearOrdenCompra) => crearMutation.mutateAsync(datos),
+    crearDesdeCotizacion: (datos: CrearOrdenDesdeCotizacion) =>
+      desdeCotizacionMutation.mutateAsync(datos),
+    confirmar: (id: string | number) => confirmarMutation.mutateAsync(id),
+    cancelar: (id: string | number) => cancelarMutation.mutateAsync(id),
+    isCreating: crearMutation.isPending || desdeCotizacionMutation.isPending,
+    isConfirming: confirmarMutation.isPending,
+    isCancelling: cancelarMutation.isPending,
   };
+}
+
+export function useOrdenCompraDetalle(id: string | null) {
+  return useQuery({
+    queryKey: [ORDENES_COMPRA_KEY, id],
+    queryFn: async () => {
+      if (!id) return null;
+      const res = await fetchOrdenCompraById(id);
+      if (!res.success) throw new Error(res.error);
+      return res.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useActualizarOrdenCompra() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, datos }: { id: string | number; datos: ActualizarOrdenCompra }) =>
+      actualizarOrdenCompra(id, datos),
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error(res.error || 'Error al actualizar');
+        return;
+      }
+      toast.success('Orden actualizada');
+      queryClient.invalidateQueries({ queryKey: [ORDENES_COMPRA_KEY] });
+    },
+  });
 }

@@ -12,7 +12,6 @@ export default function ColeccionesPage() {
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: "#fff4e2" }}
     >
       <Navbar />
 

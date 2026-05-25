@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Shield, ChevronRight } from 'lucide-react';
+import { COMPANY_PALETTE } from './widgets/DashboardUtils';
 
 interface DashboardSectionProps {
   title:    string;
@@ -11,14 +12,7 @@ interface DashboardSectionProps {
   children: React.ReactNode;
 }
 
-const P = {
-  bg:     '#f4f6f9',
-  white:  '#ffffff',
-  border: '#d4dae5',
-  text:   '#0f172a',
-  muted:  '#64748b',
-  accent: '#1d3fa6',
-};
+const P = COMPANY_PALETTE;
 
 export function DashboardSection({ title, subtitle, actions, children }: DashboardSectionProps) {
   return (

@@ -11,6 +11,8 @@ import {
   Settings, Truck, Package, Grid3x3, DollarSign, FileText,
   Building2, ShieldCheck, UserSquare, Briefcase, MessageSquare, History,
   ChevronRight,
+  ShoppingBag,
+  Tag,
 } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import type { usuarios } from '@prisma/client';
@@ -64,9 +66,10 @@ const GESTION_OPERATIVA: NavGroup = {
       icon: Package,
       roles: ['gerente', 'administrador', 'disenador', 'cortador'],
       subItems: [
-        { title: 'Productos',       href: '/admin/Panel-Administrativo/productos',       icon: Package,   resource: 'productos'       as RecursoKey },
-        { title: 'Categorías',      href: '/admin/Panel-Administrativo/categorias',      icon: Grid3x3,   resource: 'categorias'      as RecursoKey },
-        { title: 'Fichas Técnicas', href: '/admin/Panel-Administrativo/fichas-tecnicas', icon: FileText,  resource: 'fichas_tecnicas' as RecursoKey },
+        { title: 'Productos', href: '/admin/Panel-Administrativo/productos', icon: Package, resource: 'productos' as RecursoKey },
+        { title: 'Categorías', href: '/admin/Panel-Administrativo/categorias', icon: Grid3x3, resource: 'categorias' as RecursoKey },
+        { title: 'Fichas Técnicas', href: '/admin/Panel-Administrativo/fichas-tecnicas', icon: FileText, resource: 'fichas_tecnicas' as RecursoKey },
+        { title: 'Promociones y Ofertas', href: '/admin/Panel-Administrativo/promociones', icon: Tag, resource: 'promociones' as RecursoKey },
       ],
     },
     {
@@ -111,6 +114,31 @@ const GESTION_LOGISTICA: NavGroup = {
       ],
     },
     {
+      title: 'Compras',
+      icon: ShoppingBag,
+      roles: ['gerente', 'administrador', 'almacenero'],
+      subItems: [
+        {
+          title: 'Proveedores',
+          href: '/admin/Panel-Administrativo/proveedores',
+          icon: Building2,
+          resource: 'proveedores' as RecursoKey,
+        },
+        {
+          title: 'Órdenes de Compra',
+          href: '/admin/Panel-Administrativo/ordenes-compra',
+          icon: ShoppingBag,
+          resource: 'ordenes_compra' as RecursoKey,
+        },
+        {
+          title: 'Proveedores Cotizaciones',
+          href: '/admin/Panel-Administrativo/cotizaciones-proveedor',
+          icon: FileText,
+          resource: 'proveedores' as RecursoKey,
+        },
+      ],
+    },
+    {
       title: 'Logística',
       icon: Truck,
       roles: ['gerente', 'administrador', 'ayudante', 'recepcionista'],
@@ -129,10 +157,10 @@ const GESTION_SISTEMA: NavGroup = {
       icon: Users,
       roles: ['gerente', 'administrador', 'recepcionista'],
       subItems: [
-        { title: 'Usuarios',          href: '/admin/Panel-Administrativo/usuarios',         icon: ShieldCheck, resource: 'usuarios'         as RecursoKey },
-        { title: 'Personal Interno',  href: '/admin/Panel-Administrativo/personal',          icon: UserSquare,  resource: 'personal'         as RecursoKey },
-        { title: 'Clientes',          href: '/admin/Panel-Administrativo/clientes',          icon: Briefcase,   resource: 'clientes'         as RecursoKey },
-        { title: 'Auditoría',         href: '/admin/Panel-Administrativo/auditoria',         icon: History,     resource: 'usuarios'         as RecursoKey },
+        { title: 'Usuarios',          href: '/admin/Panel-Administrativo/usuarios',         icon: ShieldCheck,   resource: 'usuarios'         as RecursoKey },
+        { title: 'Personal Interno',  href: '/admin/Panel-Administrativo/personal',          icon: UserSquare,    resource: 'personal'         as RecursoKey },
+        { title: 'Clientes',          href: '/admin/Panel-Administrativo/clientes',          icon: Briefcase,     resource: 'clientes'         as RecursoKey },
+        { title: 'Auditoría',         href: '/admin/Panel-Administrativo/auditoria',         icon: History,       resource: 'usuarios'         as RecursoKey },
         { title: 'Feedback Cliente',  href: '/admin/Panel-Administrativo/feedback-cliente',  icon: MessageSquare, resource: 'feedback_cliente' as RecursoKey },
       ],
     },
@@ -280,45 +308,44 @@ export default function Sidebar({ }: { usuario: usuarios }) {
         </div>
 
         {/* ── Nav Agrupada por Gestiones ─────────────────────────────────── */}
-        {/* Cambiado space-y-6 a space-y-7 para distanciar más los bloques */}
         <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 text-left space-y-7 px-3">
           {filteredGroups.map((group) => (
-            // Aumentamos space-y-1.5 a space-y-3 para separar el título del grupo del primer icono
             <div key={group.groupLabel} className="space-y-3">
-              
-              {/* Etiqueta del Grupo — Añadido pb-1 (padding bottom) para empujar los ítems hacia abajo */}
+
+              {/* Etiqueta del Grupo */}
               {!isCollapsed && (
                 <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none pt-2 pb-1">
                   {group.groupLabel}
                 </div>
               )}
 
-              {/* Contenedor de ítems — Cambiado space-y-1 a space-y-2 para dar aire entre botones */}
+              {/* Contenedor de ítems */}
               <div className="space-y-2">
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const isOpen = openMenus.includes(item.title);
                   const isActive = item.href === pathname || item.subItems?.some(s => s.href === pathname);
 
+                  // ✅ FIX: colores aplicados directamente a cada hijo, sin depender de herencia CSS
                   const itemContent = (
                     <div className={cn(
                       'flex items-center rounded-xl transition-all duration-200 cursor-pointer select-none w-full',
-                      // Cambiado gap-3.5 a gap-x-4 para dar más espacio horizontal entre el icono y el texto interno
                       isCollapsed ? 'justify-center p-3' : 'justify-start gap-x-4 px-4 py-2.5',
-                      isActive
-                        ? 'bg-rose-50 text-rose-600'
-                        : 'text-slate-600 hover:bg-slate-50/80 hover:text-slate-900',
+                      isActive ? 'bg-rose-50' : 'hover:bg-slate-50/80',
                     )}>
                       <Icon
                         size={19}
                         strokeWidth={isActive ? 2.3 : 1.6}
-                        className="shrink-0"
+                        className={cn(
+                          'shrink-0',
+                          isActive ? 'text-rose-600' : 'text-slate-600'
+                        )}
                       />
                       {!isCollapsed && (
                         <>
                           <span className={cn(
                             'flex-1 text-[13.5px] font-medium truncate text-left tracking-wide',
-                            isActive && 'font-semibold text-rose-700',
+                            isActive ? 'font-semibold text-rose-700' : 'text-slate-600',
                           )}>
                             {item.title}
                           </span>
@@ -377,15 +404,21 @@ export default function Sidebar({ }: { usuario: usuarios }) {
                                 className={cn(
                                   'flex items-center justify-start gap-2.5 py-2 px-3 text-xs rounded-lg transition-all duration-200 w-full',
                                   isSubActive
-                                    ? 'text-rose-600 font-semibold bg-rose-50'
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50 font-medium',
+                                    ? 'bg-rose-50'
+                                    : 'hover:bg-slate-100',
                                 )}
                               >
                                 <span className={cn(
                                   'w-1.5 h-1.5 rounded-full shrink-0 transition-colors',
                                   isSubActive ? 'bg-rose-500' : 'bg-slate-300',
                                 )} />
-                                <span className="truncate text-left">{sub.title}</span>
+                                {/* ✅ FIX: color directo en el texto del subítem */}
+                                <span className={cn(
+                                  'truncate text-left font-medium',
+                                  isSubActive ? 'text-rose-600 font-semibold' : 'text-slate-700',
+                                )}>
+                                  {sub.title}
+                                </span>
                               </Link>
                             );
                           })}
@@ -420,9 +453,8 @@ export default function Sidebar({ }: { usuario: usuarios }) {
                 )}
               />
             </div>
-
             {!isCollapsed && (
-              <span className="text-xs font-medium text-left">Contraer</span>
+              <span className="text-xs font-medium text-left text-slate-500">Contraer</span>
             )}
           </button>
         </div>

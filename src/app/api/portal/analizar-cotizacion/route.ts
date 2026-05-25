@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { model } from '@/lib/gemini';
+import { getDefaultGeminiModel } from '@/lib/gemini';
 import { requireServerAuth } from '@/lib/auth/server';
 
 export async function POST(req: Request) {
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       "impacto": "Monto de ahorro estimado o beneficio clave"
     }`;
 
+    const model = await getDefaultGeminiModel();
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();

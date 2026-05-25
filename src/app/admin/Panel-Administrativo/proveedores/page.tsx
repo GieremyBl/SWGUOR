@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Search, Plus, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  Building2, Search, Plus, RefreshCw, ChevronLeft, ChevronRight,
+  FileSpreadsheet, FileText 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -12,12 +15,13 @@ import ProveedorFormModal from '@/components/admin/proveedores/ProveedorFormModa
 import { ProveedorDeleteModal, ProveedorDetailModal } from '@/components/admin/proveedores/ProveedorModals';
 import { ProveedorStatCard } from '@/components/admin/proveedores/ProveedorStatCard';
 import type { Proveedor, ProveedorForm, EstadoProveedor } from '@/lib/schemas/proveedor';
+import { exportToExcel, exportToPDF } from '@/lib/utils/export-utils';
 
 const PAGE_SIZE = 15;
 
 export default function ProveedoresPage() {
   const { can, isLoading: authLoading } = usePermissions();
-
+  
   // ── UI state ───────────────────────────────────────────────
   const [page,              setPage]              = useState(1);
   const [busqueda,          setBusqueda]          = useState('');
@@ -27,6 +31,10 @@ export default function ProveedoresPage() {
   const [editingProveedor,  setEditingProveedor]  = useState<Proveedor | null>(null);
   const [deleteTarget,      setDeleteTarget]      = useState<Proveedor | null>(null);
   const [detailTarget,      setDetailTarget]      = useState<Proveedor | null>(null);
+  
+  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   // Debounce búsqueda
   useEffect(() => {
@@ -52,11 +60,12 @@ export default function ProveedoresPage() {
 
   // ── Handlers ──────────────────────────────────────────────
   const handleNew = () => { setEditingProveedor(null); setShowForm(true); };
-
   const handleEdit = (p: Proveedor) => { setEditingProveedor(p); setShowForm(true); };
-
   const handleDelete = (p: Proveedor) => {
-    if (p.estado === 'inactivo') { toast.info('Este proveedor ya está desactivado'); return; }
+    if (p.estado === 'inactivo') { 
+      toast.info('Este proveedor ya está desactivado');
+      return; 
+    }
     setDeleteTarget(p);
   };
 
@@ -70,6 +79,55 @@ export default function ProveedoresPage() {
     if (deleteTarget) {
       deactivate(deleteTarget.id!);
       setDeleteTarget(null);
+    }
+  };
+
+  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
+  const handleExportExcel = async () => {
+    if (proveedores.length === 0) {
+      toast.error('No hay datos para exportar');
+      return;
+    }
+    try {
+      setExportingExcel(true);
+      // Corrección de Tipo implícito 'any' agregando (: Proveedor)
+      const datosExcel = proveedores.map((p: Proveedor) => ({
+        'Razón Social': p.razon_social,
+        'RUC': p.ruc,
+        'Contacto': p.contacto || '—',
+        'Teléfono': p.telefono || '—',
+        'Email': p.email || '—',
+        'Estado': p.estado === 'activo' ? 'Activo' : 'Inactivo',
+      }));
+      await exportToExcel(datosExcel, { filename: 'Proveedores_SWGUOR' });
+      toast.success('Excel descargado correctamente');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al exportar a Excel');
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (proveedores.length === 0) {
+      toast.error('No hay datos para exportar');
+      return;
+    }
+    const toastId = toast.loading('Preparando reporte PDF...');
+    try {
+      setExportingPDF(true);
+      // Corrección de función usando la utilitaria genérica exportToPDF
+      await exportToPDF(proveedores, [], {
+        title: 'REPORTE DE PROVEEDORES',
+        filename: `Proveedores_GUOR_${new Date().toISOString().split('T')[0]}`,
+      });
+      toast.success('PDF generado correctamente', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al generar el PDF', { id: toastId });
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -107,14 +165,39 @@ export default function ProveedoresPage() {
               <p className="text-gray-500 text-sm">Gestión de abastecimiento y suministros</p>
             </div>
           </div>
-          {canCreate && (
+          
+          <div className="flex items-center gap-3">
+            {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
             <Button
-              onClick={handleNew}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold gap-2 h-11 active:scale-95"
+              variant="outline"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || isLoading}
+              className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
             >
-              <Plus className="w-4 h-4" /> Agregar Proveedor
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+              {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
             </Button>
-          )}
+
+            {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={exportingPDF || isLoading}
+              className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+            >
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
+            </Button>
+
+            {canCreate && (
+              <Button
+                onClick={handleNew}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 h-11 px-6 rounded-xl transition-all active:scale-95 shadow-lg"
+              >
+                <Plus className="w-5 h-5" /> Agregar Proveedor
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stats */}
@@ -158,7 +241,7 @@ export default function ProveedoresPage() {
           </Button>
         </div>
 
-        {/* Tabla — el skeleton vive dentro de ProveedorTable */}
+        {/* Tabla */}
         <div className="space-y-4">
           <ProveedorTable
             data={proveedores}

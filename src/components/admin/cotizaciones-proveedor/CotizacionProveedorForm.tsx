@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2, Save, ArrowLeft, Plus, Trash2, FileText } from 'lucide-react';
+import { Loader2, Save, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -15,49 +14,104 @@ import { toast } from 'sonner';
 import {
   FormField, FormControl, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import PdfUploadExtractor from '@/components/admin/common/PdfUploadExtractor';
+import {
+  crearCotizacionProveedorSchema,
+  type CrearCotizacionProveedorInput,
+} from '@/lib/schemas/cotizaciones-proveedor';
+import { useCotizacionProveedorMutations } from '@/lib/hooks/useCotizacionesProveedor';
+import { CotizacionProveedorPdfUpload } from './CotizacionProveedorPdfUpload';
+import { CotizacionPdfExtractor } from './CotizacionPdfExtractor';
+import { ProveedorSearchSelect } from './ProveedorSearchSelect';
+import { ProveedorQuickCreateModal } from './ProveedorQuickCreateModal';
+import { aplicarExtraccionAlFormulario } from './apply-extraccion-to-form';
+import type { CotizacionExtraccionIA } from '@/lib/schemas/cotizacion-extraccion-ia';
+import {
+  registrarCotizacionProveedorAction,
+  resolverProveedorExtraccionAction,
+} from '@/app/admin/Panel-Administrativo/cotizaciones-proveedor/actions';
+import { datosProveedorPrefillDesdeExtraccion } from '@/lib/helpers/proveedor-extraccion-helpers';
+import type { ProveedorForm } from '@/lib/schemas/proveedor';
 
-// Schema de validación
-const itemSchema = z.object({
-  descripcion: z.string().min(1, 'Descripción requerida'),
-  cantidad: z.number().positive('Cantidad debe ser mayor a 0'),
-  precio_unitario: z.number().nonnegative('Precio no puede ser negativo'),
-});
+export interface ProveedorOption {
+  id: string | number;
+  razon_social: string;
+  ruc?: string;
+}
 
-const cotizacionProveedorSchema = z.object({
-  proveedor_nombre: z.string().min(1, 'Nombre del proveedor es requerido'),
-  proveedor_ruc: z.string().optional(),
-  proveedor_email: z.string().email().optional().or(z.literal('')),
-  proveedor_telefono: z.string().optional(),
-  numero_cotizacion: z.string().optional(),
-  fecha_cotizacion: z.string(),
-  fecha_vencimiento: z.string().optional(),
-  moneda: z.enum(['PEN', 'USD', 'EUR']),
-  items: z.array(itemSchema).min(1, 'Debe haber al menos un ítem'),
-  notas: z.string().optional(),
-});
+export interface CotizacionProveedorInitial {
+  id: string | number;
+  proveedor_id: string | number;
+  numero_externo?: string | null;
+  fecha_solicitud: string;
+  fecha_vencimiento?: string | null;
+  moneda: string;
+  notas?: string | null;
+  pdf_url?: string | null;
+  items: Array<{
+    descripcion: string;
+    cantidad: number;
+    precio_unitario: number;
+    unidad?: string;
+    tipo_item?: 'insumo' | 'material';
+  }>;
+}
 
-type CotizacionProveedorInput = z.infer<typeof cotizacionProveedorSchema>;
+interface Props {
+  proveedores: ProveedorOption[];
+  initial?: CotizacionProveedorInitial;
+  modo?: 'crear' | 'editar';
+}
 
-export function CotizacionProveedorForm({ proveedores }: { proveedores?: any[] }) {
-  const router = useRouter();
-  const formId = useId();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm<CotizacionProveedorInput>({
-    resolver: zodResolver(cotizacionProveedorSchema),
-    defaultValues: {
-      proveedor_nombre: '',
-      proveedor_ruc: '',
-      proveedor_email: '',
-      proveedor_telefono: '',
-      numero_cotizacion: '',
-      fecha_cotizacion: new Date().toISOString().split('T')[0],
+function toFormValues(initial?: CotizacionProveedorInitial): CrearCotizacionProveedorInput {
+  if (!initial) {
+    return {
+      proveedor_id: 0,
+      numero_externo: '',
+      fecha_solicitud: new Date().toISOString().split('T')[0],
       fecha_vencimiento: '',
       moneda: 'PEN',
-      items: [{ descripcion: '', cantidad: 1, precio_unitario: 0 }],
       notas: '',
-    },
+      items: [{ descripcion: '', cantidad: 1, precio_unitario: 0, unidad: 'unidades', tipo_item: 'insumo' }],
+    };
+  }
+  return {
+    proveedor_id: Number(initial.proveedor_id),
+    numero_externo: initial.numero_externo ?? '',
+    fecha_solicitud: initial.fecha_solicitud?.slice(0, 10) ?? '',
+    fecha_vencimiento: initial.fecha_vencimiento?.slice(0, 10) ?? '',
+    moneda: (initial.moneda as 'PEN' | 'USD' | 'EUR') ?? 'PEN',
+    notas: initial.notas ?? '',
+    items: initial.items.map((i) => ({
+      descripcion: i.descripcion,
+      cantidad: Number(i.cantidad),
+      precio_unitario: Number(i.precio_unitario),
+      unidad: i.unidad ?? 'unidades',
+      tipo_item: i.tipo_item ?? 'insumo',
+    })),
+  };
+}
+
+export function CotizacionProveedorForm({
+  proveedores,
+  initial,
+  modo = 'crear',
+}: Props) {
+  const router = useRouter();
+  const { actualizar, subirPdf, isSaving, isUploadingPdf } = useCotizacionProveedorMutations();
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [proveedoresOpts, setProveedoresOpts] = useState(proveedores);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateInitial, setQuickCreateInitial] = useState<Partial<ProveedorForm>>({});
+  const [savingCrear, setSavingCrear] = useState(false);
+
+  useEffect(() => {
+    setProveedoresOpts(proveedores);
+  }, [proveedores]);
+
+  // Tipado estricto del hook asignando la interfaz de entrada mapeada por Zod
+  const form = useForm<CrearCotizacionProveedorInput>({
+    resolver: zodResolver(crearCotizacionProveedorSchema),
+    defaultValues: toFormValues(initial),
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -65,286 +119,164 @@ export function CotizacionProveedorForm({ proveedores }: { proveedores?: any[] }
     name: 'items',
   });
 
-  // Calcular totales
   const items = form.watch('items');
+  const proveedorId = form.watch('proveedor_id');
   const moneda = form.watch('moneda');
-  const subtotal = items.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
-  const total = subtotal; // Sin IGV para proveedores
+  const subtotal = (items || []).reduce(
+    (sum, item) => sum + (item?.cantidad || 0) * (item?.precio_unitario || 0),
+    0,
+  );
+  const simbolo = moneda === 'USD' ? '$' : moneda === 'EUR' ? '€' : 'S/';
 
-  // Manejar extracción de PDF
-  const handlePdfExtracted = (data: any) => {
-    if (data.proveedor_nombre) form.setValue('proveedor_nombre', data.proveedor_nombre);
-    if (data.proveedor_ruc) form.setValue('proveedor_ruc', data.proveedor_ruc);
-    if (data.proveedor_email) form.setValue('proveedor_email', data.proveedor_email);
-    if (data.proveedor_telefono) form.setValue('proveedor_telefono', data.proveedor_telefono);
-    if (data.numero_cotizacion) form.setValue('numero_cotizacion', data.numero_cotizacion);
-    if (data.fecha_cotizacion) form.setValue('fecha_cotizacion', data.fecha_cotizacion);
-    if (data.fecha_vencimiento) form.setValue('fecha_vencimiento', data.fecha_vencimiento);
-    if (data.moneda) form.setValue('moneda', data.moneda as 'PEN' | 'USD' | 'EUR');
-    if (data.notas) form.setValue('notas', data.notas);
+  const handleExtraccionIa = async (data: CotizacionExtraccionIA, pdfFiles: File[]) => {
+    const currentItems = form.getValues('items');
+    aplicarExtraccionAlFormulario(data, form.setValue, {
+      appendItems: false,
+      currentItems,
+    });
+    if (pdfFiles[0]) setPdfFile(pdfFiles[0]);
 
-    // Reemplazar items si vienen del PDF
-    if (data.items && Array.isArray(data.items) && data.items.length > 0) {
-      // Limpiar items previos
-      while (fields.length > 0) {
-        remove(0);
-      }
-      // Agregar nuevos items
-      data.items.forEach((item: any) => {
-        append({
-          descripcion: item.descripcion || '',
-          cantidad: Number(item.cantidad) || 1,
-          precio_unitario: Number(item.precio_unitario) || 0,
-        });
-      });
-      toast.success(`Se extrajeron ${data.items.length} items de la cotización`);
+    const res = await resolverProveedorExtraccionAction(data);
+    if (res.success && res.data) {
+      form.setValue('proveedor_id', Number(res.data.id));
+      toast.success(`Proveedor vinculado: ${res.data.razon_social}`);
+      return;
     }
+
+    setQuickCreateInitial(datosProveedorPrefillDesdeExtraccion(data));
+    setQuickCreateOpen(true);
+    toast.info('Proveedor no encontrado. Confirme el registro o búsquelo.');
   };
 
-  const onSubmit = async (data: CotizacionProveedorInput) => {
+  const onSubmit = async (data: CrearCotizacionProveedorInput) => {
     try {
-      setIsSubmitting(true);
-
-      const res = await fetch('/api/admin/cotizaciones-proveedor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          pdf_url: null,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.error || 'Error al crear cotización');
+      if (modo === 'editar' && initial?.id) {
+        const res = await actualizar(initial.id, data);
+        if (!res.success) throw new Error(res.error || 'Error al actualizar');
+        if (pdfFile) await subirPdf(initial.id, pdfFile);
+        toast.success('Cotización actualizada');
+        router.push(`/admin/Panel-Administrativo/cotizaciones-proveedor/${initial.id}`);
+        return;
       }
 
-      toast.success('Cotización de proveedor registrada correctamente');
-      router.push('/admin/Panel-Administrativo/cotizaciones-proveedor');
-    } catch (error: any) {
-      toast.error(error.message || 'Error al guardar la cotización');
+      setSavingCrear(true);
+      const res = await registrarCotizacionProveedorAction(data);
+      if (!res.success) throw new Error(res.error || 'Error al registrar');
+
+      const newId = res.data?.id;
+      if (!newId) throw new Error('No se obtuvo el ID de la cotización');
+
+      if (pdfFile) await subirPdf(newId, pdfFile);
+
+      toast.success('Cotización registrada en borrador');
+      router.push(`/admin/Panel-Administrativo/cotizaciones-proveedor/${newId}`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar');
     } finally {
-      setIsSubmitting(false);
+      setSavingCrear(false);
     }
   };
 
-  const simboloMoneda = moneda === 'USD' ? '$' : moneda === 'EUR' ? '€' : 'S/';
+  const isBusy = isSaving || isUploadingPdf || savingCrear;
 
   return (
     <Form {...form}>
-      <form
-        id={`${formId}-cotizacion-proveedor`}
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8"
-      >
-        {/* ────────────────────────────────── EXTRACCIÓN PDF ─────────────────────────────────── */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-blue-600 rounded-full" />
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-              Cargar desde PDF
-            </h2>
-          </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <CotizacionPdfExtractor disabled={isBusy} onExtracted={handleExtraccionIa} />
 
-          <p className="text-sm text-slate-500">
-            Sube una cotización en PDF para extraer automáticamente los datos (proveedor, ítems, precios)
-          </p>
+        <CotizacionProveedorPdfUpload
+          cotizacionId={modo === 'editar' ? initial?.id : null}
+          pdfUrl={initial?.pdf_url}
+          onFileSelected={setPdfFile}
+          onUpload={
+            modo === 'editar' && initial?.id
+              ? async (file) => {
+                  await subirPdf(initial.id, file);
+                }
+              : undefined
+          }
+        />
 
-          <PdfUploadExtractor
-            label="Cargar PDF de Cotización"
-            description="Arrastra el PDF de la cotización o haz clic para seleccionar"
-            onExtract={handlePdfExtracted}
-          />
-
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <p className="text-xs text-blue-700 font-semibold">
-              💡 <strong>Tip:</strong> Si la extracción no es perfecta, puedes editar los campos manualmente a continuación.
-            </p>
-          </div>
-        </div>
-
-        {/* ────────────────────────────────── DATOS DEL PROVEEDOR ─────────────────────────────── */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-slate-900 rounded-full" />
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-              Datos del Proveedor
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="bg-white rounded-2xl border p-6 space-y-4">
+          <h2 className="font-bold text-slate-900">Proveedor y cabecera</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="proveedor_nombre"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Nombre del Proveedor *
-                  </FormLabel>
+              name="proveedor_id"
+              render={() => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Proveedor *</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ej. Comercial ACME S.A.C."
-                      className="h-10 border-slate-200 rounded-xl text-sm"
+                    <ProveedorSearchSelect
+                      proveedores={proveedoresOpts}
+                      value={proveedorId || undefined}
+                      disabled={isBusy}
+                      onChange={(id) => form.setValue('proveedor_id', id, { shouldValidate: true })}
+                      onCreateNew={() => {
+                        setQuickCreateInitial({});
+                        setQuickCreateOpen(true);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
-              name="proveedor_ruc"
+              name="numero_externo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    RUC
-                  </FormLabel>
+                  <FormLabel>N° cotización proveedor</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="20123456789"
-                      className="h-10 border-slate-200 rounded-xl text-sm"
-                    />
+                    <Input {...field} value={field.value ?? ''} placeholder="COT-2024-001" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
-              name="proveedor_email"
+              name="fecha_solicitud"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Email
-                  </FormLabel>
+                  <FormLabel>Fecha cotización *</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="contacto@acme.com"
-                      className="h-10 border-slate-200 rounded-xl text-sm"
-                    />
+                    <Input type="date" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <FormField
-              control={form.control}
-              name="proveedor_telefono"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Teléfono
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="(01) 1234-5678"
-                      className="h-10 border-slate-200 rounded-xl text-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        {/* ────────────────────────────────── DATOS DE COTIZACIÓN ────────────────────────────── */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-emerald-600 rounded-full" />
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-              Datos de la Cotización
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField
-              control={form.control}
-              name="numero_cotizacion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Número de Cotización
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ej. COT-2024-001"
-                      className="h-10 border-slate-200 rounded-xl text-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="fecha_cotizacion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Fecha Cotización *
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="date"
-                      className="h-10 border-slate-200 rounded-xl text-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="fecha_vencimiento"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Vencimiento
-                  </FormLabel>
+                  <FormLabel>Vencimiento</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      type="date"
-                      className="h-10 border-slate-200 rounded-xl text-sm"
-                    />
+                    <Input type="date" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="moneda"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    Moneda *
-                  </FormLabel>
+                  <FormLabel>Moneda</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-10 border-slate-200 rounded-xl text-sm">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="PEN">PEN (Soles)</SelectItem>
-                      <SelectItem value="USD">USD (Dólares)</SelectItem>
-                      <SelectItem value="EUR">EUR (Euros)</SelectItem>
+                      <SelectItem value="PEN">PEN</SelectItem>
+                      <SelectItem value="USD">USD</SelectItem>
+                      <SelectItem value="EUR">EUR</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -352,234 +284,158 @@ export function CotizacionProveedorForm({ proveedores }: { proveedores?: any[] }
               )}
             />
           </div>
-        </div>
+        </section>
 
-        {/* ────────────────────────────────── ÍTEMS ────────────────────────────────────────── */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-1 h-8 bg-purple-600 rounded-full" />
-              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-                Ítems de la Cotización
-              </h2>
-              {fields.length > 0 && (
-                <span className="px-2.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-black rounded-full">
-                  {fields.length}
-                </span>
-              )}
-            </div>
+        <section className="bg-white rounded-2xl border p-6 space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="font-bold text-slate-900">Ítems</h2>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => append({ descripcion: '', cantidad: 1, precio_unitario: 0 })}
-              className="h-9 gap-1.5 text-xs font-bold uppercase rounded-xl border-purple-200 text-purple-700 hover:bg-purple-50"
+              onClick={() =>
+                append({ descripcion: '', cantidad: 1, precio_unitario: 0, unidad: 'unidades', tipo_item: 'insumo' })
+              }
             >
-              <Plus size={14} /> Agregar Ítem
+              <Plus className="w-4 h-4 mr-1" /> Agregar
             </Button>
           </div>
 
-          {fields.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl">
-              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-xs text-slate-400 font-black uppercase tracking-widest">
-                Sin ítems agregados
-              </p>
+          {fields.map((field, idx) => (
+            <div key={field.id} className="grid grid-cols-12 gap-2 items-end border rounded-xl p-3">
+              <div className="col-span-3">
+                <FormField
+                  control={form.control}
+                  name={`items.${idx}.descripcion`}
+                  render={({ field: f }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Descripción</FormLabel>
+                      <FormControl>
+                        <Input {...f} placeholder="Descripción" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-2">
+                <FormField
+                  control={form.control}
+                  name={`items.${idx}.tipo_item`}
+                  render={({ field: f }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Tipo</FormLabel>
+                      <Select onValueChange={f.onChange} value={f.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-9 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="insumo">Insumo</SelectItem>
+                          <SelectItem value="material">Material</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-2">
+                <FormField
+                  control={form.control}
+                  name={`items.${idx}.cantidad`}
+                  render={({ field: f }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Cant.</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0.01}
+                          step="0.01"
+                          value={f.value}
+                          onChange={(e) => f.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-3">
+                <FormField
+                  control={form.control}
+                  name={`items.${idx}.precio_unitario`}
+                  render={({ field: f }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">P. unit.</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={f.value}
+                          onChange={(e) => f.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="col-span-2 flex justify-center">
+                <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)}>
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </Button>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {fields.map((field, idx) => (
-                <div key={field.id} className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                  <div className="grid grid-cols-12 gap-3 items-end">
-                    <div className="col-span-6">
-                      <Controller
-                        control={form.control}
-                        name={`items.${idx}.descripcion`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                              Descripción *
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                {...f}
-                                placeholder="Descripción del producto/servicio"
-                                className="h-10 border-slate-200 rounded-xl text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+          ))}
+          <FormMessage>{form.formState.errors.items?.message}</FormMessage>
+        </section>
 
-                    <div className="col-span-2">
-                      <Controller
-                        control={form.control}
-                        name={`items.${idx}.cantidad`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                              Cantidad *
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                {...f}
-                                type="number"
-                                min="1"
-                                onChange={(e) => f.onChange(Number(e.target.value))}
-                                className="h-10 border-slate-200 rounded-xl text-sm"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+        <section className="bg-slate-900 text-white rounded-2xl p-6 flex justify-between items-center">
+          <span className="text-sm uppercase tracking-widest text-slate-300">Total estimado</span>
+          <span className="text-3xl font-black">
+            {simbolo} {subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+          </span>
+        </section>
 
-                    <div className="col-span-3">
-                      <Controller
-                        control={form.control}
-                        name={`items.${idx}.precio_unitario`}
-                        render={({ field: f }) => (
-                          <FormItem>
-                            <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                              Precio Unitario *
-                            </FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">
-                                  {simboloMoneda}
-                                </span>
-                                <Input
-                                  {...f}
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  onChange={(e) => f.onChange(Number(e.target.value))}
-                                  className="h-10 border-slate-200 rounded-xl text-sm pl-6"
-                                />
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="col-span-1 flex justify-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(idx)}
-                        className="h-10 w-10 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Subtotal */}
-                  <div className="text-right text-xs">
-                    <span className="text-slate-400">Subtotal: </span>
-                    <span className="font-bold text-slate-900">
-                      {simboloMoneda} {((form.watch(`items.${idx}.cantidad`) || 0) * (form.watch(`items.${idx}.precio_unitario`) || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <FormField
+          control={form.control}
+          name="notas"
+          render={({ field }) => (
+            <FormItem className="bg-white rounded-2xl border p-6">
+              <FormLabel>Notas</FormLabel>
+              <FormControl>
+                <Textarea {...field} value={field.value ?? ''} rows={3} />
+              </FormControl>
+            </FormItem>
           )}
+        />
 
-          <FormMessage className="text-red-500" />
-        </div>
-
-        {/* ────────────────────────────────── RESUMEN FINANCIERO ────────────────────────────── */}
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl p-8 text-white space-y-6">
-          <h2 className="text-2xl font-black uppercase tracking-tight">
-            Resumen Financiero
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 mb-2">Subtotal</p>
-              <p className="text-3xl font-black text-white">
-                {simboloMoneda} {subtotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 md:col-span-2 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 mb-2">Moneda</p>
-                <p className="text-xl font-black text-slate-300">{moneda}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 mb-2">Total</p>
-                <p className="text-4xl font-black text-white">
-                  {simboloMoneda} {total.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ────────────────────────────────── NOTAS ────────────────────────────────────────── */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8 space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-1 h-8 bg-amber-600 rounded-full" />
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-              Notas Adicionales
-            </h2>
-          </div>
-
-          <FormField
-            control={form.control}
-            name="notas"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Notas / Condiciones especiales
-                </FormLabel>
-                <FormControl>
-                  <Textarea
-                    {...field}
-                    placeholder="Cualquier nota o condición especial de la cotización..."
-                    rows={4}
-                    className="border-slate-200 rounded-xl text-sm resize-none"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* ────────────────────────────────── ACCIONES ────────────────────────────────────── */}
-        <div className="flex items-center justify-end gap-4 sticky bottom-6 bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-slate-200 shadow-lg">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-            disabled={isSubmitting}
-            className="h-11 px-6 font-bold uppercase rounded-xl gap-2"
-          >
-            <ArrowLeft size={15} /> Cancelar
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => router.back()}>
+            <ArrowLeft className="w-4 h-4 mr-1" /> Cancelar
           </Button>
           <Button
             type="submit"
-            form={`${formId}-cotizacion-proveedor`}
-            disabled={isSubmitting}
-            className="h-11 px-8 bg-slate-900 hover:bg-slate-800 font-bold uppercase rounded-xl gap-2 text-white"
+            disabled={isBusy}
+            className="bg-amber-700 hover:bg-amber-800"
           >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={15} className="animate-spin" /> Guardando...
-              </>
-            ) : (
-              <>
-                <Save size={15} /> Crear Cotización
-              </>
-            )}
+            {isBusy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+            <Save className="w-4 h-4 mr-1" />
+            {modo === 'editar' ? 'Guardar cambios' : 'Registrar cotización (borrador)'}
           </Button>
         </div>
+
+        <ProveedorQuickCreateModal
+          open={quickCreateOpen}
+          initial={quickCreateInitial}
+          onClose={() => setQuickCreateOpen(false)}
+          onCreated={(p) => {
+            setProveedoresOpts((prev) => {
+              if (prev.some((x) => String(x.id) === p.id)) return prev;
+              return [...prev, p];
+            });
+            form.setValue('proveedor_id', Number(p.id), { shouldValidate: true });
+          }}
+        />
       </form>
     </Form>
   );

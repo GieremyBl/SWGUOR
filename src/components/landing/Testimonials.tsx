@@ -22,10 +22,19 @@ export default function Testimonials() {
     async function loadTestimonials() {
       try {
         const res = await fetch('/api/testimonials');
+        if (!res.ok) {
+          throw new Error(`Error fetching testimonials: ${res.status}`);
+        }
+
         const data = await res.json();
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid testimonials response');
+        }
+
         setTestimonials(data);
       } catch (error) {
         console.error('Error:', error);
+        setTestimonials([]);
       } finally {
         setLoading(false);
       }

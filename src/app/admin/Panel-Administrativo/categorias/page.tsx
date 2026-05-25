@@ -10,7 +10,6 @@ import {
 import { exportToExcel, exportCategoriasToPDF } from "@/lib/utils/export-utils";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import type { Categoria } from "@/types/categoria";
 import CategoriaFormModal from "@/components/admin/categorias/CategoriaFormModal";
@@ -30,7 +29,6 @@ interface CategoriaForm {
 
 export default function CategoriasPage() {
   const { can, isLoading: authLoading } = usePermissions();
-
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,7 +40,11 @@ export default function CategoriasPage() {
   const [archiveModal, setArchiveModal] = useState<{ open: boolean; categoria: Categoria | null }>({ open: false, categoria: null });
   const [isSaving, setIsSaving] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
-
+  
+  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  
   const pageSize = 10;
 
   const canView = can('view', 'categorias');
@@ -129,7 +131,6 @@ export default function CategoriasPage() {
     const isEdit = !!formModal.categoria;
     const url = isEdit ? `/api/admin/categorias/${formModal.categoria!.id}` : '/api/admin/categorias';
     const method = isEdit ? 'PATCH' : 'POST';
-
     try {
       const res = await fetch(url, {
         method,
@@ -177,20 +178,28 @@ export default function CategoriasPage() {
 
   // ── Exportaciones ───────────────────────────────────────────────────────────
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!canExport) return toast.error("No tienes permisos para exportar");
     if (filteredCategorias.length === 0) return toast.error("No hay datos para exportar");
-
-    exportToExcel(
-      filteredCategorias.map(c => ({
-        Categoría: c.nombre,
-        Descripción: c.descripcion || "Sin descripción",
-        Estado: c.activo ? "Activa" : "Inactiva",
-        "Fecha Creación": c.created_at ? new Date(c.created_at).toLocaleDateString() : '-',
-      })),
-      { filename: `Categorias_ModasGUOR_${new Date().toISOString().split('T')[0]}` }
-    );
-    toast.success("Excel generado correctamente");
+    
+    try {
+      setExportingExcel(true);
+      exportToExcel(
+        filteredCategorias.map(c => ({
+          Categoría: c.nombre,
+          Descripción: c.descripcion || "Sin descripción",
+          Estado: c.activo ? "Activa" : "Inactiva",
+          "Fecha Creación": c.created_at ? new Date(c.created_at).toLocaleDateString() : '-',
+        })),
+        { filename: `Categorias_ModasGUOR_${new Date().toISOString().split('T')[0]}` }
+      );
+      toast.success("Excel generado correctamente");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al exportar a Excel");
+    } finally {
+      setExportingExcel(false);
+    }
   };
 
   const handleExportPDF = async () => {
@@ -199,13 +208,17 @@ export default function CategoriasPage() {
 
     const toastId = toast.loading("Preparando reporte PDF...");
     try {
+      setExportingPDF(true);
       await exportCategoriasToPDF(filteredCategorias, {
         title: "REPORTE DE CATEGORÍAS",
         filename: `Categorias_GUOR_${new Date().toISOString().split('T')[0]}`,
       });
       toast.success("PDF generado correctamente", { id: toastId });
-    } catch {
+    } catch (error) {
+      console.error(error);
       toast.error("Error al generar el PDF", { id: toastId });
+    } finally {
+      setExportingPDF(false);
     }
   };
 
@@ -236,7 +249,7 @@ export default function CategoriasPage() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header */}
+        {/* Header con los botones integrados arriba a la derecha */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Directorio de Categorías</h1>
@@ -245,18 +258,31 @@ export default function CategoriasPage() {
           <div className="flex items-center gap-3">
             {canExport && (
               <>
-                <Button onClick={handleExportPDF} variant="outline" className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 transition-all active:scale-95">
-                  <FileText className="w-5 h-5" />
-                  <span className="hidden sm:inline">Exportar PDF</span>
+                {/* BOTÓN EXPORTAR EXCEL CON EL ESTILO DE ÓRDENES DE COMPRA */}
+                <Button
+                  variant="outline"
+                  onClick={handleExportExcel}
+                  disabled={exportingExcel || loading}
+                  className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                  {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
                 </Button>
-                <Button onClick={handleExportExcel} variant="outline" className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
-                  <FileSpreadsheet className="w-5 h-5" />
-                  <span className="hidden sm:inline">Exportar Excel</span>
+
+                {/* BOTÓN EXPORTAR PDF CON EL ESTILO DE ÓRDENES DE COMPRA */}
+                <Button
+                  variant="outline"
+                  onClick={handleExportPDF}
+                  disabled={exportingPDF || loading}
+                  className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+                >
+                  <FileText className="w-4 h-4 mr-2 text-red-600" />
+                  {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
                 </Button>
               </>
             )}
             {canCreate && (
-              <Button onClick={handleCreateClick} className="bg-pink-600 hover:bg-pink-700 shadow-lg font-bold gap-2 h-11 px-6 text-white transition-all active:scale-95">
+              <Button onClick={handleCreateClick} className="bg-pink-600 hover:bg-pink-700 shadow-lg font-bold gap-2 h-11 px-6 text-white transition-all active:scale-95 rounded-xl">
                 <Plus className="w-5 h-5" /> Nueva Categoría
               </Button>
             )}

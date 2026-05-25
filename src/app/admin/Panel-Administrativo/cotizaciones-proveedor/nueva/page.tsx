@@ -27,11 +27,17 @@ export default async function NuevaCotizacionProveedorPage() {
           Nueva Cotización de Proveedor
         </h1>
         <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">
-          Registra una nueva cotización recibida de un proveedor. Puedes cargar el PDF para extraer automáticamente los datos.
+          Cargue PDFs para extraer datos con IA (Gemini) o complete el formulario manualmente. Se guarda en borrador.
         </p>
       </div>
 
-      <CotizacionProveedorForm proveedores={proveedores} />
+      <CotizacionProveedorForm
+        proveedores={proveedores.map((p) => ({
+          id: String(p.id),
+          razon_social: p.razon_social,
+          ruc: p.ruc ?? undefined,
+        }))}
+      />
     </div>
   );
 }

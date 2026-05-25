@@ -1,16 +1,5 @@
 import { z } from 'zod';
 
-// Prisma: ordenes_compra { id BigInt, cotizacion_proveedor_id BigInt?,
-// proveedor_id BigInt, creado_por String? @db.Uuid,
-// estado EstadoOrdenCompra @default(pendiente),
-// estado_pago EstadoPagoOrdenCompra @default(pendiente),
-// total_orden Decimal(12,2) @default(0), total_pagado Decimal(12,2) @default(0),
-// saldo_pendiente Decimal(12,2)? (computed), fecha_prometida Date?,
-// fecha_recepcion Date?, notas String?, created_at?, updated_at? }
-
-// EstadoOrdenCompra enum: pendiente | confirmada | parcialmente_recibida | completada | cancelada
-// EstadoPagoOrdenCompra enum: pendiente | parcial | pagado
-
 export const EstadoOrdenCompraEnum = z.enum([
   'pendiente',
   'confirmada',
@@ -21,66 +10,74 @@ export const EstadoOrdenCompraEnum = z.enum([
 
 export const EstadoPagoOrdenCompraEnum = z.enum(['pendiente', 'parcial', 'pagado']);
 
+export const ordenCompraItemSchema = z
+  .object({
+    material_id: z.coerce.number().int().positive().optional().nullable(),
+    insumo_id: z.coerce.number().int().positive().optional().nullable(),
+    cantidad_pedida: z.coerce.number().positive('La cantidad debe ser mayor a 0'),
+    precio_unitario: z.coerce.number().nonnegative('El precio no puede ser negativo'),
+    notas: z.string().max(500).optional().nullable(),
+  })
+  .refine(
+    (item) => {
+      const hasMaterial = item.material_id != null;
+      const hasInsumo = item.insumo_id != null;
+      return hasMaterial !== hasInsumo;
+    },
+    { message: 'Cada ítem debe tener material o insumo (no ambos ni ninguno)' },
+  );
+
 export const ordenCompraBaseSchema = z.object({
-  id: z.number().int().positive(),
-  cotizacion_proveedor_id: z.number().int().positive().nullable().optional(),
-  proveedor_id: z.number().int().positive(),
+  id: z.coerce.number().int().positive(),
+  cotizacion_proveedor_id: z.coerce.number().int().positive().nullable().optional(),
+  proveedor_id: z.coerce.number().int().positive(),
   creado_por: z.string().uuid().nullable().optional(),
   estado: EstadoOrdenCompraEnum.default('pendiente'),
   estado_pago: EstadoPagoOrdenCompraEnum.default('pendiente'),
-  total_orden: z.number().nonnegative().default(0),
-  total_pagado: z.number().nonnegative().default(0),
-  saldo_pendiente: z.number().nullable().optional(),
-  fecha_prometida: z.date().nullable().optional(),
-  fecha_recepcion: z.date().nullable().optional(),
-  notas: z.string().nullable().optional(),
-  created_at: z.date().nullable().optional(),
-  updated_at: z.date().nullable().optional(),
+  total_orden: z.coerce.number().nonnegative().default(0),
+  total_pagado: z.coerce.number().nonnegative().default(0),
+  saldo_pendiente: z.coerce.number().nullable().optional(),
+  fecha_prometida: z.coerce.date().nullable().optional(),
+  fecha_recepcion: z.coerce.date().nullable().optional(),
+  notas: z.string().max(2000).nullable().optional(),
+  created_at: z.coerce.date().nullable().optional(),
+  updated_at: z.coerce.date().nullable().optional(),
 });
 
-export const crearOrdenCompraSchema = ordenCompraBaseSchema.omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-  saldo_pendiente: true,
-  total_pagado: true,
-  estado: true,
-  estado_pago: true,
+export const crearOrdenCompraSchema = z.object({
+  proveedor_id: z.coerce.number().int().positive(),
+  cotizacion_proveedor_id: z.coerce.number().int().positive().optional().nullable(),
+  fecha_prometida: z.coerce.date().optional().nullable(),
+  notas: z.string().max(2000).optional().nullable(),
+  items: z.array(ordenCompraItemSchema).min(1, 'Debe incluir al menos un ítem'),
 });
 
-export const actualizarOrdenCompraSchema = crearOrdenCompraSchema.partial();
-
-export const aprobarOrdenCompraSchema = z.object({
-  ordenId: z.number().int().positive(),
-  observaciones: z.string().max(500).optional(),
+export const crearOrdenDesdeCotizacionSchema = z.object({
+  cotizacion_proveedor_id: z.coerce.number().int().positive(),
+  fecha_prometida: z.coerce.date().optional().nullable(),
+  notas: z.string().max(2000).optional().nullable(),
 });
 
-export const recibirOrdenCompraSchema = z.object({
-  ordenId: z.number().int().positive(),
-  fecha_recepcion: z.date(),
-  observacionesRecepcion: z.string().max(500).optional(),
+export const actualizarOrdenCompraSchema = z.object({
+  estado: EstadoOrdenCompraEnum.optional(),
+  estado_pago: EstadoPagoOrdenCompraEnum.optional(),
+  fecha_prometida: z.coerce.date().optional().nullable(),
+  fecha_recepcion: z.coerce.date().optional().nullable(),
+  notas: z.string().max(2000).optional().nullable(),
+  total_pagado: z.coerce.number().nonnegative().optional(),
 });
 
-export const obtenerOrdenesSchema = z.object({
-  filtro: z
-    .object({
-      proveedor_id: z.number().int().positive().optional(),
-      estado: EstadoOrdenCompraEnum.optional(),
-      estado_pago: EstadoPagoOrdenCompraEnum.optional(),
-      desde: z.date().optional(),
-      hasta: z.date().optional(),
-    })
-    .optional(),
-  paginacion: z
-    .object({
-      pagina: z.number().int().positive().default(1),
-      limite: z.number().int().positive().default(20),
-    })
-    .optional(),
+export const listarOrdenesCompraSchema = z.object({
+  proveedor_id: z.coerce.number().int().positive().optional(),
+  estado: EstadoOrdenCompraEnum.optional(),
+  estado_pago: EstadoPagoOrdenCompraEnum.optional(),
+  cotizacion_proveedor_id: z.coerce.number().int().positive().optional(),
 });
 
 export type EstadoOrdenCompra = z.infer<typeof EstadoOrdenCompraEnum>;
 export type EstadoPagoOrdenCompra = z.infer<typeof EstadoPagoOrdenCompraEnum>;
+export type OrdenCompraItemInput = z.infer<typeof ordenCompraItemSchema>;
 export type OrdenCompra = z.infer<typeof ordenCompraBaseSchema>;
 export type CrearOrdenCompra = z.infer<typeof crearOrdenCompraSchema>;
+export type CrearOrdenDesdeCotizacion = z.infer<typeof crearOrdenDesdeCotizacionSchema>;
 export type ActualizarOrdenCompra = z.infer<typeof actualizarOrdenCompraSchema>;

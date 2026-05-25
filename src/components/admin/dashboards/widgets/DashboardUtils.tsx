@@ -8,11 +8,13 @@ type EstadoPedido =
 
 export interface PaletaColors {
   accent: string;
+  accent2?: string;
   bg: string;
   bgSoft: string;
   border: string;
   text: string;
   mid: string;
+  muted: string;
   primary: string;
   secondary: string;
   dark: string;
@@ -20,26 +22,38 @@ export interface PaletaColors {
   peach: string;
   beige: string;
   white: string;
+  surface?: string;
+  green?: string;
 }
 
-// ─── PALETA CORPORATIVA ROSE ──────────────────────────────────────────────────
+// ─── PALETA CORPORATIVA ROSE MEJORADA ────────────────────────────────────────
 export const COMPANY_PALETTE: PaletaColors = {
-  accent:    '#e11d48',   // guor-600  — rose principal
-  primary:   '#e11d48',   // guor-600
-  secondary: '#be123c',   // guor-700  — hover / pressed
+  // Acentos principales
+  accent:    '#e11d48',   // rose-600 — primario
+  accent2:   '#f43f5e',   // rose-500 — hover
+  primary:   '#e11d48',
+  secondary: '#be123c',   // rose-700
 
-  bg:        '#fafaf9',   // guor-bg   — off-white cálido
-  bgSoft:    '#fff1f2',   // guor-50   — surface tint rose
+  // Fondos y superficies
+  bg:        '#fafaf9',   // stone-50 — fondo principal limpio
+  bgSoft:    '#fff1f2',   // rose-50  — fondo suave
+  surface:   '#ffffff',   // blanco puro para cards
   white:     '#ffffff',
-  beige:     '#fff1f2',   // guor-50   — icon bg
-  cream:     '#ffe4e6',   // guor-100  — stock crítico bg
-  peach:     '#fecdd3',   // guor-200  — stock crítico border
 
-  text:      '#1c1917',   // guor-ink  — warm-black
-  dark:      '#1c1917',   // guor-ink
-  mid:       '#78716c',   // guor-soft — warm-gray (texto secundario)
+  // Bordes y divisores
+  border:    '#f1f5f9',   // slate-100 — borde sutil
+  beige:     '#fff1f2',   // rose-50   — iconos bg
+  cream:     '#ffe4e6',   // rose-100  — alertas
+  peach:     '#fecdd3',   // rose-200  — bordes destacados
 
-  border:    '#e7e5e4',   // guor-line — warm-stone
+  // Tipografía
+  text:      '#0f172a',   // slate-900 — texto principal
+  dark:      '#0f172a',
+  muted:     '#64748b',   // slate-500 — texto secundario
+  mid:       '#78716c',   // stone-600 — más cálido
+
+  // Verde para éxito
+  green:     '#10b981',   // emerald-500
 };
 
 export type RolPaleta =
