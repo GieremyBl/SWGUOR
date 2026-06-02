@@ -2200,8 +2200,9 @@ enum EstadoOrdenProduccion {
 
 enum EstadoPago {
   pendiente
-  verificado
-  rechazado
+  pagado
+  pago_parcial
+  anulado
 
   @@schema("public")
 }
