@@ -12,35 +12,43 @@ import {
 import { useRouter } from "next/navigation";
 import type { ClienteListItem } from "@/lib/services/clientes.service";
 
-// ─── Props ────────────────────────────────────────────────────
+// ─── Tipo Extendido Seguro ────────────────────────────────────
+// Extendemos el tipo del servicio para reflejar la columna real de la Base de Datos
+type ClienteConEstado = ClienteListItem & {
+  estado?: string | null;
+};
+
 interface Props {
-  clientes: ClienteListItem[];
+  clientes: ClienteConEstado[]; // <-- Ahora usamos el tipo correcto con 'estado'
   loading?: boolean;
   onEdit?: (user: ClienteListItem) => void;
   onSuspender?: (user: ClienteListItem) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-function EstadoBadge({ estado }: { estado: string }) {
-  const activo = estado.toLowerCase() === "activo";
+function EstadoBadge({ estado }: { estado: string | null | undefined }) {
+  const estadoLimpio = (estado ?? "activo").toLowerCase();
+  const isActivo = estadoLimpio === "activo";
+
   return (
     <Badge
       variant="outline"
-      className={`rounded-full px-3 py-0.5 text-[10px] font-bold uppercase border ${activo
+      className={`rounded-full px-3 py-0.5 text-[10px] font-black uppercase tracking-wider border transition-colors ${
+        isActivo
           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-          : "bg-orange-50 text-orange-600 border-orange-200"
-        }`}
+          : "bg-[var(--guor-cream-deep)] text-[var(--guor-soft)] border-[var(--guor-stone-mid)]"
+      }`}
     >
-      {estado}
+      {estadoLimpio}
     </Badge>
   );
 }
 
-// ─── Componente ───────────────────────────────────────────────
+// ─── Componente Principal ─────────────────────────────────────
 function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
   const router = useRouter();
   const showActions = !!onEdit || !!onSuspender;
-  const colSpan = 4 + (showActions ? 1 : 0);
+  const colSpan = 5 + (showActions ? 1 : 0);
 
   return (
     <Table>
@@ -49,6 +57,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
           <TableHead className={thCls}>Empresa</TableHead>
           <TableHead className={`${thCls} text-center`}>RUC</TableHead>
           <TableHead className={`${thCls} text-center`}>Email</TableHead>
+          <TableHead className={`${thCls} text-center`}>Dirección Fiscal</TableHead>
           <TableHead className={`${thCls} text-center`}>Estado</TableHead>
           {showActions && (
             <TableHead className={`${thCls} text-right pr-6`}>Acciones</TableHead>
@@ -58,7 +67,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
 
       <TableBody>
 
-        {/* ── Skeleton ── */}
+        {/* ── Skeleton Loaders ── */}
         {loading && Array.from({ length: 5 }).map((_, i) => (
           <TableRow key={`sk-${i}`} className={rowCls}>
             <TableCell className="py-4 px-6 rounded-l-xl">
@@ -72,6 +81,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
             </TableCell>
             <TableCell className="text-center"><Skeleton className="h-4 w-28 mx-auto" /></TableCell>
             <TableCell className="text-center"><Skeleton className="h-4 w-36 mx-auto" /></TableCell>
+            <TableCell className="text-center"><Skeleton className="h-4 w-44 mx-auto" /></TableCell>
             <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto rounded-full" /></TableCell>
             {showActions && (
               <TableCell className="text-right px-6 rounded-r-xl">
@@ -85,7 +95,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
           </TableRow>
         ))}
 
-        {/* ── Sin datos ── */}
+        {/* ── Sin Datos en la Lista ── */}
         {!loading && clientes.length === 0 && (
           <TableRow>
             <TableCell colSpan={colSpan} className="py-16 text-center">
@@ -99,10 +109,13 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
           </TableRow>
         )}
 
-        {/* ── Filas ── */}
+        {/* ── Renderizado de Filas ── */}
         {!loading && clientes.map((c) => {
-          const activo = c.activo;
-          const iniciales = (c.razon_social ?? c.usuarios?.email ?? "??")
+          // TypeScript ahora reconoce perfectamente c.estado gracias al tipo extendido
+          const estadoLimpio = (c.estado ?? "activo").toLowerCase();
+          const isActivo = estadoLimpio === "activo";
+
+          const iniciales = (c.razon_social ?? c.email ?? "??")
             .substring(0, 2).toUpperCase();
 
           return (
@@ -122,7 +135,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
                     </span>
                     <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                       <Building2 size={9} className="text-slate-300 shrink-0" />
-                      Cliente
+                      Cliente {c.tipo_cliente ? `(${c.tipo_cliente})` : ""}
                     </span>
                   </div>
                 </div>
@@ -139,13 +152,13 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
               <TableCell className="text-center">
                 <span className="text-xs text-slate-500 flex items-center justify-center gap-1.5">
                   <Mail size={11} className="text-slate-300 shrink-0" />
-                  {c.email}
+                  {c.email || <span className="text-slate-300">—</span>}
                 </span>
               </TableCell>
 
-              {/* Direccion Fiscal */}
+              {/* Dirección Fiscal */}
               <TableCell className="text-center">
-                <span className="text-xs text-slate-600 flex items-center justify-center gap-1.5">
+                <span className="text-xs text-slate-600 flex items-center justify-center gap-1.5 max-w-[200px] truncate mx-auto">
                   <MapPin size={11} className="text-slate-300 shrink-0" />
                   {c.direccion_fiscal || <span className="text-slate-300">No registrada</span>}
                 </span>
@@ -153,7 +166,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
 
               {/* Estado */}
               <TableCell className="text-center">
-                <EstadoBadge estado={c.activo} />
+                <EstadoBadge estado={c.estado} />
               </TableCell>
 
               {/* Acciones */}
@@ -176,8 +189,8 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
 
                     {onSuspender && (
                       <ActionBtn
-                        title={activo ? "Suspender" : "Reactivar"}
-                        color={activo ? "amber" : "blue"}
+                        title={isActivo ? "Suspender" : "Reactivar"}
+                        color={isActivo ? "amber" : "blue"}
                         onClick={() => onSuspender(c)}
                       >
                         <ShieldOff size={15} />

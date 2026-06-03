@@ -2,24 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 
-function useScrollReveal(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+const BenefitsHero = () => {
+  const sRef = useRef<HTMLDivElement>(null);
+  const [sVisible, setSVisible] = useState(false);
+
   useEffect(() => {
-    const el = ref.current;
+    const el = sRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
+      ([e]) => { if (e.isIntersecting) { setSVisible(true); obs.disconnect(); } },
+      { threshold: 0.15 },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
-const BenefitsHero = () => {
-  const s = useScrollReveal();
+  }, []);
 
   return (
     <section style={{
@@ -41,10 +37,10 @@ const BenefitsHero = () => {
         pointerEvents: "none",
       }} />
 
-      <div ref={s.ref} style={{
+      <div ref={sRef} style={{
         maxWidth: "800px", margin: "0 auto", position: "relative", zIndex: 1,
-        opacity: s.visible ? 1 : 0,
-        transform: s.visible ? "translateY(0)" : "translateY(40px)",
+        opacity: sVisible ? 1 : 0,
+        transform: sVisible ? "translateY(0)" : "translateY(40px)",
         transition: "all 0.9s ease",
       }}>
         <span style={{

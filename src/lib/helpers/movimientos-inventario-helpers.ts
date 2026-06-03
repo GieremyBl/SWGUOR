@@ -18,13 +18,11 @@ export async function registrarEntradaCompra(data: {
     cantidad: data.cantidad,
     tipo_movimiento: 'entrada',
     motivo: `Compra OC-${data.numero_oc}`,
-
     usuario_id: data.usuario_id,
     almacen_id: data.almacen_id,
     referencia_tipo: 'ORDEN_COMPRA',
   });
 }
-
 
 export async function registrarSalidaVenta(data: {
   producto_id: string | number;
@@ -161,8 +159,9 @@ export async function fetchMovimientos(filtros?: {
   try {
     const data = await MovimientosInventarioService.listar(filtros);
     return { success: true, data };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const mensajeError = error instanceof Error ? error.message : 'Ocurrió un error desconocido';
+    return { success: false, error: mensajeError };
   }
 }
 
@@ -174,7 +173,8 @@ export async function fetchResumenMovimientos(filtros?: {
   try {
     const data = await MovimientosInventarioService.obtenerResumen(filtros);
     return { success: true, data };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error) {
+    const mensajeError = error instanceof Error ? error.message : 'Ocurrió un error desconocido';
+    return { success: false, error: mensajeError };
   }
 }

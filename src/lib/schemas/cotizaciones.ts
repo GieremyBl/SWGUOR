@@ -3,6 +3,7 @@ import { z } from 'zod';
 // ITEMS DE COTIZACIÓN
 export const cotizacionItemSchema = z.object({
   producto_id:          z.string().min(1, 'Producto es obligatorio'),
+  variante_id:          z.string().optional(),
   cantidad:             z.number().min(1, 'Cantidad requerida'), 
   precio_unitario:      z.number().min(0, 'Precio requerido'), 
   color_snapshot:       z.string().optional(),

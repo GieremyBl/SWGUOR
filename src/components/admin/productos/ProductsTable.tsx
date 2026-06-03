@@ -5,7 +5,6 @@ import { Package } from "lucide-react";
 import { ProductoConRelaciones, Categoria } from "@/app/admin/Panel-Administrativo/productos/types";
 import ProductoRow from "@/components/admin/productos/ProductsRow";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRouter } from "next/navigation";
 
 interface ProductosTableProps {
   data: ProductoConRelaciones[];
@@ -14,8 +13,7 @@ interface ProductosTableProps {
   onArchive: (p: ProductoConRelaciones) => void;
   onEdit: (p: ProductoConRelaciones) => void;
   onStatusChange?: (p: ProductoConRelaciones) => void;
-  canEdit?: boolean;
-  canArchive?: boolean;
+  // Se eliminan canEdit y canArchive de la interfaz ya que el Row maneja sus propios permisos internos
 }
 
 function ProductosTable({
@@ -25,8 +23,6 @@ function ProductosTable({
   onArchive,
   onEdit,
   onStatusChange,
-  canEdit = false,
-  canArchive = false
 }: ProductosTableProps) {
 
   return (
@@ -94,8 +90,7 @@ function ProductosTable({
                   onArchive={onArchive}
                   onEdit={onEdit}
                   onStatusChange={onStatusChange}
-                  canEdit={canEdit}
-                  canArchive={canArchive}
+                  // Solución al Error TS2322: Se removieron canEdit y canArchive de aquí
                 />
               ))
             )}

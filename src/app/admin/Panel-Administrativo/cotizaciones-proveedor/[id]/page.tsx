@@ -42,7 +42,7 @@ export default function CotizacionProveedorDetallePage({
     );
   }
 
-  const cotizacion = res.data as CotizacionDetalleData;
+  const cotizacion = res.data as unknown as CotizacionDetalleData;
 
   return (
     <div className="space-y-6 p-6 bg-slate-50 min-h-screen">

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePortal } from './_contexts/PortalContext';
+import { usePortal } from '@/lib/hooks/usePortal';
 import { Loader2 } from 'lucide-react';
 
 export default function PortalIndexPage() {

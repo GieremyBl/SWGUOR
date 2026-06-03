@@ -3,39 +3,35 @@
 import { useEffect, useRef, useState } from "react";
 import { Clock3 } from "lucide-react";
 
-function useScrollReveal(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+const TimelineCard = () => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [sectionVisible, setSectionVisible] = useState(false);
+
   useEffect(() => {
-    const el = ref.current;
+    const el = sectionRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
+      ([e]) => { if (e.isIntersecting) { setSectionVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
-const TimelineCard = () => {
-  const section = useScrollReveal(0.1);
+  }, []);
 
   return (
     <section style={{ background: "#0f0d0b", padding: "6rem 2rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
         <div
-          ref={section.ref}
+          ref={sectionRef}
           style={{
             borderRadius: "40px", padding: "4rem",
             background: "rgba(255,255,255,0.015)",
             border: "1px solid rgba(196,163,90,0.15)",
             display: "grid", gridTemplateColumns: "1fr 1.4fr",
             gap: "4rem", alignItems: "center",
-            opacity: section.visible ? 1 : 0,
-            transform: section.visible ? "translateY(0)" : "translateY(50px)",
+            opacity: sectionVisible ? 1 : 0,
+            transform: sectionVisible ? "translateY(0)" : "translateY(50px)",
             transition: "all 0.9s ease",
           }}
           className="timeline-grid"

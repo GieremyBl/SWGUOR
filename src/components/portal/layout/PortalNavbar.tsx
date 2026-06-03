@@ -1,18 +1,24 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, User, Menu, X, LogOut, UserCircle } from 'lucide-react';
+import { Search, User, Menu, X, LogOut, UserCircle, ShoppingCart } from 'lucide-react';
 import { NotificationDropdown } from './NotificationDropDown';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useCartStore, type CartState } from '@/lib/store/useCartStore';
+import { usePortalCart } from '../cart/PortalCartLayout';
 
 export function Navbar({ empresa = 'Cargando...' }: { empresa?: string }) {
+  const [mounted, setMounted] = useState(false);
+  const itemCount = useCartStore((s: CartState) => s.items.length);
+  const { openCart } = usePortalCart();
+
+  useEffect(() => setMounted(true), []);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Cerrar el menú si se hace click afuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -34,7 +40,7 @@ export function Navbar({ empresa = 'Cargando...' }: { empresa?: string }) {
       className="h-16 border-b border-guor-line bg-white sticky top-0 z-30 px-4 md:px-8 flex items-center justify-between shadow-sm"
       role="banner"
     >
-      {/* Sección Izquierda: Buscador Compacto */}
+      {/* Sección Izquierda: Buscador */}
       <div className="flex items-center flex-1 min-w-0">
         <div className="relative w-full max-w-sm group hidden sm:block">
           <Search
@@ -51,12 +57,27 @@ export function Navbar({ empresa = 'Cargando...' }: { empresa?: string }) {
         </div>
       </div>
 
-      {/* Sección Derecha: Acciones — Escritorio */}
-      <div className="hidden sm:flex items-center gap-4">
-        {/* Inserción del Dropdown en Tiempo Real */}
+      {/* Sección Derecha — Escritorio */}
+      <div className="hidden sm:flex items-center gap-3">
+
+        {/* Botón Carrito */}
+        <button
+          onClick={openCart}
+          aria-label={`Carrito de pedidos${mounted && itemCount > 0 ? `, ${itemCount} productos` : ''}`}
+          className="relative p-2 rounded-xl hover:bg-guor-50 text-guor-soft/60 hover:text-guor-600 transition-colors"
+        >
+          <ShoppingCart size={20} />
+          {mounted && itemCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
+              {itemCount > 99 ? '99+' : itemCount}
+            </span>
+          )}
+        </button>
+
+        {/* Notificaciones */}
         <NotificationDropdown />
 
-        {/* Contenedor del Perfil con Dropdown */}
+        {/* Perfil con Dropdown */}
         <div className="relative" ref={profileMenuRef}>
           <button
             onClick={() => setIsProfileMenuOpen((prev) => !prev)}
@@ -79,14 +100,10 @@ export function Navbar({ empresa = 'Cargando...' }: { empresa?: string }) {
             </div>
           </button>
 
-          {/* Dropdown Menu */}
           {isProfileMenuOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-guor-line rounded-xl shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <button
-                onClick={() => {
-                  setIsProfileMenuOpen(false);
-                  router.push('/portal/perfil'); // Ajusta la ruta a tu necesidad
-                }}
+                onClick={() => { setIsProfileMenuOpen(false); router.push('/portal/perfil'); }}
                 className="w-full px-4 py-2 text-left text-xs text-guor-ink hover:bg-guor-50 flex items-center gap-2 transition-colors"
               >
                 <UserCircle size={16} className="text-guor-600" />
@@ -105,9 +122,25 @@ export function Navbar({ empresa = 'Cargando...' }: { empresa?: string }) {
         </div>
       </div>
 
-      {/* Botón Menú Hamburguesa — Móvil */}
+      {/* Móvil */}
       <div className="flex sm:hidden items-center gap-2">
+
+        {/* Carrito móvil */}
+        <button
+          onClick={openCart}
+          aria-label="Abrir carrito"
+          className="relative p-1.5 text-guor-soft/60 hover:text-guor-600 hover:bg-guor-50 rounded-md transition-colors"
+        >
+          <ShoppingCart size={20} />
+          {mounted && itemCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-0.5 bg-amber-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">
+              {itemCount > 99 ? '99+' : itemCount}
+            </span>
+          )}
+        </button>
+
         <NotificationDropdown />
+
         <button
           onClick={() => setIsMobileMenuOpen((prev) => !prev)}
           className="p-1.5 text-guor-soft/60 hover:text-guor-600 hover:bg-guor-50 rounded-md transition-colors"
@@ -129,7 +162,6 @@ export function Navbar({ empresa = 'Cargando...' }: { empresa?: string }) {
                 className="w-full bg-guor-bg border border-guor-line rounded-full py-1.5 pl-9 pr-4 text-xs text-guor-ink"
               />
             </div>
-
             <div className="border-t border-guor-line pt-2 space-y-1">
               <button
                 onClick={() => router.push('/portal/mi-perfil')}

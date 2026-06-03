@@ -5,10 +5,9 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 import { useProductos } from "@/lib/hooks/useProductos";
 import { Button } from "@/components/ui/button";
 import {
-  ShieldAlert, RefreshCw, Plus, ChevronLeft, ChevronRight,
+  ShieldAlert, RefreshCw, ChevronLeft, ChevronRight,
   FileSpreadsheet, FileText
 } from "lucide-react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import ProductFilters from "@/components/admin/productos/ProductsFilters";
 import ProductosTable from "@/components/admin/productos/ProductsTable";
@@ -41,7 +40,7 @@ export default function ProductosPage() {
   const pageSize = 10;
   const { data: stockResumen } = useProductoStockResumen();
 
-  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  // Estados de carga para las exportaciones
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
 
@@ -86,7 +85,7 @@ export default function ProductosPage() {
     setCurrentPage(0);
   }, [searchTerm, selectedCategoria, colorFilter, sizeFilter, sortOrder, statusFilter]);
 
-  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
+  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF (SANEADA PARA TYPESCRIPT) ──
 
   const handleExportExcel = async () => {
     if (productosProcesados.length === 0) {
@@ -96,8 +95,20 @@ export default function ProductosPage() {
     const toastId = toast.loading("Generando Excel...");
     try {
       setExportingExcel(true);
+
+      // CORRECCIÓN TS: Removemos nulos convirtiéndolos a cadenas vacías o undefined
+      const productosSaneados = productosProcesados.map((p: any) => ({
+        ...p,
+        sku: p.sku ?? "",
+        codigo: p.codigo ?? "",
+        descripcion: p.descripcion ?? undefined,
+        precio: Number(p.precio ?? 0),
+        stock: Number(p.stock ?? 0),
+        estado: p.estado ?? "inactivo"
+      }));
+
       await exportProductosToExcel(
-        productosProcesados,
+        productosSaneados,
         stockResumen ?? [],
         "Inventario"
       );
@@ -118,7 +129,19 @@ export default function ProductosPage() {
     const toastId = toast.loading("Generando PDF...");
     try {
       setExportingPDF(true);
-      await exportInventarioToPDF(productosProcesados, categorias, {
+
+      // CORRECCIÓN TS: Mapeamos de igual forma para cumplir la firma estricta del PDF
+      const productosSaneados = productosProcesados.map((p: any) => ({
+        ...p,
+        sku: p.sku ?? "",
+        codigo: p.codigo ?? "",
+        descripcion: p.descripcion ?? undefined,
+        precio: Number(p.precio ?? 0),
+        stock: Number(p.stock ?? 0),
+        estado: p.estado ?? "inactivo"
+      }));
+
+      await exportInventarioToPDF(productosSaneados, categorias, {
         filename: "Inventario",
         title: "REPORTE DE INVENTARIO",
       });
@@ -148,7 +171,6 @@ export default function ProductosPage() {
           }}
         >
           <div className="flex items-center gap-3">
-            {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
             <Button
               variant="outline"
               onClick={handleExportExcel}
@@ -159,7 +181,6 @@ export default function ProductosPage() {
               {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
             </Button>
 
-            {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
             <Button
               variant="outline"
               onClick={handleExportPDF}

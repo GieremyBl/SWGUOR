@@ -4,25 +4,30 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
-  ShieldOff, Loader2, AlertTriangle, X,
-  PackageX, Box, Archive, Info, AlertCircle,
-  PackageCheck, ArrowRightLeft
+  Loader2, X,
+  PackageX, Box, Archive, 
+  ArrowRightLeft
 } from "lucide-react";
 import { tienePermiso, type RolUsuario } from "@/lib/constants/roles";
-import { cn } from "@/lib/utils";
+
+// ── Definición de Interfaces Estrictas ──────────────────────────────────
+
+export interface ProductoDescontinuarData {
+  id: string | number;
+  nombre: string;
+}
 
 interface DescontinuarProductoDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  producto: any;
+  producto: ProductoDescontinuarData | null | undefined;
   rolUsuario: RolUsuario;
 }
 
@@ -56,9 +61,14 @@ export default function DescontinuarProductoDialog({
       toast.success("Catálogo actualizado: Producto fuera de circulación");
       onSuccess();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error al descontinuar:", error);
-      toast.error(error.message || "Error al descontinuar");
+      // Validación segura del error capturado en lugar de usar 'any'
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Error inesperado al descontinuar");
+      }
     } finally {
       setLoading(false);
     }
@@ -77,7 +87,7 @@ export default function DescontinuarProductoDialog({
             <div className="p-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl">
               <PackageX className="w-7 h-7 text-white" />
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-all">
+            <button type="button" onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-all">
               <X className="w-5 h-5 text-white/70" />
             </button>
           </div>
@@ -113,7 +123,7 @@ export default function DescontinuarProductoDialog({
             <div className="flex gap-4 relative z-10">
               <div className="space-y-4">
                 <p className="text-sm font-bold text-slate-700 leading-relaxed">
-                  ¿Confirma la descontinuación de <span className="font-black text-amber-600 italic">"{producto?.nombre}"</span>?
+                  ¿Confirma la descontinuación de <span className="font-black text-amber-600 italic">{producto?.nombre}</span>?
                 </p>
 
                 <div className="grid grid-cols-1 gap-3">
@@ -151,6 +161,7 @@ export default function DescontinuarProductoDialog({
             </Button>
 
             <button
+              type="button"
               onClick={onClose}
               disabled={loading}
               className="w-full py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] hover:text-slate-600 transition-colors"

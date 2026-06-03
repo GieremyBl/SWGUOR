@@ -3,9 +3,8 @@ import { prisma, prismaAvailable } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 
 export async function GET() {
-  // Check DATABASE_URL first
-  if (!process.env.DATABASE_URL) {
-    console.error('[testimonials] DATABASE_URL is not set');
+  if (!prisma) {
+    console.error('[testimonials] Prisma client not initialized');
     return NextResponse.json(
       { error: 'Database not configured' },
       { status: 503 }

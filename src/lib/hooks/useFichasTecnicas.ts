@@ -15,6 +15,26 @@ import type { Medida } from '@/lib/schemas/fichas-tecnicas';
 export const FICHAS_KEY  = 'fichas-tecnicas';
 export const MEDIDAS_KEY = 'ficha-medidas';
 
+// Interfaz estándar para el contrato de respuestas de la API locales
+interface ApiResponse {
+  success:  boolean;
+  error?:   string | null;
+  message?: string | null;
+  data?:    unknown;
+}
+
+export interface CrearFichaTecnicaInput {
+  producto_id:            string | number;
+  version?:               string;
+  descripcion_detallada?: string;
+  sam_total?:             number;
+  costo_estimado?:        number;
+  ficha_url?:             string;
+  imagen_geometral?:      string;
+}
+
+// ── Hook: useFichaTecnica ───────────────────────────────────────────────────
+
 export function useFichaTecnica(producto_id: string) {
   const queryClient = useQueryClient();
 
@@ -25,20 +45,27 @@ export function useFichaTecnica(producto_id: string) {
     refetchOnWindowFocus: false,
   });
 
-  const createMutation = useMutation({
+  const createMutation = useMutation<ApiResponse, Error, CrearFichaTecnicaInput>({
     mutationFn: createFichaTecnica,
     onSuccess: (res) => {
-      if (!res.success) { toast.error(res.error ?? 'Error al crear ficha'); return; }
+      if (!res.success) { 
+        toast.error(res.error ?? 'Error al crear ficha'); 
+        return; 
+      }
       toast.success('Ficha técnica creada');
       queryClient.invalidateQueries({ queryKey: [FICHAS_KEY, producto_id] });
     },
     onError: () => toast.error('Error de conexión'),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateFichaTecnica(id, data),
+  // Para la actualización podemos usar Partial de la creación unida a propiedades libres si se requiere
+  const updateMutation = useMutation<ApiResponse, Error, { id: string; data: Partial<CrearFichaTecnicaInput> & Record<string, unknown> }>({
+    mutationFn: ({ id, data }) => updateFichaTecnica(id, data),
     onSuccess: (res) => {
-      if (!res.success) { toast.error(res.error ?? 'Error al actualizar'); return; }
+      if (!res.success) { 
+        toast.error(res.error ?? 'Error al actualizar'); 
+        return; 
+      }
       toast.success('Ficha actualizada');
       queryClient.invalidateQueries({ queryKey: [FICHAS_KEY, producto_id] });
     },
@@ -50,13 +77,15 @@ export function useFichaTecnica(producto_id: string) {
     isLoading: query.isLoading,
     refetch:   query.refetch,
 
-    create: (data: any)            => createMutation.mutate(data),
-    update: (id: string, data: any) => updateMutation.mutate({ id, data }),
+    create: (data: CrearFichaTecnicaInput) => createMutation.mutate(data),
+    update: (id: string, data: Partial<CrearFichaTecnicaInput> & Record<string, unknown>) => updateMutation.mutate({ id, data }),
 
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
   };
 }
+
+// ── Hook: useFichaMedidas ────────────────────────────────────────────────────
 
 export function useFichaMedidas(ficha_id: string) {
   const queryClient = useQueryClient();
@@ -68,18 +97,20 @@ export function useFichaMedidas(ficha_id: string) {
     refetchOnWindowFocus: false,
   });
 
-  const saveMutation = useMutation({
-    mutationFn: ({ medidas }: { medidas: Omit<Medida, 'id'>[] }) =>
-      saveMedidas(ficha_id, medidas),
+  const saveMutation = useMutation<ApiResponse, Error, { medidas: Omit<Medida, 'id'>[] }>({
+    mutationFn: ({ medidas }) => saveMedidas(ficha_id, medidas),
     onSuccess: (res) => {
-      if (!res.success) { toast.error(res.error ?? 'Error al guardar medidas'); return; }
+      if (!res.success) { 
+        toast.error(res.error ?? 'Error al guardar medidas'); 
+        return; 
+      }
       toast.success('Medidas guardadas');
       queryClient.invalidateQueries({ queryKey: [MEDIDAS_KEY, ficha_id] });
     },
     onError: () => toast.error('Error de conexión'),
   });
 
-  const deleteMutation = useMutation({
+  const deleteMutation = useMutation<ApiResponse, Error, string>({
     mutationFn: deleteMedida,
     onSuccess: () => {
       toast.success('Medida eliminada');
@@ -96,7 +127,7 @@ export function useFichaMedidas(ficha_id: string) {
     save:   (medidas: Omit<Medida, 'id'>[]) => saveMutation.mutate({ medidas }),
     remove: (id: string)                    => deleteMutation.mutate(id),
 
-    isSaving:  saveMutation.isPending,
+    isSaving:   saveMutation.isPending,
     isDeleting: deleteMutation.isPending,
   };
 }

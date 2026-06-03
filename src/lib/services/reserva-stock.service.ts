@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { reservas_stock, Prisma } from '@prisma/client';
+import { reservas_stock } from '@prisma/client';
 
 // Campos reales del modelo 'reservas_stock':
 //   id, variante_id, cotizacion_id, pedido_id, cantidad, expira_en, estado

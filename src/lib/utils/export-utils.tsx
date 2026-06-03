@@ -1,12 +1,18 @@
 import * as XLSX from "exceljs";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import autoTable, { UserOptions } from "jspdf-autotable";
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { ProductoStockResumen } from '@/lib/hooks/useStockResumen';
 
 // =====================================================
 // INTERFACES Y TIPOS
 // =====================================================
+
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable?: {
+    finalY: number;
+  };
+}
 
 interface ExcelExportConfig {
   filename: string;
@@ -29,10 +35,87 @@ interface PDFImageConfig extends PDFExportConfig {
   excludeFields?: string[];
 }
 
+// Interfaces específicas para el dominio de datos
+interface ProductoBase {
+  id: string | number;
+  sku?: string;
+  nombre?: string;
+  precio?: string | number;
+  estado?: string;
+  categorias?: { nombre?: string };
+}
+
+interface CategoriaBase {
+  nombre: string;
+  descripcion?: string | null;
+  activo?: boolean;
+  created_at: string | Date;
+}
+
+interface VentaBase {
+  codigo_pedido?: string;
+  numero_comprobante?: string;
+  orden_id?: string | number;
+  created_at: string | Date;
+  subtotal?: string | number;
+  impuestos?: string | number;
+  total?: string | number;
+  estado_pedido: string;
+  cliente?: { nombre?: string };
+  ordenes?: {
+    metodo_pago?: string;
+    estado?: string;
+    clientes?: { razon_social?: string };
+  };
+}
+
+interface ConfeccionBase {
+  id: string | number;
+  cliente?: string;
+  taller?: string;
+  estado?: string;
+  fecha_entrega?: string;
+  total_prendas?: number;
+  prioridad?: string;
+}
+
+interface PersonalBase {
+  nombre_completo?: string;
+  cargo: string;
+  dni?: string;
+  telefono?: string;
+  estado?: boolean;
+  fecha_income?: string | Date; // mapeado internamente
+  fecha_ingreso?: string | Date;
+  usuarios?: {
+    email?: string;
+    rol?: string;
+    ultimo_acceso?: string | Date;
+  };
+}
+
+interface ClienteBase {
+  ruc?: string;
+  razon_social?: string;
+  nombre_comercial?: string;
+  email?: string;
+  telefono?: string;
+  tipo_cliente?: string;
+  direccion_fiscal?: string;
+  activo?: boolean;
+  created_at?: string | Date;
+  ultimo_pedido_en?: string | Date;
+  clientes?: ClienteBase; // Por compatibilidad con la estructura anidada u.clientes ?? u
+  estado?: string;
+  usuarios?: {
+    email?: string;
+    rol?: string;
+    ultimo_acceso?: string | Date;
+  };
+}
+
 // =====================================================
 // HELPER: descarga un blob como archivo
-// ─ Aplica document.body.appendChild/removeChild para
-//   compatibilidad con Firefox y Safari
 // =====================================================
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -70,8 +153,8 @@ const drawHeaderWithLogo = async (doc: jsPDF, title: string, subtitle?: string):
     const img = new Image();
     img.src = '/logo.png';
 
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
       img.onerror = reject;
       setTimeout(() => reject(new Error('Timeout loading logo')), 1500);
     });
@@ -107,7 +190,7 @@ const drawHeaderWithLogo = async (doc: jsPDF, title: string, subtitle?: string):
 // EXPORTACIÓN A EXCEL — GENÉRICO
 // =====================================================
 
-export const exportToExcel = async (data: any[], config: ExcelExportConfig) => {
+export const exportToExcel = async (data: Record<string, unknown>[], config: ExcelExportConfig) => {
   if (data.length === 0) return;
 
   const workbook = new XLSX.Workbook();
@@ -130,26 +213,26 @@ export const exportToExcel = async (data: any[], config: ExcelExportConfig) => {
 // =====================================================
 
 export const prepareProductosForExcel = (
-  productos: any[],
+  productos: ProductoBase[],
   stockResumen: ProductoStockResumen[] = [],
 ) => {
   return productos.map(p => ({
     'SKU': p.sku ?? '---',
     'Producto': p.nombre ?? '---',
     'Categoría': p.categorias?.nombre ?? 'General',
-    'Stock Real': stockResumen.find(s => s.producto_id === Number(p.id))?.stock_total_adicional ?? p.stock ?? 0,
+    'Stock Real': stockResumen.find(s => s.producto_id === Number(p.id))?.stock_total_adicional ?? (typeof p.precio === 'number' ? p.precio : 0), 
     'Precio (S/.)': Number(p.precio ?? 0).toFixed(2),
     'Estado': p.estado === 'activo' ? 'Activo' : 'Inactivo',
   }));
 };
 
 export const exportProductosToExcel = async (
-  productos: any[],
+  productos: ProductoBase[],
   stockResumen: ProductoStockResumen[] = [],
   filename: string,
 ) => {
   const data = prepareProductosForExcel(productos, stockResumen);
-  await exportToExcel(data, { filename, sheetName: 'Inventario' });
+  await exportToExcel(data as unknown as Record<string, unknown>[], { filename, sheetName: 'Inventario' });
 };
 
 // =====================================================
@@ -158,7 +241,7 @@ export const exportProductosToExcel = async (
 
 export const exportToPDF = async (
   headers: string[][],
-  body: any[][],
+  body: string[][],
   config: PDFExportConfig,
 ) => {
   const doc = new jsPDF({ orientation: config.orientation ?? 'portrait' });
@@ -174,7 +257,7 @@ export const exportToPDF = async (
     rowPageBreak: 'auto',
     showHead: 'everyPage',
     margin: { top: 40, bottom: 20 },
-  });
+  } as UserOptions);
 
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
@@ -218,7 +301,12 @@ const styles = StyleSheet.create({
 // EXPORTACIÓN A PDF — CATEGORÍAS (@react-pdf/renderer)
 // =====================================================
 
-const CategoriasDocument = ({ data, config }: any) => {
+interface DocumentProps<T> {
+  data: T[];
+  config: { title: string; filename: string };
+}
+
+const CategoriasDocument = ({ data, config }: DocumentProps<CategoriaBase>) => {
   const colWidths = ['25%', '40%', '15%', '20%'];
   return (
     <Document>
@@ -238,7 +326,7 @@ const CategoriasDocument = ({ data, config }: any) => {
               </View>
             ))}
           </View>
-          {data.map((item: any, rowIndex: number) => (
+          {data.map((item, rowIndex) => (
             <View key={rowIndex} style={rowIndex % 2 === 0 ? styles.tableRow : styles.tableRowStriped}>
               <View style={[styles.tableCol, { width: colWidths[0] }]}><Text style={styles.tableCell}>{item.nombre ?? '---'}</Text></View>
               <View style={[styles.tableCol, { width: colWidths[1] }]}><Text style={styles.tableCell}>{item.descripcion ?? 'Sin descripción'}</Text></View>
@@ -252,7 +340,7 @@ const CategoriasDocument = ({ data, config }: any) => {
   );
 };
 
-export const exportCategoriasToPDF = async (data: any[], config: { title: string; filename: string }) => {
+export const exportCategoriasToPDF = async (data: CategoriaBase[], config: { title: string; filename: string }) => {
   if (!data || data.length === 0) return;
   if (typeof window === 'undefined') return;
 
@@ -266,7 +354,13 @@ export const exportCategoriasToPDF = async (data: any[], config: { title: string
 // EXPORTACIÓN A PDF — INVENTARIO (@react-pdf/renderer)
 // =====================================================
 
-const InventarioDocument = ({ data, categorias, config }: any) => {
+interface InventarioDocumentProps {
+  data: (ProductoBase & { categoria_id?: string | number; stock?: number })[];
+  categorias: { id: string | number; nombre: string }[];
+  config: PDFExportConfig;
+}
+
+const InventarioDocument = ({ data, categorias, config }: InventarioDocumentProps) => {
   const colWidths = ['15%', '35%', '20%', '10%', '10%', '10%'];
   return (
     <Document>
@@ -286,9 +380,9 @@ const InventarioDocument = ({ data, categorias, config }: any) => {
               </View>
             ))}
           </View>
-          {data.map((item: any, rowIndex: number) => {
+          {data.map((item, rowIndex) => {
             const cat = categorias.find(
-              (c: any) => String(c.id).replace(/\D/g, '') === String(item.categoria_id).replace(/\D/g, ''),
+              (c) => String(c.id).replace(/\D/g, '') === String(item.categoria_id).replace(/\D/g, ''),
             )?.nombre ?? 'General';
             const stockVal = Number(item.stock ?? 0);
             const estLabel = stockVal === 0 ? 'Agotado' : stockVal <= 5 ? 'Bajo' : 'Disponible';
@@ -310,7 +404,11 @@ const InventarioDocument = ({ data, categorias, config }: any) => {
   );
 };
 
-export const exportInventarioToPDF = async (data: any[], categorias: any[], config: PDFExportConfig) => {
+export const exportInventarioToPDF = async (
+  data: (ProductoBase & { categoria_id?: string | number; stock?: number })[], 
+  categorias: { id: string | number; nombre: string }[], 
+  config: PDFExportConfig
+) => {
   if (!data || data.length === 0) return;
   if (typeof window === 'undefined') return;
 
@@ -324,7 +422,7 @@ export const exportInventarioToPDF = async (data: any[], categorias: any[], conf
 // EXPORTACIÓN A PDF — CON IMÁGENES (CATÁLOGO)
 // =====================================================
 
-export const exportToPDFWithImages = async (data: any[], config: PDFImageConfig) => {
+export const exportToPDFWithImages = async (data: Record<string, unknown>[], config: PDFImageConfig) => {
   if (data.length === 0) return;
 
   const doc = new jsPDF({ orientation: config.orientation ?? 'portrait' });
@@ -357,7 +455,7 @@ export const exportToPDFWithImages = async (data: any[], config: PDFImageConfig)
   const tableRows = await Promise.all(
     data.map(item =>
       Promise.all(
-        displayKeys.map(key => (key === imageKey ? getImageData(item[key]) : String(item[key] ?? '-'))),
+        displayKeys.map(key => (key === imageKey ? getImageData(item[key] as string) : String(item[key] ?? '-'))),
       ),
     ),
   );
@@ -373,18 +471,18 @@ export const exportToPDFWithImages = async (data: any[], config: PDFImageConfig)
     styles: { valign: 'middle', fontSize: 8 },
     columnStyles: { [imageColIndex]: { cellWidth: 30, fontSize: 0.1, textColor: [255, 246, 228] } },
     headStyles: { fillColor: [219, 39, 119] },
-    didDrawCell: data => {
-      if (data.column.index === imageColIndex && data.cell.section === 'body') {
-        const imgRaw = data.cell.raw as string;
+    didDrawCell: (cellData) => {
+      if (cellData.column.index === imageColIndex && cellData.cell.section === 'body') {
+        const imgRaw = cellData.cell.raw as string;
         if (imgRaw?.startsWith('data:image')) {
-          doc.addImage(imgRaw, 'JPEG', data.cell.x + 5, data.cell.y + 2, 20, 20);
+          doc.addImage(imgRaw, 'JPEG', cellData.cell.x + 5, cellData.cell.y + 2, 20, 20);
         }
       }
     },
-    didParseCell: data => {
-      if (data.section === 'body') data.row.height = 25;
+    didParseCell: (cellData) => {
+      if (cellData.section === 'body') cellData.row.height = 25;
     },
-  });
+  } as UserOptions);
 
   doc.save(`${config.filename}.pdf`);
 };
@@ -393,7 +491,7 @@ export const exportToPDFWithImages = async (data: any[], config: PDFImageConfig)
 // HELPERS ESPECÍFICOS DE PREPARACIÓN
 // =====================================================
 
-export const exportProductosToPDFWithImages = async (productos: any[]) => {
+export const exportProductosToPDFWithImages = async (productos: (ProductoBase & { imagen_url?: string; stock?: number })[]) => {
   const productosFiltrados = productos.filter(p => Number(p.stock) > 400);
   if (productosFiltrados.length === 0) {
     throw new Error('No hay productos con stock superior a 400 unidades.');
@@ -414,30 +512,30 @@ export const exportProductosToPDFWithImages = async (productos: any[]) => {
   });
 };
 
-export const prepareVentasForPDF = (ventas: any[]) => {
+export const prepareVentasForPDF = (ventas: VentaBase[]) => {
   const headers = [['CÓDIGO', 'CLIENTE', 'FECHA', 'ESTADO', 'TOTAL']];
   const body = ventas.map(v => [
-    v.codigo_pedido,
+    v.codigo_pedido ?? '---',
     v.cliente?.nombre ?? 'Público General',
     new Date(v.created_at).toLocaleDateString('es-PE'),
     v.estado_pedido.toUpperCase(),
-    formatCurrency(Number(v.total)),
+    formatCurrency(Number(v.total ?? 0)),
   ]);
   return { headers, body };
 };
 
-export const prepareVentasForExcel = (ventas: any[]) => {
+export const prepareVentasForExcel = (ventas: VentaBase[]) => {
   return ventas.map(v => ({
-    'Código': v.codigo_pedido,
+    'Código': v.codigo_pedido ?? '---',
     'Cliente': v.cliente?.nombre ?? 'Público General',
     'Fecha': new Date(v.created_at).toLocaleDateString('es-PE'),
-    'Subtotal': Number(v.subtotal),
-    'Total': Number(v.total),
+    'Subtotal': Number(v.subtotal ?? 0),
+    'Total': Number(v.total ?? 0),
     'Estado': v.estado_pedido.toUpperCase(),
   }));
 };
 
-export const prepareCategoriasForExcel = (categorias: any[]) => {
+export const prepareCategoriasForExcel = (categorias: CategoriaBase[]) => {
   return categorias.map(c => ({
     'Nombre de Categoría': c.nombre,
     'Descripción': c.descripcion ?? 'Sin descripción',
@@ -446,7 +544,7 @@ export const prepareCategoriasForExcel = (categorias: any[]) => {
   }));
 };
 
-export const exportVentasDetailedPDF = async (ventas: any[], config: PDFExportConfig) => {
+export const exportVentasDetailedPDF = async (ventas: VentaBase[], config: PDFExportConfig) => {
   if (ventas.length === 0) return;
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -477,7 +575,7 @@ export const exportVentasDetailedPDF = async (ventas: any[], config: PDFExportCo
   });
 
   autoTable(doc, {
-    head: [['COMPROBANTE', 'CLIENTE', 'RUC', 'FECHA', 'MÉTODO', 'ESTADO', 'SUBTOTAL', 'IGV', 'TOTAL']],
+    head: [['COMPROBANTE', 'CLIENTE', 'FECHA', 'MÉTODO', 'ESTADO', 'SUBTOTAL', 'IGV', 'TOTAL']],
     body,
     startY,
     styles: { fontSize: 8, cellPadding: 3, overflow: 'linebreak', halign: 'center' },
@@ -485,9 +583,9 @@ export const exportVentasDetailedPDF = async (ventas: any[], config: PDFExportCo
     columnStyles: { 1: { halign: 'left', cellWidth: 'auto' }, 7: { halign: 'right', fontStyle: 'bold' } },
     alternateRowStyles: { fillColor: [250, 250, 250] },
     margin: { left: 14, right: 14 },
-  });
+  } as UserOptions);
 
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const finalY = (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? (startY + 20);
   const pageWidth = doc.internal.pageSize.width;
   const margin = 14;
 
@@ -524,7 +622,7 @@ export const exportVentasDetailedPDF = async (ventas: any[], config: PDFExportCo
 // HELPERS ESPECÍFICOS PARA CONFECCIONES
 // =====================================================
 
-export const prepareConfeccionesForExcel = (data: any[]) => {
+export const prepareConfeccionesForExcel = (data: ConfeccionBase[]) => {
   return data.map(c => ({
     'ID Orden': c.id,
     'Cliente': c.cliente ?? 'Sin Cliente',
@@ -536,7 +634,7 @@ export const prepareConfeccionesForExcel = (data: any[]) => {
   }));
 };
 
-export const prepareConfeccionesForPDF = (data: any[]) => {
+export const prepareConfeccionesForPDF = (data: ConfeccionBase[]) => {
   const headers = [['ORDEN', 'CLIENTE', 'TALLER', 'ESTADO', 'ENTREGA', 'CANT.']];
   const body = data.map(c => [
     `#${c.id}`,
@@ -544,12 +642,12 @@ export const prepareConfeccionesForPDF = (data: any[]) => {
     c.taller ?? 'Interno',
     (c.estado ?? 'Pendiente').toUpperCase(),
     c.fecha_entrega ?? 'Pnd.',
-    c.total_prendas ?? 0,
+    String(c.total_prendas ?? 0),
   ]);
   return { headers, body };
 };
 
-export const exportConfeccionesDetailedPDF = async (data: any[], config: PDFExportConfig) => {
+export const exportConfeccionesDetailedPDF = async (data: ConfeccionBase[], config: PDFExportConfig) => {
   if (!data || data.length === 0) return;
 
   const doc = new jsPDF({ orientation: config.orientation ?? 'portrait', unit: 'mm', format: 'a4' });
@@ -558,7 +656,7 @@ export const exportConfeccionesDetailedPDF = async (data: any[], config: PDFExpo
   const stats = {
     total: data.length,
     prendas: data.reduce((acc, curr) => acc + (Number(curr.total_prendas) || 0), 0),
-    enProceso: data.filter(c => ['cortando', 'confeccionando', 'escalado'].includes(c.estado)).length,
+    enProceso: data.filter(c => c.estado && ['cortando', 'confeccionando', 'escalado'].includes(c.estado)).length,
   };
 
   const { headers, body } = prepareConfeccionesForPDF(data);
@@ -571,9 +669,9 @@ export const exportConfeccionesDetailedPDF = async (data: any[], config: PDFExpo
     headStyles: { fillColor: [219, 39, 119], textColor: 255 },
     columnStyles: { 1: { halign: 'left', cellWidth: 'auto' }, 2: { halign: 'left' } },
     alternateRowStyles: { fillColor: [250, 250, 250] },
-  });
+  } as UserOptions);
 
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const finalY = (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? (startY + 20);
   const pageWidth = doc.internal.pageSize.width;
 
   doc.setFillColor(245, 245, 245);
@@ -608,7 +706,16 @@ export const exportConfeccionesDetailedPDF = async (data: any[], config: PDFExpo
 // EXPORTACIÓN A PDF — COTIZACIONES (@react-pdf/renderer)
 // =====================================================
 
-const CotizacionesDocument = ({ data, config }: any) => {
+interface CotizacionDocData {
+  cotizacion_id?: string | number;
+  cliente?: string;
+  monto?: number;
+  estado?: string;
+  fecha_vencimiento?: string;
+  descripcion?: string;
+}
+
+const CotizacionesDocument = ({ data, config }: DocumentProps<CotizacionDocData>) => {
   const colWidths = ['18%', '22%', '15%', '12%', '13%', '20%'];
   return (
     <Document>
@@ -628,7 +735,7 @@ const CotizacionesDocument = ({ data, config }: any) => {
               </View>
             ))}
           </View>
-          {data.map((item: any, rowIndex: number) => (
+          {data.map((item, rowIndex) => (
             <View key={rowIndex} style={rowIndex % 2 === 0 ? styles.tableRow : styles.tableRowStriped}>
               <View style={[styles.tableCol, { width: colWidths[0] }]}><Text style={styles.tableCell}>{item.cotizacion_id ?? '---'}</Text></View>
               <View style={[styles.tableCol, { width: colWidths[1] }]}><Text style={styles.tableCell}>{item.cliente ?? 'Sin cliente'}</Text></View>
@@ -644,7 +751,7 @@ const CotizacionesDocument = ({ data, config }: any) => {
   );
 };
 
-export const exportCotizacionesToPDF = async (data: any[], config: { title: string; filename: string }) => {
+export const exportCotizacionesToPDF = async (data: CotizacionDocData[], config: { title: string; filename: string }) => {
   if (!data || data.length === 0) return;
   if (typeof window === 'undefined') return;
 
@@ -668,20 +775,57 @@ const CARGO_LABELS_MAP: Record<string, string> = {
   representante_taller: 'Rep. de Taller',
 };
 
-export const exportPersonalToExcel = async (data: any[], config?: { filename?: string }) => {
+export interface PersonalExportInput {
+  nombre_completo?: string | null;
+  cargo?: string | null;
+  dni?: string | null;
+  telefono?: string | number | null;
+  estado?: string | boolean | null;
+  fecha_ingreso?: string | Date | null;
+  usuarios?: {
+    email?: string | null;
+    rol?: string | null;
+    ultimo_acceso?: string | Date | null;
+  } | null;
+}
+
+export const exportPersonalToExcel = async (
+  data: PersonalExportInput[], 
+  config?: { filename?: string }
+) => {
   if (!data || data.length === 0) return;
-  const rows = data.map(p => ({
-    'NOMBRE COMPLETO': p.nombre_completo ?? '—',
-    'CARGO': CARGO_LABELS_MAP[p.cargo] ?? p.cargo ?? '—',
-    'DNI': p.dni ?? '—',
-    'TELÉFONO': p.telefono ?? '—',
-    'EMAIL': p.usuarios?.email ?? '—',
-    'ROL SISTEMA': p.usuarios?.rol ?? '—',
-    'ESTADO': p.estado !== false ? 'ACTIVO' : 'INACTIVO',
-    'FECHA INGRESO': p.fecha_ingreso ? new Date(p.fecha_ingreso).toLocaleDateString('es-PE') : '—',
-    'ÚLTIMO ACCESO': p.usuarios?.ultimo_acceso ? new Date(p.usuarios.ultimo_acceso).toLocaleDateString('es-PE') : '—',
-  }));
-  await exportToExcel(rows, {
+
+  const rows = data.map(p => {
+    // 1. Procesamiento seguro del Cargo buscando en tu mapa de etiquetas
+    const cargoKey = p.cargo ?? '';
+    const cargoLabel = cargoKey && typeof CARGO_LABELS_MAP !== 'undefined'
+      ? (CARGO_LABELS_MAP as Record<string, string>)[cargoKey] ?? cargoKey
+      : cargoKey;
+
+    // 2. Procesamiento semántico del Estado (por si viene como String o Boolean)
+    let estadoLabel = 'INACTIVO';
+    if (p.estado === 'activo' || p.estado === true) {
+      estadoLabel = 'ACTIVO';
+    } else if (p.estado === 'suspendido') {
+      estadoLabel = 'SUSPENDIDO';
+    } else if (p.estado) {
+      estadoLabel = String(p.estado).toUpperCase();
+    }
+
+    return {
+      'NOMBRE COMPLETO': p.nombre_completo || '—',
+      'CARGO': cargoLabel || '—',
+      'DNI': p.dni || '—',
+      'TELÉFONO': p.telefono || '—',
+      'EMAIL': p.usuarios?.email || '—',
+      'ROL SISTEMA': p.usuarios?.rol || '—',
+      'ESTADO': estadoLabel,
+      'FECHA INGRESO': p.fecha_ingreso ? new Date(p.fecha_ingreso).toLocaleDateString('es-PE') : '—',
+      'ÚLTIMO ACCESO': p.usuarios?.ultimo_acceso ? new Date(p.usuarios.ultimo_acceso).toLocaleDateString('es-PE') : '—',
+    };
+  });
+
+  await exportToExcel(rows as Record<string, unknown>[], {
     filename: config?.filename ?? `Personal_GUOR_${new Date().toISOString().split('T')[0]}`,
     sheetName: 'Personal Interno',
   });
@@ -691,12 +835,12 @@ export const exportPersonalToExcel = async (data: any[], config?: { filename?: s
 // EXPORTACIÓN PERSONAL — PDF
 // =====================================================
 
-export const exportPersonalToPDF = async (data: any[], config?: { filename?: string }) => {
+export const exportPersonalToPDF = async (data: PersonalBase[], config?: { filename?: string }) => {
   if (!data || data.length === 0) return;
   const headers = [['NOMBRE', 'CARGO', 'DNI', 'TELÉFONO', 'EMAIL', 'ESTADO']];
   const body = data.map(p => [
     p.nombre_completo ?? '—',
-    CARGO_LABELS_MAP[p.cargo] ?? p.cargo ?? '—',
+    p.cargo ? (CARGO_LABELS_MAP[p.cargo] ?? p.cargo) : '—',
     p.dni ?? '—',
     p.telefono ?? '—',
     p.usuarios?.email ?? '—',
@@ -714,7 +858,7 @@ export const exportPersonalToPDF = async (data: any[], config?: { filename?: str
 // EXPORTACIÓN CLIENTES — EXCEL
 // =====================================================
 
-export const exportClientesToExcel = async (data: any[], config?: { filename?: string }) => {
+export const exportClientesToExcel = async (data: ClienteBase[], config?: { filename?: string }) => {
   if (!data || data.length === 0) return;
   const rows = data.map(u => {
     const c = u.clientes ?? u;
@@ -726,12 +870,12 @@ export const exportClientesToExcel = async (data: any[], config?: { filename?: s
       'TELÉFONO': c.telefono ?? '—',
       'TIPO': String(c.tipo_cliente ?? '—').toUpperCase(),
       'DIRECCIÓN FISCAL': c.direccion_fiscal ?? '—',
-      'ESTADO': String(u.estado ?? c.activo ?? '—').toUpperCase(),
+      'ESTADO': String(u.estado ?? (c.activo ? 'ACTIVO' : 'INACTIVO')).toUpperCase(),
       'REGISTRADO': c.created_at ? new Date(c.created_at).toLocaleDateString('es-PE') : '—',
-      'ÚLTIMO ACCESO': u.ultimo_acceso ? new Date(u.ultimo_acceso).toLocaleDateString('es-PE') : '—',
+      'ÚLTIMO ACCESO': u.usuarios?.ultimo_acceso ? new Date(u.usuarios.ultimo_acceso).toLocaleDateString('es-PE') : '—',
     };
   });
-  await exportToExcel(rows, {
+  await exportToExcel(rows as unknown as Record<string, unknown>[], {
     filename: config?.filename ?? `Clientes_GUOR_${new Date().toISOString().split('T')[0]}`,
     sheetName: 'Clientes',
   });
@@ -741,7 +885,7 @@ export const exportClientesToExcel = async (data: any[], config?: { filename?: s
 // EXPORTACIÓN CLIENTES — PDF
 // =====================================================
 
-export const exportClientesToPDF = async (data: any[], config?: { filename?: string }) => {
+export const exportClientesToPDF = async (data: ClienteBase[], config?: { filename?: string }) => {
   if (!data || data.length === 0) return;
   const headers = [['RUC', 'RAZÓN SOCIAL', 'EMAIL', 'TELÉFONO', 'TIPO', 'ESTADO']];
   const body = data.map(u => {
@@ -752,7 +896,7 @@ export const exportClientesToPDF = async (data: any[], config?: { filename?: str
       u.email ?? c.email ?? '—',
       c.telefono ?? '—',
       String(c.tipo_cliente ?? '—').toUpperCase(),
-      String(u.estado ?? c.activo ?? '—').toUpperCase(),
+      String(u.estado ?? (c.activo ? 'ACTIVO' : 'INACTIVO')).toUpperCase(),
     ];
   });
   await exportToPDF(headers, body, {
@@ -767,7 +911,7 @@ export const exportClientesToPDF = async (data: any[], config?: { filename?: str
 // EXPORTACIÓN CLIENTES (ClienteListItem) — EXCEL
 // =====================================================
 
-export const exportClientesListToExcel = async (data: any[], config?: { filename?: string }) => {
+export const exportClientesListToExcel = async (data: ClienteBase[], config?: { filename?: string }) => {
   if (!data || data.length === 0) return;
   const rows = data.map(c => ({
     'RUC': c.ruc ?? '—',
@@ -782,7 +926,7 @@ export const exportClientesListToExcel = async (data: any[], config?: { filename
     'ÚLTIMO PEDIDO': c.ultimo_pedido_en ? new Date(c.ultimo_pedido_en).toLocaleDateString('es-PE') : 'Sin pedidos',
     'ÚLTIMO ACCESO': c.usuarios?.ultimo_acceso ? new Date(c.usuarios.ultimo_acceso).toLocaleDateString('es-PE') : '—',
   }));
-  await exportToExcel(rows, {
+  await exportToExcel(rows as unknown as Record<string, unknown>[], {
     filename: config?.filename ?? `Clientes_GUOR_${new Date().toISOString().split('T')[0]}`,
     sheetName: 'Clientes',
   });
@@ -792,7 +936,7 @@ export const exportClientesListToExcel = async (data: any[], config?: { filename
 // EXPORTACIÓN CLIENTES (ClienteListItem) — PDF
 // =====================================================
 
-export const exportClientesListToPDF = async (data: any[], config?: { filename?: string }) => {
+export const exportClientesListToPDF = async (data: ClienteBase[], config?: { filename?: string }) => {
   if (!data || data.length === 0) return;
   const headers = [['RUC', 'RAZÓN SOCIAL', 'EMAIL', 'TELÉFONO', 'TIPO', 'ESTADO', 'ÚLTIMO PEDIDO']];
   const body = data.map(c => [
@@ -932,16 +1076,28 @@ const CotizacionDocument = ({ d }: { d: CotizacionPDFData }) => (
       <View style={S.sectionRow}>
         <View style={S.card}>
           <Text style={S.cardTitle}>Datos del Cliente</Text>
-          {[['Cliente', d.cliente_nombre, true], ['RUC', d.cliente_ruc], ['Tel', d.cliente_telefono], ['Email', d.cliente_email], ['Dir', d.cliente_direccion]].map(([label, value, bold], i) => (
+          {[
+            ['Cliente', d.cliente_nombre, true], 
+            ['RUC', d.cliente_ruc], 
+            ['Tel', d.cliente_telefono], 
+            ['Email', d.cliente_email], 
+            ['Dir', d.cliente_direccion]
+          ].map(([label, value, bold], i) => (
             <View key={i} style={S.cardRow}>
-              <Text style={S.cardLabel}>{label}</Text>
+              <Text style={S.cardLabel}>{String(label)}</Text>
               <Text style={bold ? S.cardValue : S.cardValueNormal}>{dash(value as string)}</Text>
             </View>
           ))}
         </View>
         <View style={S.card}>
           <Text style={S.cardTitle}>Condiciones</Text>
-          {[['Moneda', d.moneda], ['Vigencia', '7 días calendario'], ['IGV', '18% incluido'], ['Envío', d.zona_envio], ['Forma de pago', 'A convenir']].map(([label, value], i) => (
+          {[
+            ['Moneda', d.moneda], 
+            ['Vigencia', '7 días calendario'], 
+            ['IGV', '18% incluido'], 
+            ['Envío', d.zona_envio], 
+            ['Forma de pago', 'A convenir']
+          ].map(([label, value], i) => (
             <View key={i} style={S.cardRow}>
               <Text style={S.cardLabel}>{label}</Text>
               <Text style={S.cardValueNormal}>{dash(value as string)}</Text>

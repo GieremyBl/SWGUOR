@@ -2,9 +2,9 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useOrdenesProduccion } from '@/lib/hooks/useOrdenProduccion';
-import OrdenDetalleForm from '@/components/admin/ordenes/OrdenDetalleForm';
+import OrdenDetalleForm from '@/components/admin/ordenes-produccion/OrdenDetalleForm';
 import { Loader2, Factory, ArrowLeft } from 'lucide-react';
-import { OrdenProduccion } from '@/components/admin/ordenes/types';
+import { OrdenProduccion } from '@/components/admin/ordenes-produccion/types';
 
 export default function OrdenDetallePage() {
   const params = useParams();

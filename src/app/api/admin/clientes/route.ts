@@ -7,6 +7,15 @@ import { NextResponse } from 'next/server';
 
 const CLIENTES_ROLES: RolUsuario[] = ['administrador', 'gerente', 'recepcionista'];
 
+// Función utilitaria para transformar tipos complejos (bigint, Decimal, Date) a tipos JSON nativos válidos
+const serializarPrisma = (objeto: any) => {
+  return JSON.parse(
+    JSON.stringify(objeto, (_, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    )
+  );
+};
+
 // GET /api/admin/clientes?busqueda=xxx&estado=xxx
 export async function GET(req: Request) {
   const auth = await requireServerRole(CLIENTES_ROLES);
@@ -19,7 +28,7 @@ export async function GET(req: Request) {
       busqueda: searchParams.get('busqueda') ?? undefined,
       estado: searchParams.get('estado') ?? undefined,
     });
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: serializarPrisma(data) });
   } catch (error: any) {
     console.error('[GET /clientes]', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -47,16 +56,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No se pudo crear el cliente' }, { status: 500 });
     }
 
+    // Sanitizamos los datos del cliente para evitar errores con InputJsonValue en la auditoría
+    const clienteSerializado = serializarPrisma(cliente);
+
     // Registro en auditoría
     await auditoriaService.registrar({
       usuario_id: BigInt(auth.user.id),
       accion: 'CREAR',
       tabla: 'clientes',
       registro_id: BigInt(cliente.id),
-      datos_despues: cliente,
+      datos_despues: clienteSerializado, // <-- Evita incompatibilidades de tipo bigint
     });
 
-    return NextResponse.json({ success: true, data: cliente }, { status: 201 });
+    return NextResponse.json({ success: true, data: clienteSerializado }, { status: 201 });
   } catch (error: any) {
     console.error('[POST /clientes]', error);
     if (error.code === 'P2002') {
@@ -88,16 +100,19 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'No se pudo actualizar el cliente' }, { status: 500 });
     }
 
+    // Sanitizamos los datos antes de introducirlos en la auditoría o enviarlos de regreso
+    const clienteSerializado = serializarPrisma(cliente);
+
     // Registro en auditoría
     await auditoriaService.registrar({
       usuario_id: BigInt(auth.user.id),
       accion: 'ACTUALIZAR',
       tabla: 'clientes',
       registro_id: BigInt(id),
-      datos_despues: cliente,
+      datos_despues: clienteSerializado,
     });
 
-    return NextResponse.json({ success: true, data: cliente });
+    return NextResponse.json({ success: true, data: clienteSerializado });
   } catch (error: any) {
     console.error('[PUT /clientes]', error);
     if (error.code === 'P2025') {

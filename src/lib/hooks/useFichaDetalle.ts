@@ -10,6 +10,22 @@ import {
 
 export const FICHA_DETALLE_KEY = 'ficha-detalle';
 
+export interface FichaDetalleItemInput {
+  material_id?:           string | number;
+  insumo_id?:             string | number;
+  cantidad_consumo:       number;
+  porcentaje_desperdicio?: number;
+  observaciones?:         string; 
+  [key: string]:          unknown;
+}
+
+interface ApiResponse {
+  success:  boolean;
+  error?:   string | null;
+  message?: string | null;
+  data?:    unknown;
+}
+
 export function useFichaDetalle(ficha_id: string) {
   const queryClient = useQueryClient();
 
@@ -20,17 +36,20 @@ export function useFichaDetalle(ficha_id: string) {
     refetchOnWindowFocus: false,
   });
 
-  const saveMutation = useMutation({
-    mutationFn: (items: any[]) => saveFichaDetalle(ficha_id, items),
+  const saveMutation = useMutation<ApiResponse, Error, FichaDetalleItemInput[]>({
+    mutationFn: (items) => saveFichaDetalle(ficha_id, items),
     onSuccess: (res) => {
-      if (!res.success) { toast.error(res.error ?? 'Error al guardar'); return; }
+      if (!res.success) { 
+        toast.error(res.error ?? 'Error al guardar'); 
+        return; 
+      }
       toast.success('Detalle guardado');
       queryClient.invalidateQueries({ queryKey: [FICHA_DETALLE_KEY, ficha_id] });
     },
     onError: () => toast.error('Error de conexión'),
   });
 
-  const deleteMutation = useMutation({
+  const deleteMutation = useMutation<ApiResponse, Error, string>({
     mutationFn: deleteFichaDetalleItem,
     onSuccess: () => {
       toast.success('Item eliminado');
@@ -44,10 +63,10 @@ export function useFichaDetalle(ficha_id: string) {
     isLoading: query.isLoading,
     refetch:   query.refetch,
 
-    save:   (items: any[]) => saveMutation.mutate(items),
+    save:   (items: FichaDetalleItemInput[]) => saveMutation.mutate(items),
     remove: (id: string)   => deleteMutation.mutate(id),
 
-    isSaving:  saveMutation.isPending,
+    isSaving:   saveMutation.isPending,
     isDeleting: deleteMutation.isPending,
   };
 }

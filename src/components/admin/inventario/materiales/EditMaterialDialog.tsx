@@ -14,23 +14,39 @@ import {
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Minus, Plus } from 'lucide-react';
+import { type Material, type MaterialFormValues } from '@/lib/schemas/material';
 
 interface Props {
   isOpen:    boolean;
-  material:  any;
+  material:  Material | null | any;
   onClose:   () => void;
   onSuccess: () => void;
 }
 
-const UNIDADES = ['metros', 'kilos', 'yards', 'unidades'];
-const TIPOS    = ['plano', 'punto', 'tejido', 'especial'];
+const UNIDADES = ['metros', 'kilos', 'yards', 'unidades'] as const;
+const TIPOS    = ['plano', 'punto', 'tejido', 'especial'] as const;
 
 type StockOp = 'sumar' | 'restar' | 'absoluto';
 
 export default function EditMaterialDialog({ isOpen, material, onClose, onSuccess }: Props) {
   const { update, isUpdating, ajustarStock, isAjustandoStock } = useMateriales();
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    nombre: string;
+    tipo: 'plano' | 'punto' | 'tejido' | 'especial';
+    descripcion: string;
+    composicion: string;
+    gramaje: string;
+    ancho_total: string;
+    ancho_util: string;
+    color: string;
+    codigo_color: string;
+    unidad_medida: 'metros' | 'unidades' | 'kilos' | 'yards';
+    stock_minimo: string;
+    precio_unitario: string;
+    ubicacion_almacen: string;
+    alerta_bajo_stock: boolean;
+  }>({
     nombre:            '',
     tipo:              'plano',
     descripcion:       '',
@@ -51,12 +67,11 @@ export default function EditMaterialDialog({ isOpen, material, onClose, onSucces
   const [stockCantidad, setStockCantidad] = useState('');
   const [stockMotivo,   setStockMotivo]   = useState('');
 
-  // Hydrate form when material changes
   useEffect(() => {
     if (!material) return;
     setForm({
       nombre:            material.nombre            ?? '',
-      tipo:              material.tipo              ?? 'plano',
+      tipo:              (material.tipo as any)     ?? 'plano',
       descripcion:       material.descripcion       ?? '',
       composicion:       material.composicion       ?? '',
       gramaje:           material.gramaje            != null ? String(material.gramaje)       : '',
@@ -64,7 +79,7 @@ export default function EditMaterialDialog({ isOpen, material, onClose, onSucces
       ancho_util:        material.ancho_util         != null ? String(material.ancho_util)    : '',
       color:             material.color             ?? '',
       codigo_color:      material.codigo_color      ?? '',
-      unidad_medida:     material.unidad_medida     ?? 'metros',
+      unidad_medida:     (material.unidad_medida as any) ?? 'metros',
       stock_minimo:      String(material.stock_minimo ?? 10),
       precio_unitario:   material.precio_unitario    != null ? String(material.precio_unitario) : '',
       ubicacion_almacen: material.ubicacion_almacen ?? '',
@@ -75,27 +90,45 @@ export default function EditMaterialDialog({ isOpen, material, onClose, onSucces
     setStockMotivo('');
   }, [material]);
 
-  function set(field: string, value: any) {
+  function set(field: keyof typeof form, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
   function handleSave() {
-    update(String(material.id), {
-      ...form,
-      gramaje:         form.gramaje        ? Number(form.gramaje)        : null,
-      ancho_total:     form.ancho_total     ? Number(form.ancho_total)     : null,
-      ancho_util:      form.ancho_util      ? Number(form.ancho_util)      : null,
-      stock_minimo:    Number(form.stock_minimo),
-      precio_unitario: form.precio_unitario ? Number(form.precio_unitario) : null,
-    });
+    if (!material?.id) return;
+
+    const datosValidados: MaterialFormValues = {
+      nombre:            form.nombre,
+      tipo:              form.tipo,
+      unidad_medida:     form.unidad_medida,
+      stock_minimo:      Number(form.stock_minimo),
+      alerta_bajo_stock: form.alerta_bajo_stock,
+      descripcion:       form.descripcion || undefined,
+      composicion:       form.composicion || undefined,
+      gramaje:           form.gramaje           ? Number(form.gramaje)           : undefined,
+      ancho_total:       form.ancho_total       ? Number(form.ancho_total)       : undefined,
+      ancho_util:        form.ancho_util        ? Number(form.ancho_util)        : undefined,
+      color:             form.color             || undefined,
+      codigo_color:      form.codigo_color      || undefined,
+      precio_unitario:   form.precio_unitario   ? Number(form.precio_unitario)   : undefined,
+      ubicacion_almacen: form.ubicacion_almacen || undefined,
+    };
+
+    update(String(material.id), datosValidados);
     onSuccess();
     onClose();
   }
 
   function handleAjustarStock() {
     const cantidad = Number(stockCantidad);
-    if (!cantidad || cantidad <= 0) return;
-    ajustarStock(String(material.id), stockOp, cantidad, stockMotivo || undefined);
+    if (!cantidad || cantidad <= 0 || !material?.id) return;
+
+    ajustarStock(String(material.id), {
+      operacion: stockOp,
+      cantidad,
+      motivo:    stockMotivo || undefined,
+    });
+
     setStockCantidad('');
     setStockMotivo('');
     onSuccess();
@@ -123,9 +156,11 @@ export default function EditMaterialDialog({ isOpen, material, onClose, onSucces
           <div className="flex flex-col sm:flex-row gap-2">
             {/* Operación */}
             <div className="flex rounded-lg border bg-white overflow-hidden">
-              {(['sumar', 'restar', 'absoluto'] as StockOp[]).map(op => (
+              {/* ✅ Sintaxis de mapeo JSX completamente reparada aquí */}
+              {(['sumar', 'restar', 'absoluto'] as StockOp[]).map((op) => (
                 <button
                   key={op}
+                  type="button"
                   onClick={() => setStockOp(op)}
                   className={`px-3 py-2 text-xs font-bold capitalize transition-colors ${
                     stockOp === op ? 'bg-pink-600 text-white' : 'text-gray-500 hover:bg-gray-50'
@@ -149,6 +184,7 @@ export default function EditMaterialDialog({ isOpen, material, onClose, onSucces
             />
             <Button
               size="sm"
+              type="button"
               onClick={handleAjustarStock}
               disabled={!stockCantidad || Number(stockCantidad) <= 0 || isAjustandoStock}
               className="bg-pink-600 hover:bg-pink-700 text-white font-bold h-9 px-4 whitespace-nowrap"
@@ -244,8 +280,9 @@ export default function EditMaterialDialog({ isOpen, material, onClose, onSucces
         </div>
 
         <DialogFooter className="gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={isBusy}>Cancelar</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>Cancelar</Button>
           <Button
+            type="button"
             onClick={handleSave}
             disabled={!form.nombre.trim() || isBusy}
             className="bg-pink-600 hover:bg-pink-700 text-white font-bold px-6"

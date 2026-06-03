@@ -1,6 +1,6 @@
-// lib/services/ordenes-produccion.service.ts
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
+import { Prisma } from '@prisma/client';
 
 export const OrdenesProduccionService = {
 
@@ -15,17 +15,22 @@ export const OrdenesProduccionService = {
   }) {
     const { producto_id, taller_id, estado, etapa, search, page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
-    const where: any = {};
+    
+    // FIX: Tipado estricto con el contrato WhereInput nativo de Prisma en lugar de 'any'
+    const where: Prisma.ordenes_produccionWhereInput = {};
 
     if (producto_id) where.producto_id = BigInt(producto_id);
     if (taller_id) where.taller_id = BigInt(taller_id);
-    if (estado && estado !== 'todos' && estado !== 'all') where.estado = estado;
+    
+    if (estado && estado !== 'todos' && estado !== 'all') {
+      where.estado = estado as Prisma.ordenes_produccionWhereInput['estado'];
+    }
     
     // Filtrar por etapa del seguimiento más reciente
     if (etapa && etapa !== 'all') {
       where.seguimiento_produccion = {
         some: {
-          etapa: etapa,
+          etapa: etapa as Prisma.seguimiento_produccionWhereInput['etapa'],
           activo: true,
         },
       };
@@ -36,7 +41,9 @@ export const OrdenesProduccionService = {
         { productos: { nombre: { contains: search, mode: 'insensitive' } } },
         { talleres: { nombre: { contains: search, mode: 'insensitive' } } },
       ];
-      if (!isNaN(Number(search))) where.OR.push({ id: BigInt(search) });
+      if (!isNaN(Number(search))) {
+        where.OR.push({ id: BigInt(search) });
+      }
     }
 
     const [total, ordenes] = await Promise.all([
@@ -54,7 +61,6 @@ export const OrdenesProduccionService = {
             take: 1,
             orderBy: { created_at: 'desc' },
           },
-          // Confecciones derivadas de esta orden
           confecciones: {
             select: { id: true, estado: true, taller_id: true, cantidad: true },
           },
@@ -78,7 +84,8 @@ export const OrdenesProduccionService = {
         fichas_tecnicas: true,
         pedidos: {
           select: {
-            id: true, estado: true,
+            id: true,
+            estado: true,
             clientes: { select: { id: true, razon_social: true } },
           },
         },
@@ -115,7 +122,7 @@ export const OrdenesProduccionService = {
           fecha_entrega: data.fecha_entrega ? new Date(data.fecha_entrega) : null,
           notas: data.notas ?? null,
           creado_por: data.creado_por ? BigInt(data.creado_por) : null,
-          estado: 'borrador',
+          estado: 'borrador', // Asignación segura de string directo compatible con el Enum nativo
         },
         include: {
           productos: { select: { id: true, nombre: true, sku: true } },
@@ -146,7 +153,7 @@ export const OrdenesProduccionService = {
     const orden = await prisma.ordenes_produccion.update({
       where: { id: BigInt(id) },
       data: {
-        ...(data.fecha_entrega !== undefined && { fecha_entrega: new Date(data.fecha_entrega) }),
+        ...(data.fecha_entrega !== undefined && { fecha_entrega: data.fecha_entrega ? new Date(data.fecha_entrega) : null }),
         ...(data.notas !== undefined && { notas: data.notas }),
         ...(data.taller_id !== undefined && { taller_id: BigInt(data.taller_id) }),
         updated_at: new Date(),
@@ -168,22 +175,25 @@ export const OrdenesProduccionService = {
         data: { activo: false, completado_en: new Date() },
       });
 
+      // FIX: Reemplazado 'as any' por la propiedad tipada exacta extraída de los modelos de Prisma
       const seg = await tx.seguimiento_produccion.create({
         data: {
           orden_id: BigInt(data.orden_id),
-          etapa: data.etapa as any,
+          etapa: data.etapa as Prisma.seguimiento_produccionCreateInput['etapa'],
           observaciones: data.observaciones ?? null,
           usuario_id: data.usuario_id ? BigInt(data.usuario_id) : null,
           activo: true,
         },
       });
 
-      // Al completar la orden — solo marca estado, el stock
-      // lo gestiona el servicio de inventario por separado
+      // Al completar la orden — solo marca estado
       if (data.etapa === 'completada') {
         await tx.ordenes_produccion.update({
           where: { id: BigInt(data.orden_id) },
-          data: { estado: 'completada', updated_at: new Date() },
+          data: { 
+            estado: 'completada', 
+            updated_at: new Date() 
+          },
         });
       }
 

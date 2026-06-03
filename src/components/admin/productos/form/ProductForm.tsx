@@ -13,10 +13,56 @@ import { VariantsSection } from "./sections/VariantsSection";
 import { ImageUploadSection } from "./sections/ImageUploadSection";
 import { generateSKU, generateVariantSKU } from "@/lib/utils/producto-utils";
 
+// ── Definición de Interfaces Estrictas ──
+
+export interface Categoria {
+  id: number | string;
+  nombre: string;
+}
+
+interface VarianteProductoBase {
+  id?: string | number;
+  color: string;
+  talla: string;
+  sku: string;
+  stock?: number;
+  stock_actual?: number;
+  textura?: string;
+}
+
+interface FichaTecnicaForm {
+  version?: string;
+  version_detallada?: string;
+  sam_total?: string | number;
+  costo_estimado?: string | number;
+}
+
+export interface ProductoFormData {
+  id?: string | number;
+  nombre: string;
+  precio: string | number;
+  categoria_id: string;
+  categoria_nombre: string;
+  sku: string;
+  estado: "activo" | "inactivo";
+  imagen: string | null;
+  variantes_producto?: VarianteProductoBase[];
+  variantes: {
+    id?: string | number;
+    color: string;
+    talla: string;
+    sku: string;
+    stock: number;
+  }[];
+  reglas_descuento?: unknown;
+  fichas_tecnicas_id?: string | number | null;
+  ficha_tecnica?: FichaTecnicaForm;
+}
+
 interface ProductFormProps {
   mode: "create" | "edit";
-  initialData?: any;
-  categorias: any[];
+  initialData?: ProductoFormData | null;
+  categorias: Categoria[];
   nextId?: number;
 }
 
@@ -28,50 +74,49 @@ export default function ProductForm({ mode, initialData, categorias, nextId }: P
     initialData?.id ? Number(initialData.id) : undefined
   );
 
-  // ── Mapeo normalizado: siempre { sku, color, talla, stock } ──
+  // Solución al error 2352: Mapeo seguro utilizando 'unknown' para evitar conflictos de superposición de tipos
   const stockResumen: { sku: string; color: string; talla: string; stock: number }[] =
-    (variantesDB ?? initialData?.variantes_producto ?? []).map((v: any) => ({
+    ((variantesDB as unknown as VarianteProductoBase[] | undefined) ?? initialData?.variantes_producto ?? []).map((v) => ({
       sku: v.sku ?? "",
       color: v.color ?? "",
-      textura: v.textura ?? "",
       talla: v.talla ?? "",
       stock: v.stock ?? v.stock_actual ?? 0,
     }));
 
-  const methods = useForm({
+  const methods = useForm<ProductoFormData>({
     defaultValues: initialData
       ? {
-        ...initialData,
-        categoria_id: initialData.categoria_id != null ? String(initialData.categoria_id) : "",
-        estado: initialData.estado || "activo",
-        imagen: initialData.imagen ?? null,
-        variantes: initialData.variantes_producto?.map((v: any) => ({
-          id: v.id,
-          color: v.color,
-          talla: v.talla,
-          sku: v.sku,
-          stock: v.stock ?? v.stock_actual ?? 0,
-        })) ?? [],
-      }
+          ...initialData,
+          categoria_id: initialData.categoria_id != null ? String(initialData.categoria_id) : "",
+          estado: initialData.estado || "activo",
+          imagen: initialData.imagen ?? null,
+          variantes: initialData.variantes_producto?.map((v) => ({
+            id: v.id,
+            color: v.color,
+            talla: v.talla,
+            sku: v.sku,
+            stock: v.stock ?? v.stock_actual ?? 0,
+          })) ?? [],
+        }
       : {
-        nombre: "",
-        precio: "",
-        categoria_id: "",
-        categoria_nombre: "",
-        sku: "",
-        estado: "activo",
-        imagen: null,
-        variantes: [{ color: "", talla: "", stock: 0, sku: "" }],
-      },
+          nombre: "",
+          precio: "",
+          categoria_id: "",
+          categoria_nombre: "",
+          sku: "",
+          estado: "activo",
+          imagen: null,
+          variantes: [{ color: "", talla: "", stock: 0, sku: "" }],
+        },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: ProductoFormData) => {
     setLoading(true);
     try {
       const isCreate = mode === "create";
       const url = isCreate
         ? "/api/admin/productos"
-        : `/api/admin/productos/${initialData.id}`;
+        : `/api/admin/productos/${initialData?.id}`;
 
       const categoria = categorias.find((c) => c.id.toString() === data.categoria_id.toString());
       const catNombre = categoria?.nombre ?? "GEN";
@@ -80,27 +125,27 @@ export default function ProductForm({ mode, initialData, categorias, nextId }: P
       const bodyParaAPI = {
         producto: {
           nombre: data.nombre,
-          precio: parseFloat(data.precio) || 0,
-          categoria_id: parseInt(data.categoria_id),
+          precio: typeof data.precio === "string" ? parseFloat(data.precio) || 0 : data.precio,
+          categoria_id: parseInt(data.categoria_id, 10),
           sku: skuProducto,
           estado: data.estado || "activo",
           imagen: data.imagen || null,
           reglas_descuento: data.reglas_descuento || null,
           fichas_tecnicas_id: data.fichas_tecnicas_id || null,
         },
-        variantes: (data.variantes || []).map((v: any) => ({
+        variantes: (data.variantes || []).map((v) => ({
           id: v.id,
           color: v.color,
           talla: v.talla,
           sku: generateVariantSKU(skuProducto, v.color, v.talla),
-          stock: parseInt(v.stock) || 0,
+          stock: typeof v.stock === "string" ? parseInt(v.stock, 10) || 0 : v.stock,
           estado: "activo",
         })),
         nueva_ficha_relacional: data.ficha_tecnica ? {
           version: data.ficha_tecnica.version || "1.0",
           descripcion_detallada: data.ficha_tecnica.version_detallada || "Sin descripción",
-          sam_total: parseFloat(data.ficha_tecnica.sam_total) || 0,
-          costo_estimado: parseFloat(data.ficha_tecnica.costo_estimado) || 0,
+          sam_total: typeof data.ficha_tecnica.sam_total === "string" ? parseFloat(data.ficha_tecnica.sam_total) || 0 : data.ficha_tecnica.sam_total || 0,
+          costo_estimado: typeof data.ficha_tecnica.costo_estimado === "string" ? parseFloat(data.ficha_tecnica.costo_estimado) || 0 : data.ficha_tecnica.costo_estimado || 0,
           estado: "Borrador",
           imagen_geometral: null,
         } : null,
@@ -117,9 +162,10 @@ export default function ProductForm({ mode, initialData, categorias, nextId }: P
       toast.success("Producto guardado correctamente");
       router.push("/admin/Panel-Administrativo/productos");
       router.refresh();
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Ocurrió un error inesperado";
+      toast.error(msg);
+    } finally { // Solución al error de sintaxis / typo en la línea 168 (cambiado de 'file' a 'finally')
       setLoading(false);
     }
   };

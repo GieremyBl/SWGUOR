@@ -48,7 +48,7 @@ export default function PromocionesPage() {
           Promociones y Ofertas
         </h1>
         <p className="text-sm text-slate-500">
-          CUS_41 — Reglas de descuento, campañas promocionales y ofertas comerciales
+          Reglas de descuento, campañas promocionales y ofertas comerciales
         </p>
       </header>
 

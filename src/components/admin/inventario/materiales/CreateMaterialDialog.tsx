@@ -14,6 +14,7 @@ import {
   SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
+import { type MaterialFormValues } from '@/lib/schemas/material';
 
 interface Props {
   isOpen:    boolean;
@@ -21,13 +22,30 @@ interface Props {
   onSuccess: () => void;
 }
 
-const UNIDADES = ['metros', 'kilos', 'yards', 'unidades'];
-const TIPOS    = ['plano', 'punto', 'tejido', 'especial'];
+const UNIDADES = ['metros', 'kilos', 'yards', 'unidades'] as const;
+const TIPOS    = ['plano', 'punto', 'tejido', 'especial'] as const;
 
 export default function CreateMaterialDialog({ isOpen, onClose, onSuccess }: Props) {
   const { create, isCreating } = useMateriales();
 
-  const [form, setForm] = useState({
+  // ✅ Añadimos tipado estricto al estado para que coincida con los literales válidos
+  const [form, setForm] = useState<{
+    nombre: string;
+    tipo: 'plano' | 'punto' | 'tejido' | 'especial';
+    descripcion: string;
+    composicion: string;
+    gramaje: string;
+    ancho_total: string;
+    ancho_util: string;
+    color: string;
+    codigo_color: string;
+    unidad_medida: 'metros' | 'unidades' | 'kilos' | 'yards';
+    stock_actual: string; // Se mantiene en el formulario para la UI
+    stock_minimo: string;
+    precio_unitario: string;
+    ubicacion_almacen: string;
+    alerta_bajo_stock: boolean;
+  }>({
     nombre:            '',
     tipo:              'plano',
     descripcion:       '',
@@ -45,24 +63,34 @@ export default function CreateMaterialDialog({ isOpen, onClose, onSuccess }: Pro
     alerta_bajo_stock: true,
   });
 
-  function set(field: string, value: any) {
+  function set(field: keyof typeof form, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
   async function handleSubmit() {
     if (!form.nombre.trim()) return;
 
-    create({
-      ...form,
-      gramaje:         form.gramaje        ? Number(form.gramaje)        : undefined,
-      ancho_total:     form.ancho_total     ? Number(form.ancho_total)     : undefined,
-      ancho_util:      form.ancho_util      ? Number(form.ancho_util)      : undefined,
-      stock_actual:    Number(form.stock_actual),
-      stock_minimo:    Number(form.stock_minimo),
-      precio_unitario: form.precio_unitario ? Number(form.precio_unitario) : undefined,
-    });
+    // ✅ Construimos el objeto MaterialFormValues con las propiedades conocidas únicamente
+    const datosValidados: MaterialFormValues = {
+      nombre:            form.nombre,
+      tipo:              form.tipo,
+      unidad_medida:     form.unidad_medida,
+      stock_minimo:      Number(form.stock_minimo),
+      alerta_bajo_stock: form.alerta_bajo_stock,
+      descripcion:       form.descripcion || undefined,
+      composicion:       form.composicion || undefined,
+      gramaje:           form.gramaje         ? Number(form.gramaje)         : undefined,
+      ancho_total:       form.ancho_total     ? Number(form.ancho_total)     : undefined,
+      ancho_util:        form.ancho_util      ? Number(form.ancho_util)      : undefined,
+      color:             form.color           || undefined,
+      codigo_color:      form.codigo_color    || undefined,
+      precio_unitario:   form.precio_unitario ? Number(form.precio_unitario) : undefined,
+      ubicacion_almacen: form.ubicacion_almacen || undefined,
+      // Nota: Si tu backend necesita el stock inicial al crear, agrega un campo opcional "stock_inicial" en el esquema
+    };
 
-    // useMateriales toast + invalidate ya se encarga del feedback
+    create(datosValidados);
+
     onSuccess();
     handleClose();
   }
@@ -198,10 +226,11 @@ export default function CreateMaterialDialog({ isOpen, onClose, onSuccess }: Pro
         </div>
 
         <DialogFooter className="gap-2 pt-2">
-          <Button variant="outline" onClick={handleClose} disabled={isCreating}>
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isCreating}>
             Cancelar
           </Button>
           <Button
+            type="button"
             onClick={handleSubmit}
             disabled={!form.nombre.trim() || isCreating}
             className="bg-pink-600 hover:bg-pink-700 text-white font-bold px-6"

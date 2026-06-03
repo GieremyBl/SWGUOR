@@ -21,51 +21,32 @@ import { NextResponse } from 'next/server';
  * - limite: Máximo registros (default 100)
  */
 export async function GET(req: Request) {
+  const auth = await requireServerRole(['administrador', 'gerente', 'almacenero']);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
+    const tipoItem = searchParams.get('tipoItem');
 
-    const filtros: any = {};
-
-    // Filtros simples
-    if (searchParams.has('tipo_movimiento')) {
-      filtros.tipo_movimiento = searchParams.get('tipo_movimiento');
-    }
-    if (searchParams.has('referencia_tipo')) {
-      filtros.referencia_tipo = searchParams.get('referencia_tipo');
-    }
-    if (searchParams.has('producto_id')) {
-      filtros.producto_id = searchParams.get('producto_id');
-    }
-    if (searchParams.has('material_id')) {
-      filtros.material_id = searchParams.get('material_id');
-    }
-    if (searchParams.has('insumo_id')) {
-      filtros.insumo_id = searchParams.get('insumo_id');
-    }
-    if (searchParams.has('usuario_id')) {
-      filtros.usuario_id = searchParams.get('usuario_id');
-    }
-    if (searchParams.has('almacen_id')) {
-      filtros.almacen_id = searchParams.get('almacen_id');
-    }
-    if (searchParams.has('busqueda')) {
-      filtros.busqueda = searchParams.get('busqueda');
-    }
-
-    // Filtros de fecha
-    if (searchParams.has('desde')) {
-      filtros.desde = new Date(searchParams.get('desde')!);
-    }
-    if (searchParams.has('hasta')) {
-      filtros.hasta = new Date(searchParams.get('hasta')!);
-    }
-
-    // Límite
-    if (searchParams.has('limite')) {
-      filtros.limite = parseInt(searchParams.get('limite') || '100');
-    }
-
-    const data = await MovimientosInventarioService.listar(filtros);
+    const data = await MovimientosInventarioService.listarDesdeFiltros({
+      search: searchParams.get('search') ?? searchParams.get('busqueda') ?? undefined,
+      busqueda: searchParams.get('busqueda') ?? undefined,
+      tipo_movimiento: searchParams.get('tipo_movimiento') ?? undefined,
+      referencia_tipo: searchParams.get('referencia_tipo') ?? undefined,
+      tipoItem:
+        tipoItem === 'producto' || tipoItem === 'insumo' || tipoItem === 'material'
+          ? tipoItem
+          : undefined,
+      desde: searchParams.get('desde') ?? undefined,
+      hasta: searchParams.get('hasta') ?? undefined,
+      fecha_inicio: searchParams.get('fecha_inicio') ?? undefined,
+      fecha_fin: searchParams.get('fecha_fin') ?? undefined,
+      limite: searchParams.has('limite')
+        ? parseInt(searchParams.get('limite') || '50', 10)
+        : undefined,
+    });
     return NextResponse.json({ success: true, data });
   } catch (error: any) {
     console.error('[GET /movimientos-inventario]', error);

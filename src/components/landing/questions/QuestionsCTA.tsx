@@ -4,37 +4,23 @@ import Link from "next/link";
 import { ArrowRight, MessageCircle } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
 
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-
-  // Durante SSR y antes del mount, siempre retornamos visible:true
-  // para que el HTML del servidor coincida con el cliente inicial
-  return { ref, visible: !mounted ? true : visible };
-}
-
 const QuestionsCTA = () => {
-  const card = useScrollReveal(0.2);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardVisible, setCardVisible] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [hovered, setHovered] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
+    Promise.resolve().then(() => setMounted(true));
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setCardVisible(true); obs.disconnect(); } },
+      { threshold: 0.2 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -55,10 +41,10 @@ const QuestionsCTA = () => {
 
   // El transform de entrada 3D solo se aplica post-mount para evitar mismatch
   const cardTransform = !mounted
-    ? "perspective(1200px)"
-    : card.visible
-      ? `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(0px)`
-      : "perspective(1200px) rotateX(8deg) translateY(40px)";
+  ? "perspective(1200px)"
+  : cardVisible
+    ? `perspective(1200px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateZ(0px)`
+    : "perspective(1200px) rotateX(8deg) translateY(40px)";
 
   return (
     <section
@@ -84,10 +70,7 @@ const QuestionsCTA = () => {
 
       <div style={{ maxWidth: "860px", margin: "0 auto", perspective: "1200px" }}>
         <div
-          ref={(node) => {
-            (cardRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-            (card.ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-          }}
+          ref={cardRef}
           onMouseMove={handleMouseMove}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={handleMouseLeave}
@@ -99,7 +82,7 @@ const QuestionsCTA = () => {
             cursor: "default",
             transformStyle: "preserve-3d",
             transform: cardTransform,
-            opacity: !mounted ? 1 : card.visible ? 1 : 0,
+            opacity: !mounted ? 1 : cardVisible ? 1 : 0,
             transition: hovered
               ? "transform 0.1s ease"
               : "transform 0.7s cubic-bezier(0.23,1,0.32,1), opacity 0.9s ease",
@@ -143,8 +126,8 @@ const QuestionsCTA = () => {
               style={{
                 position: "absolute",
                 top: dot.top,
-                left: (dot as any).left,
-                right: (dot as any).right,
+                left: (dot).left,
+                right: (dot).right,
                 width: dot.size,
                 height: dot.size,
                 borderRadius: "50%",

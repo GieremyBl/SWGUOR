@@ -1,23 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, Plus } from "lucide-react";
-
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
+import { ChevronDown } from "lucide-react";
 
 const faqs = [
   { question: "¿Cómo funciona la alianza estratégica con GUOR?", answer: "Trabajamos junto a marcas y negocios ofreciendo producción textil premium, asesoría estratégica y atención personalizada para potenciar cada colección." },
@@ -29,18 +13,44 @@ const faqs = [
 
 const QuestionsAccordion = () => {
   const [active, setActive] = useState<number | null>(0);
-  const title = useScrollReveal();
-  const list = useScrollReveal(0.05);
+
+  const titleRef = useRef<HTMLDivElement>(null);
+  const listRef  = useRef<HTMLDivElement>(null);
+  const [titleVisible, setTitleVisible] = useState(false);
+  const [listVisible,  setListVisible]  = useState(false);
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    const observe = (
+      el: HTMLDivElement | null,
+      setVisible: (v: boolean) => void,
+      threshold = 0.1,
+    ) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+        { threshold },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    };
+
+    observe(titleRef.current, setTitleVisible, 0.1);
+    observe(listRef.current,  setListVisible,  0.05);
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
   return (
     <section style={{ background: "#0a0806", padding: "6rem 2rem" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
 
         {/* Title */}
-        <div ref={title.ref} style={{
+        <div ref={titleRef} style={{
           textAlign: "center", marginBottom: "4rem",
-          opacity: title.visible ? 1 : 0,
-          transform: title.visible ? "translateY(0)" : "translateY(30px)",
+          opacity: titleVisible ? 1 : 0,
+          transform: titleVisible ? "translateY(0)" : "translateY(30px)",
           transition: "all 0.8s ease",
         }}>
           <span style={{
@@ -62,7 +72,7 @@ const QuestionsAccordion = () => {
         </div>
 
         {/* FAQ list */}
-        <div ref={list.ref} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div ref={listRef} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {faqs.map((faq, i) => {
             const isOpen = active === i;
             return (
@@ -74,8 +84,8 @@ const QuestionsAccordion = () => {
                   background: isOpen ? "rgba(196,163,90,0.05)" : "rgba(255,255,255,0.015)",
                   transition: "all 0.4s ease",
                   boxShadow: isOpen ? "0 8px 32px rgba(0,0,0,0.3)" : "none",
-                  opacity: list.visible ? 1 : 0,
-                  transform: list.visible ? "translateX(0)" : "translateX(-20px)",
+                  opacity: listVisible ? 1 : 0,
+                  transform: listVisible ? "translateX(0)" : "translateX(-20px)",
                   transitionDelay: `${i * 0.07}s`,
                 }}
               >

@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     });
 
     const hoy = new Date();
-    let pedidosAtrasados = 0;
+    const pedidosAtrasados = 0;
 
     // ── Agrupar ventas mensuales por mes real ──
     const meses = [

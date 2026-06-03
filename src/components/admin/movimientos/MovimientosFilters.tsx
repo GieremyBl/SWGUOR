@@ -94,7 +94,7 @@ export function MovimientosFilters({ onFilterChange }: MovimientosFiltersProps) 
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>  {/* ✅ nunca "" */}
+                <SelectItem value={ALL}>Todos</SelectItem>
                 <SelectItem value="entrada">Entrada</SelectItem>
                 <SelectItem value="salida">Salida</SelectItem>
                 <SelectItem value="ajuste">Ajuste</SelectItem>
@@ -113,7 +113,7 @@ export function MovimientosFilters({ onFilterChange }: MovimientosFiltersProps) 
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>  {/* ✅ */}
+                <SelectItem value={ALL}>Todos</SelectItem>
                 <SelectItem value="ORDEN">Orden de Compra</SelectItem>
                 <SelectItem value="COMPRA">Compra</SelectItem>
                 <SelectItem value="VENTA">Venta</SelectItem>
@@ -133,7 +133,7 @@ export function MovimientosFilters({ onFilterChange }: MovimientosFiltersProps) 
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL}>Todos</SelectItem>  {/* ✅ */}
+                <SelectItem value={ALL}>Todos</SelectItem>
                 <SelectItem value="producto">Productos</SelectItem>
                 <SelectItem value="insumo">Insumos</SelectItem>
                 <SelectItem value="material">Materiales</SelectItem>

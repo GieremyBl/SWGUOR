@@ -3,13 +3,22 @@ import type { ApiResponse } from '@/lib/schemas/ordenes-produccion';
 const API     = '/api/admin/ordenes-produccion';
 const SEG_API = '/api/admin/seguimiento-produccion';
 
+// Definimos una interfaz genérica para la metadata de paginación (page, limit, total, etc.)
+interface PaginationMeta {
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
+  [key: string]: unknown; // Permite propiedades adicionales sin usar 'any'
+}
+
 export async function fetchOrdenesProduccion(params?: {
   producto_id?: string;
   search?: string;
   etapa?: string;
   page?: number;
   limit?: number;
-}): Promise<{ data: any[], meta?: any }> {
+}): Promise<{ data: Record<string, unknown>[]; meta?: PaginationMeta; error?: string }> {
   const query = new URLSearchParams();
   if (params?.producto_id) query.set('producto_id', params.producto_id);
   if (params?.search) query.set('search', params.search);
@@ -65,7 +74,7 @@ export async function registrarEtapaProduccion(data: {
   return res.json();
 }
 
-export async function fetchSeguimientosProduccion(orden_id: string): Promise<any[]> {
+export async function fetchSeguimientosProduccion(orden_id: string): Promise<Record<string, unknown>[]> {
   const res = await fetch(`${SEG_API}?orden_id=${orden_id}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Error al cargar seguimientos');
   const result = await res.json();

@@ -87,7 +87,7 @@ async function fetchUserByAuthId(authId: string): Promise<usuarios | null> {
  */
 async function updateLastAccess(userId: number): Promise<void> {
   try {
-    await (getSupabaseBrowserClient() as any)
+    await (getSupabaseBrowserClient())
       .from('usuarios')
       .update({ ultimo_acceso: new Date().toISOString() })
       .eq('id', userId);
@@ -170,20 +170,21 @@ export async function loginUser(
       usuario 
     };
 
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Auth] Unexpected login error:', err);
-    
-    // Detectar errores de red
-    if (err?.message?.includes('fetch') || err?.message?.includes('network')) {
-      return { 
-        success: false, 
-        error: ERROR_MESSAGES.NETWORK_ERROR 
+
+    // // Detectar errores de red
+    if (err instanceof Error && (err.message.includes('fetch') || err.message.includes('network'))) { 
+      return {
+        success: false,
+        error: ERROR_MESSAGES.NETWORK_ERROR
       };
     }
 
-    return { 
-      success: false, 
-      error: ERROR_MESSAGES.UNEXPECTED_ERROR 
+    // Opcional: Manejo para cualquier otro error genérico que no sea de red
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Error desconocido'
     };
   }
 }

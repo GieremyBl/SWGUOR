@@ -3,12 +3,30 @@
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const GoldenThreadBackground = () => {
-  const [mounted, setMounted] = useState(false);
-  const [particles, setParticles] = useState<any[]>([]);
+interface ThreadParticle {
+  left:     string;
+  top:      string;
+  duration: number;
+  delay:    number;
+}
 
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+const GoldenThreadBackground = () => {
+  // El estado se calcula una sola vez al instanciar el componente, sin gatillar efectos secundarios.
+  const [particles] = useState<ThreadParticle[]>(() => {
+    // Si estamos en el servidor durante el SSR de Next.js, iniciamos vacío
+    if (typeof window === "undefined") return [];
+
+    // Si ya estamos en el cliente, generamos las partículas instantáneamente
+    return [...Array(12)].map(() => ({
+      left:     `${Math.random() * 100}%`,
+      top:      `${Math.random() * 100}%`,
+      duration: 12 + Math.random() * 10,
+      delay:    Math.random() * 5,
+    }));
+  });
+
+  const mouseX = useMotionValue<number>(0);
+  const mouseY = useMotionValue<number>(0);
 
   const springX = useSpring(mouseX, { stiffness: 40, damping: 25 });
   const springY = useSpring(mouseY, { stiffness: 40, damping: 25 });
@@ -16,18 +34,8 @@ const GoldenThreadBackground = () => {
   const moveX = useTransform(springX, [0, 2000], [20, -20]);
   const moveY = useTransform(springY, [0, 1200], [15, -15]);
 
+  // Este efecto queda única y exclusivamente para escuchar eventos nativos del DOM (su propósito real)
   useEffect(() => {
-    setMounted(true);
-
-    const generatedParticles = [...Array(12)].map(() => ({
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      duration: 12 + Math.random() * 10,
-      delay: Math.random() * 5,
-    }));
-
-    setParticles(generatedParticles);
-
     const handleMouseMove = (e: MouseEvent) => {
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
@@ -37,15 +45,16 @@ const GoldenThreadBackground = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
 
-  if (!mounted) return null;
+  // Si no hay partículas (caso SSR inicial), prevenimos el desajuste visual de Next.js devolviendo null
+  if (particles.length === 0) return null;
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-gradient-to-br from-[#fff4e2] via-[#fbddd3] to-[#e4c28a]">
 
-      {/* glow */}
+      {/* Glow / Resplandor de fondo */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(181,133,75,0.15),transparent_60%)]" />
 
-      {/* líneas */}
+      {/* Líneas fluidas texturizadas (Hilos de oro) */}
       <motion.div style={{ x: moveX, y: moveY }} className="absolute inset-0">
         <svg className="w-full h-full opacity-40" viewBox="0 0 1440 900">
           {[...Array(3)].map((_, i) => (
@@ -65,15 +74,15 @@ const GoldenThreadBackground = () => {
               }}
               transition={{
                 duration: 12 + i * 3,
-                repeat: Infinity,
-                ease: "easeInOut",
+                repeat:   Infinity,
+                ease:     "easeInOut",
               }}
             />
           ))}
         </svg>
       </motion.div>
 
-      {/* partículas */}
+      {/* Partículas flotantes texturizadas en suspensión */}
       {particles.map((p, i) => (
         <motion.div
           key={i}
@@ -82,8 +91,8 @@ const GoldenThreadBackground = () => {
           animate={{ opacity: [0, 0.4, 0], y: [0, -80] }}
           transition={{
             duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
+            repeat:   Infinity,
+            delay:    p.delay,
           }}
         />
       ))}

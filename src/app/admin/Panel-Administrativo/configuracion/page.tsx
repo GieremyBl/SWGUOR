@@ -81,21 +81,6 @@ export default function ConfiguracionPage() {
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<SaveState>({ status: 'idle', message: '' });
 
-  // Load configuration on mount
-  useEffect(() => {
-    loadConfiguration();
-  }, []);
-
-  // Auto-hide success/error messages
-  useEffect(() => {
-    if (saveState.status === 'success' || saveState.status === 'error') {
-      const timer = setTimeout(() => {
-        setSaveState({ status: 'idle', message: '' });
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [saveState.status]);
-
   // ============================================================================
   // HANDLERS
   // ============================================================================
@@ -130,6 +115,21 @@ export default function ConfiguracionPage() {
       setLoading(false);
     }
   };
+
+  // Load configuration on mount
+  useEffect(() => {
+    loadConfiguration();
+  }, []);
+
+  // Auto-hide success/error messages
+  useEffect(() => {
+    if (saveState.status === 'success' || saveState.status === 'error') {
+      const timer = setTimeout(() => {
+        setSaveState({ status: 'idle', message: '' });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [saveState.status]);
 
   const handleFieldChange = useCallback((field: keyof ConfigFormData, value: string | number) => {
     setFormData(prev => ({

@@ -1,5 +1,27 @@
+import { type Cargo } from '@prisma/client';
+
+// ── Tipos de Soporte para Relaciones ───────────────────────────
+export interface PersonalInternoBase {
+  id: number | string | bigint;
+  nombre_completo: string | null;
+  cargo: Cargo | string | null;
+  dni: number | string | bigint | null;
+  telefono: number | string | bigint | null;
+  fecha_ingreso: string | null;
+  usuario_id: number | string | bigint | null;
+}
+
+export interface ClienteBase {
+  id: number | string | bigint;
+  nombre_completo: string | null;
+  telefono: string | null;
+  dni_ruc: string | null;
+  direccion: string | null;
+}
+
+// ── Definición de Datos de Usuario ─────────────────────────────
 export type UsuarioData = {
-  id: number | string | bigint; // Permitir flexibilidad por BigInt
+  id: number | string | bigint;
   email: string;
   rol: 'administrador' | 'cortador' | 'disenador' | 'recepcionista' | 'ayudante' | 'representante_taller' | 'cliente' | 'gerente' | null;
   estado: 'activo' | 'inactivo' | 'suspendido' | null;
@@ -9,24 +31,25 @@ export type UsuarioData = {
   auth_id: string | null;
   created_by: string | null;
   
-  // IMPORTANTE: Cambiamos para que acepte tanto el objeto aplanado como el array original
+  // Soporta tanto la propiedad mapeada directa como la estructura relacional nativa (objeto u objeto en array)
   personal_interno_id?: number | string | bigint | null;
-  personal_interno?: any; // Cambiado a 'any' o a un objeto único para evitar conflictos de Array
+  personal_interno?: PersonalInternoBase | PersonalInternoBase[] | null;
   
-  // Campos aplanados que inyectamos en el helper
+  // Campos aplanados/inyectados por helpers de servicio
   nombre_completo?: string | null;
   telefono?: number | string | bigint | null;
   dni?: number | string | bigint | null;
   
-  // Relación con clientes por si el usuario es un cliente
-  clientes?: any;
+  // Relación con clientes por si el usuario posee un perfil comercial de cliente
+  clientes?: ClienteBase | ClienteBase[] | null;
 };
 
+// ── Estado del Formulario de Perfil (UI) ────────────────────────
 export interface ProfileState {
   nombreCompleto: string;
   email: string;
-  telefono: string; // Mejor manejar siempre como string en el estado del formulario
-  dni: string;     // Mejor manejar siempre como string en el estado del formulario
+  telefono: string; 
+  dni: string;     
   avatarUrl: string;
   currentPassword: string;
   newPassword: string;
@@ -42,9 +65,20 @@ export interface ProfileState {
   error: string;
 }
 
+// ── Reducer Actions con Tipado Seguro Discriminado ─────────────
+
+// Tipo auxiliar: genera una unión de { type, field, value } por cada campo de ProfileState
+type SetFieldAction = {
+  [K in keyof ProfileState]: {
+    type: 'SET_FIELD';
+    field: K;
+    value: ProfileState[K];
+  };
+}[keyof ProfileState];
+
 export type ProfileAction =
-  | { type: 'SET_FIELD'; field: keyof ProfileState; value: any }
-  | { type: 'SET_PROFILE_DATA'; data: any } // Cambiado a any para evitar el error de overlap
+  | SetFieldAction
+  | { type: 'SET_PROFILE_DATA'; data: Partial<ProfileState> | UsuarioData }
   | { type: 'RESET_PASSWORD_FIELDS' }
   | { type: 'SET_LOADING'; loading: boolean }
   | { type: 'SET_SAVING'; saving: boolean }

@@ -1,0 +1,36 @@
+export const COLOR_MAP: Record<string, string> = {
+    blanco: '#FFFFFF',
+    negro: '#1a1a1a',
+    gris: '#9ca3af',
+    grafito: '#4b5563',
+    azul: '#3b82f6',
+    azulino: '#1d4ed8',
+    celeste: '#7dd3fc',
+    rojo: '#ef4444',
+    rosa: '#f472b6',
+    palo_rosa: '#fda4af',
+    rose: '#fb7185',
+    fucsia: '#e879f9',
+    lila: '#c084fc',
+    morado: '#7c3aed',
+    verde: '#22c55e',
+    camel: '#b45309',
+    chocolate: '#78350f',
+    marron: '#92400e',
+    beige: '#d4b896',
+    crema: '#fef3c7',
+    nude: '#e8c9a0',
+    perla: '#f0ece4',
+    cemento: '#a8a29e',
+    coral: '#fb923c',
+    melon: '#fdba74',
+    guinda: '#881337',
+    vino: '#7f1d1d',
+    piton: '#a16207',
+    melange: '#d6d3d1',
+    animal_print: '#d97706',
+};
+
+export const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34'] as const;
+
+export type Talla = typeof TALLAS[number];

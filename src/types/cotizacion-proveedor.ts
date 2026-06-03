@@ -13,10 +13,7 @@ export interface CotizacionRow {
   proveedores: ProveedorData | null;
 }
 
-// Representa el detalle completo que requiere tu componente de UI
-export interface CotizacionDetalleData extends CotizacionRow {
-  // Aquí puedes añadir campos específicos del detalle si existen en el futuro
-}
+export type CotizacionDetalleData = CotizacionRow;
 
 export interface PaginationData {
   total: number;

@@ -40,6 +40,25 @@ export interface ExtraccionFichaTecnica {
   }>;
 }
 
+// ─── tipos internos para el resultado del schema ──────────────────────────────
+
+interface CotizacionCampos {
+  numero_externo?: string | null;
+  fecha_solicitud?: string | null;
+  fecha_vencimiento?: string | null;
+  moneda?: string | null;
+  total_estimado?: number;
+  notas?: string | null;
+}
+
+interface ProveedorCampos {
+  ruc?: string | null;
+  razon_social?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+  contacto?: string | null;
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 function fileToBase64(filePath: string): string {
@@ -49,8 +68,8 @@ function fileToBase64(filePath: string): string {
 function getMimeType(filePath: string): 'image/png' | 'image/jpeg' | 'image/webp' {
   const ext = path.extname(filePath).toLowerCase();
   const map: Record<string, 'image/png' | 'image/jpeg' | 'image/webp'> = {
-    '.png':  'image/png',
-    '.jpg':  'image/jpeg',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.webp': 'image/webp',
   };
@@ -58,15 +77,14 @@ function getMimeType(filePath: string): 'image/png' | 'image/jpeg' | 'image/webp
 }
 
 function parseJSON<T>(raw: string): T {
-  // Intenta múltiples patrones para extraer JSON
   const patterns = [
-    /```json\n?([\s\S]*?)\n?```/, // JSON dentro de bloque de código
-    /```\n?([\s\S]*?)\n?```/,      // Bloque de código sin lenguaje especificado
-    /\{[\s\S]*\}/,                   // JSON puro
+    /```json\n?([\s\S]*?)\n?```/,
+    /```\n?([\s\S]*?)\n?```/,
+    /\{[\s\S]*\}/,
   ];
 
   let jsonStr = raw.trim();
-  
+
   for (const pattern of patterns) {
     const match = raw.match(pattern);
     if (match) {
@@ -75,11 +93,9 @@ function parseJSON<T>(raw: string): T {
     }
   }
 
-  // Si aún no parece JSON válido, trata de limpiar
   jsonStr = jsonStr.trim();
-  
+
   if (!jsonStr.startsWith('{')) {
-    // Si comienza con algo que no es {, busca la primera {
     const firstBrace = jsonStr.indexOf('{');
     if (firstBrace !== -1) {
       jsonStr = jsonStr.substring(firstBrace);
@@ -97,16 +113,11 @@ function parseJSON<T>(raw: string): T {
 
 // ─── extracción desde imagen geometral ───────────────────────────────────────
 
-/**
- * Extrae medidas, materiales, SAM y costo estimado
- * a partir de la imagen geometral de la prenda.
- * Los colores y tallas se obtienen directamente de la tabla productos.
- */
 export async function extraerFichaTecnica(
   imagePath: string
 ): Promise<ExtraccionFichaTecnica> {
   const base64Data = fileToBase64(imagePath);
-  const mimeType   = getMimeType(imagePath);
+  const mimeType = getMimeType(imagePath);
 
   const prompt = `
 Eres un experto en patronaje y fichas técnicas de confección textil.
@@ -157,7 +168,7 @@ INSTRUCCIONES CRÍTICAS:
 
     const content = response.response.text();
     console.log('📤 Respuesta de Gemini (primeros 500 chars):', content.substring(0, 500));
-    
+
     return parseJSON<ExtraccionFichaTecnica>(content);
   } catch (error: any) {
     console.error('❌ Error al extraer ficha técnica desde imagen:', error.message);
@@ -165,7 +176,7 @@ INSTRUCCIONES CRÍTICAS:
   }
 }
 
-// ─── extracción de cotización (sin cambios, sigue usando PDF) ─────────────────
+// ─── extracción de cotización ─────────────────────────────────────────────────
 
 export async function extraerCotizacionProveedor(
   pdfPath: string,
@@ -174,8 +185,12 @@ export async function extraerCotizacionProveedor(
     '@/lib/helpers/cotizacion-gemini-extraction'
   );
   const data = await extraerCotizacionProveedorDesdeArchivo(pdfPath);
-  const p = data.proveedor ?? {};
-  const c = data.cotizacion ?? {};
+
+  // Tipamos los fallbacks explícitamente para que TypeScript
+  // conozca la forma del objeto aunque cotizacion/proveedor sean undefined
+  const p: ProveedorCampos = data.proveedor ?? {};
+  const c: CotizacionCampos = data.cotizacion ?? {};
+
   return {
     numero_cotizacion: c.numero_externo ?? undefined,
     fecha_cotizacion: c.fecha_solicitud ?? undefined,
@@ -204,17 +219,17 @@ export async function extraerConPromptCustom(
   promptCustom?: string
 ): Promise<any> {
   const base64Data = fileToBase64(filePath);
-  const ext        = path.extname(filePath).toLowerCase();
-  const isImage    = ['.png', '.jpg', '.jpeg', '.webp'].includes(ext);
+  const ext = path.extname(filePath).toLowerCase();
+  const isImage = ['.png', '.jpg', '.jpeg', '.webp'].includes(ext);
 
   const mimeType = isImage
     ? getMimeType(filePath)
     : 'application/pdf';
 
   const prompts: Record<string, string> = {
-    cotizacion:    'Extrae datos de cotización: número, fecha, proveedor, items. Retorna JSON.',
+    cotizacion: 'Extrae datos de cotización: número, fecha, proveedor, items. Retorna JSON.',
     ficha_tecnica: 'Extrae medidas, materiales, SAM y costo estimado. Retorna JSON.',
-    medidas:       'Extrae tabla de medidas con puntos, tallas y valores en cm. Retorna JSON.',
+    medidas: 'Extrae tabla de medidas con puntos, tallas y valores en cm. Retorna JSON.',
   };
 
   const prompt = promptCustom ?? prompts[tipoExtraccion] ?? 'Extrae toda la información relevante en JSON.';

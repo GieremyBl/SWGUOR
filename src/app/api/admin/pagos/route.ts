@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       usuario_id: BigInt(auth.user.id),
       accion: 'CREAR',
       tabla: 'pagos',
-      registro_id: BigInt(pago.id_uuid), // pagos usa UUID (id_uuid), auditoria requiere BigInt
+      registro_id: BigInt(pago.id_uuid),
       datos_despues: pago,
     });
 

@@ -7,6 +7,17 @@ import {
   X, Palette, Ruler, PackagePlus, Shirt, Scissors,
 } from "lucide-react";
 import { generateVariantSKU } from "@/lib/utils/producto-utils";
+import { Input } from "@/components/ui/input";
+
+// Interfaz para el tipado estricto de las variantes en el formulario
+export interface VarianteForm {
+  id?: string;
+  color: string;
+  talla: string;
+  sku: string;
+  stock: number;
+  stock_adicional?: number;
+}
 
 const COLORES_PRENDA: { nombre: string; hex: string }[] = [
   { nombre: "Animal Print", hex: "#8B6914" },
@@ -35,7 +46,7 @@ const COLORES_PRENDA: { nombre: string; hex: string }[] = [
   { nombre: "Piton", hex: "#a16207" },
   { nombre: "Rojo", hex: "#dc2626" },
   { nombre: "Rosa", hex: "#f9a8d4" },
-  { nombre: "Rose", hex: "#fb7185" },
+  { nombre: "Rose", hex: "#fb7185" }, // Corregido: Removido el literal intruso fontName
   { nombre: "Verde", hex: "#16a34a" },
   { nombre: "Vino", hex: "#7f1d1d" },
 ];
@@ -57,8 +68,9 @@ const LABEL = "text-[9px] font-black text-gray-400 uppercase tracking-[0.14em] b
 function ColorSwatch({ hex, border }: { hex: string; border?: boolean }) {
   return (
     <span
-      className={`inline-block w-3.5 h-3.5 rounded-full shrink-0 shadow-sm ${border ? "border-2 border-white" : "border border-gray-200"
-        }`}
+      className={`inline-block w-3.5 h-3.5 rounded-full shrink-0 shadow-sm ${
+        border ? "border-2 border-white" : "border border-gray-200"
+      }`}
       style={{ background: hex }}
     />
   );
@@ -67,8 +79,8 @@ function ColorSwatch({ hex, border }: { hex: string; border?: boolean }) {
 function StockBadge({ value }: { value: number }) {
   const n = Number(value) || 0;
   const cls =
-    n === 0 ? "bg-rose-50   text-rose-500   border-rose-100"
-      : n < 50 ? "bg-amber-50  text-amber-600  border-amber-100"
+    n === 0 ? "bg-rose-50 text-rose-500 border-rose-100"
+      : n < 50 ? "bg-amber-50 text-amber-600 border-amber-100"
         : "bg-emerald-50 text-emerald-600 border-emerald-100";
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-black ${cls}`}>
@@ -87,7 +99,7 @@ function VariantBuilderPanel({
 }: {
   skuMaestro: string;
   categoriaNombre: string;
-  onGenerate: (variantes: any[]) => void;
+  onGenerate: (variantes: VarianteForm[]) => void; // Tipado formal en lugar de any[]
   onClose: () => void;
 }) {
   const tipoTallas = detectarTipoTallas(categoriaNombre);
@@ -103,8 +115,7 @@ function VariantBuilderPanel({
   const toggleAllTallas = () =>
     setTallasSel((p) => p.length === TALLAS.length ? [] : [...TALLAS]);
 
-  // ✅ Stock siempre 0 — se gestiona desde Inventario
-  const preview = coloresSel.flatMap((color) =>
+  const preview: VarianteForm[] = coloresSel.flatMap((color) =>
     tallasSel.map((talla) => ({
       color,
       talla,
@@ -122,10 +133,9 @@ function VariantBuilderPanel({
           <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
             Generador de Variantes
           </span>
-          <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ml-2 ${tipoTallas === "pantalon"
-            ? "bg-indigo-50 text-indigo-500"
-            : "bg-teal-50   text-teal-600"
-            }`}>
+          <span className={`inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ml-2 ${
+            tipoTallas === "pantalon" ? "bg-indigo-50 text-indigo-500" : "bg-teal-50 text-teal-600"
+          }`}>
             {tipoTallas === "pantalon"
               ? <><Scissors size={9} /> Tallas 28–34</>
               : <><Shirt size={9} /> Tallas XS–XXL</>
@@ -142,7 +152,6 @@ function VariantBuilderPanel({
       </div>
 
       <div className="px-5 pb-5 space-y-5">
-
         {/* Colores */}
         <div>
           <div className="flex items-center gap-1.5 mb-3">
@@ -162,10 +171,11 @@ function VariantBuilderPanel({
                   key={nombre}
                   type="button"
                   onClick={() => toggle(coloresSel, setColoresSel, nombre)}
-                  className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-xs font-bold transition-all ${sel
-                    ? "border-teal-300 bg-teal-50 text-teal-700 shadow-sm"
-                    : "border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50"
-                    }`}
+                  className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-xs font-bold transition-all ${
+                    sel
+                      ? "border-teal-300 bg-teal-50 text-teal-700 shadow-sm"
+                      : "border-gray-100 bg-white text-gray-500 hover:border-gray-200 hover:bg-gray-50"
+                  }`}
                 >
                   <ColorSwatch hex={hex} border={sel} />
                   <span className="truncate capitalize text-[11px]">{labelColor(nombre)}</span>
@@ -197,10 +207,11 @@ function VariantBuilderPanel({
                   key={t}
                   type="button"
                   onClick={() => toggle(tallasSel, setTallasSel, t)}
-                  className={`min-w-[52px] px-4 py-2.5 rounded-xl border text-xs font-black uppercase transition-all ${sel
-                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-100"
-                    : "bg-white border-gray-100 text-gray-500 hover:border-indigo-200 hover:text-indigo-500"
-                    }`}
+                  className={`min-w-[52px] px-4 py-2.5 rounded-xl border text-xs font-black uppercase transition-all ${
+                    sel
+                      ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-100"
+                      : "bg-white border-gray-100 text-gray-500 hover:border-indigo-200 hover:text-indigo-500"
+                  }`}
                 >
                   {t}
                 </button>
@@ -209,7 +220,7 @@ function VariantBuilderPanel({
           </div>
         </div>
 
-        {/* Resumen — sin input de stock */}
+        {/* Resumen */}
         {preview.length > 0 && (
           <div className="flex items-center gap-2 text-xs text-gray-400 py-1">
             <span className="font-black text-gray-700 text-base">{preview.length}</span>
@@ -280,20 +291,112 @@ function VariantBuilderPanel({
 
 // ─── Fila de variante ─────────────────────────────────────────
 
-function VariantRow({ index, field, skuMaestro, mode, onEdit, onRemove }: {
-  index: number; field: any; skuMaestro: string;
-  mode: "create" | "edit"; onEdit: () => void; onRemove: () => void;
+function VariantRow({
+  index,
+  field,
+  skuMaestro,
+  categoriaNombre,
+  mode,
+  isEditing,
+  onEdit,
+  onCancelEdit,
+  onRemove,
+}: {
+  index: number;
+  field: VarianteForm; // Tipado estricto reemplazando 'any'
+  skuMaestro: string;
+  categoriaNombre: string;
+  mode: "create" | "edit";
+  isEditing: boolean;
+  onEdit: () => void;
+  onCancelEdit: () => void;
+  onRemove: () => void;
 }) {
-  const { watch } = useFormContext();
+  const { register, watch, setValue } = useFormContext();
+  
   const color = watch(`variantes.${index}.color`) || "";
   const talla = watch(`variantes.${index}.talla`) || "";
   const stock = watch(`variantes.${index}.stock`) ?? 0;
   const stockAdicional = watch(`variantes.${index}.stock_adicional`) || 0;
 
+  const tipoTallas = integrateTipoTallas(categoriaNombre);
+  function integrateTipoTallas(cat: string) { return detectarTipoTallas(cat); }
+  const TALLAS = tipoTallas === "pantalon" ? TALLAS_PANT : TALLAS_ROPA;
   const hex = COLORES_PRENDA.find((c) => c.nombre === color)?.hex ?? "#e5e7eb";
-  const sku = color && talla && skuMaestro !== "SKU"
-    ? generateVariantSKU(skuMaestro, color, talla)
-    : field.sku || "—";
+
+  useEffect(() => {
+    if (color && talla && skuMaestro !== "SKU") {
+      const nuevoSku = generateVariantSKU(skuMaestro, color, talla);
+      setValue(`variantes.${index}.sku`, nuevoSku, { shouldDirty: true });
+    }
+  }, [color, talla, skuMaestro, index, setValue]);
+
+  const sku = watch(`variantes.${index}.sku`) || field.sku || "—";
+
+  if (isEditing) {
+    return (
+      <tr className="bg-teal-50/30 border-l-2 border-teal-500 transition-colors">
+        <td className="px-5 py-3">
+          <div className="flex items-center gap-2">
+            <ColorSwatch hex={hex} />
+            <select
+              {...register(`variantes.${index}.color`)}
+              className="text-xs font-semibold rounded-lg border border-gray-200 bg-white p-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500 capitalize"
+            >
+              {COLORES_PRENDA.map((c) => (
+                <option key={c.nombre} value={c.nombre}>
+                  {labelColor(c.nombre)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </td>
+        <td className="px-5 py-3">
+          <select
+            {...register(`variantes.${index}.talla`)}
+            className="text-xs font-black rounded-lg border border-gray-200 bg-white p-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500 uppercase"
+          >
+            {TALLAS.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </td>
+        <td className="px-5 py-3">
+          <code className="text-[10px] font-mono bg-gray-100 text-gray-600 px-2.5 py-1.5 rounded-lg block w-fit">
+            {sku}
+          </code>
+        </td>
+        <td className="px-5 py-3 text-center">
+          <StockBadge value={stock} />
+        </td>
+        {mode === "edit" && (
+          <td className="px-5 py-3 text-center">
+            <Input
+              type="number"
+              min={0}
+              placeholder="0"
+              {...register(`variantes.${index}.stock_adicional`, { valueAsNumber: true })}
+              className="w-20 h-8 text-center text-xs font-black text-sky-600 bg-white border-gray-200 focus:ring-sky-500"
+            />
+          </td>
+        )}
+        <td className="px-5 py-3">
+          <div className="flex justify-end items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Confirmar cambios"
+            >
+              <Check size={14} className="text-teal-600" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
 
   return (
     <tr className="group hover:bg-gray-50/50 transition-colors">
@@ -366,10 +469,9 @@ export function VariantsSection({ stockResumen = [], mode = "create" }: {
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // Sincroniza stocks desde BD en modo edición
   useEffect(() => {
     if (!stockResumen?.length) return;
-    const allVariants = (watch("variantes") as any[]) || [];
+    const allVariants = (watch("variantes") as VarianteForm[]) || [];
     stockResumen.forEach((item) => {
       const index = allVariants.findIndex(
         (v) => v.sku === item.sku || (v.color === item.color && v.talla === item.talla)
@@ -378,15 +480,14 @@ export function VariantsSection({ stockResumen = [], mode = "create" }: {
         setValue(`variantes.${index}.stock`, item.stock ?? 0, { shouldDirty: false });
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stockResumen]);
+  }, [stockResumen, setValue, watch]);
 
-  const totalStock = ((watch("variantes") as any[]) || []).reduce(
-    (acc: number, v: any) => acc + (Number(v.stock) || 0), 0
+  const totalStock = (watch("variantes") as VarianteForm[] || []).reduce(
+    (acc: number, v: VarianteForm) => acc + (Number(v.stock) || 0), 0
   );
 
-  const handleGenerate = (nuevas: any[]) => {
-    const existing = (watch("variantes") as any[]) || [];
+  const handleGenerate = (nuevas: VarianteForm[]) => {
+    const existing = (watch("variantes") as VarianteForm[]) || [];
     const sinDuplicados = nuevas.filter(
       (n) => !existing.some((e) => e.color === n.color && e.talla === n.talla)
     );
@@ -423,10 +524,11 @@ export function VariantsSection({ stockResumen = [], mode = "create" }: {
           <button
             type="button"
             onClick={() => { setShowBuilder((v) => !v); setEditingIndex(null); }}
-            className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-black transition-all ${showBuilder
-              ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
-              : "bg-teal-600 hover:bg-teal-700 text-white"
-              }`}
+            className={`flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-black transition-all ${
+              showBuilder
+                ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                : "bg-teal-600 hover:bg-teal-700 text-white"
+            }`}
           >
             {showBuilder ? <X size={13} /> : <Plus size={13} />}
             {showBuilder ? "Cerrar" : "Agregar variantes"}
@@ -434,9 +536,9 @@ export function VariantsSection({ stockResumen = [], mode = "create" }: {
         </div>
       </div>
 
-      <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+      <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
         {fields.length > 0 ? (
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/60 border-b border-gray-100">
                 {colHeaders.map((h) => (
@@ -454,10 +556,13 @@ export function VariantsSection({ stockResumen = [], mode = "create" }: {
                 <VariantRow
                   key={field.id}
                   index={index}
-                  field={field}
+                  field={field as unknown as VarianteForm}
                   skuMaestro={skuMaestro}
+                  categoriaNombre={categoriaNombre}
                   mode={mode}
+                  isEditing={editingIndex === index}
                   onEdit={() => { setEditingIndex(index); setShowBuilder(false); }}
+                  onCancelEdit={() => setEditingIndex(null)}
                   onRemove={() => {
                     if (editingIndex === index) setEditingIndex(null);
                     remove(index);

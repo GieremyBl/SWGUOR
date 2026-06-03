@@ -4,20 +4,42 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, ShoppingBag, Truck,
-  ChevronRight, Settings, Package, PackageOpen
+  ChevronRight, Settings, Package, PackageOpen,
+  ShoppingCart, UserCircle
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
-// ─── Estructura Plana de Navegación (Estilo ERP) ──────────────────────────────
-const NAV_ITEMS = [
-  { href: '/portal/dashboard', label: 'Inicio', icon: LayoutDashboard },
-  { href: '/portal/productos', label: 'Catálogo', icon: ShoppingBag },
-  { href: '/portal/cotizaciones', label: 'Cotizaciones', icon: FileText },
-  { href: '/portal/pedidos', label: 'Mis Pedidos', icon: Package },
-  { href: '/portal/seguimiento-pedido', label: 'Trazabilidad', icon: Truck },
-  { href: '/portal/despachos', label: 'Envíos', icon: PackageOpen },
-  { href: '/portal/configuracion', label: 'Ajustes', icon: Settings },
+const MENU_GROUPS = [
+  {
+    group: 'Menú Principal',
+    items: [{ href: '/portal/dashboard', label: 'Inicio', icon: LayoutDashboard }],
+  },
+  {
+    group: 'Comercial',
+    items: [
+      { href: '/portal/catalogo', label: 'Catálogo', icon: ShoppingBag },
+      { href: '/portal/cotizaciones', label: 'Cotizaciones', icon: FileText },
+      { href: '/portal/pedidos', label: 'Mis pedidos', icon: Package },
+      { href: '/portal/compras', label: 'Confirmar compra', icon: ShoppingCart },
+
+    ],
+  },
+  {
+    group: 'Logística & Despachos',
+    items: [
+      { href: '/portal/seguimiento-pedido', label: 'Trazabilidad', icon: Truck },
+      { href: '/portal/despachos', label: 'Envíos', icon: PackageOpen },
+
+    ],
+  },
+  {
+    group: 'Cuenta',
+    items: [
+      { href: '/portal/perfil', label: 'Mi Perfil', icon: UserCircle },
+      { href: '/portal/configuracion', label: 'Ajustes', icon: Settings },
+    ],
+  },
 ];
 
 interface PortalSidebarProps {
@@ -56,7 +78,7 @@ export function PortalSidebar({ collapsed, onToggle }: PortalSidebarProps) {
         'flex-1 overflow-y-auto overflow-x-hidden py-4 text-left',
         collapsed ? 'px-2 space-y-2' : 'px-4 space-y-1.5',
       )}>
-        {NAV_ITEMS.map((item) => {
+        {MENU_GROUPS.flatMap((g) => g.items).map((item) => {
           const Icon = item.icon;
           const isActive = pathname.startsWith(item.href);
 

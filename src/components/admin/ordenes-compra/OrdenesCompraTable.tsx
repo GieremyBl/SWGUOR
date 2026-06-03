@@ -11,6 +11,7 @@ import {
 import { formatNumeroOc } from '@/lib/helpers/ordenes-compra-helpers';
 import type { OrdenCompraRow } from './types';
 import { OrdenCompraArchiveModal, OrdenCompraConfirmModal } from './OrdenCompraModals';
+import { EstadoOrdenCompra, EstadoPagoOrdenCompra } from '@prisma/client';
 
 interface Props {
   ordenes: OrdenCompraRow[];
@@ -77,12 +78,12 @@ export default function OrdenesCompraTable({
         </thead>
         <tbody>
           {ordenes.map((orden) => {
-            const est = ESTADOS_ORDEN_COMPRA[orden.estado] ?? {
+            const est = ESTADOS_ORDEN_COMPRA[orden.estado as EstadoOrdenCompra] ?? {
               label: orden.estado,
               color: 'text-slate-600',
               bgColor: 'bg-slate-100',
             };
-            const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago] ?? {
+            const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago as EstadoPagoOrdenCompra] ?? {
               label: orden.estado_pago,
               color: 'text-slate-600',
               bgColor: 'bg-slate-100',
@@ -149,7 +150,7 @@ export default function OrdenesCompraTable({
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
-                    
+
                     {puedeConfirmar && (
                       <Button
                         variant="ghost"

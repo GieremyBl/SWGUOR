@@ -7,10 +7,28 @@ import type { Usuario } from '@/types/auth';
 export function useAuth() {
   const [user, setUser] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
+  const supabase = getSupabaseBrowserClient();
+
+  const loadUserData = async (authId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('auth_id', authId)
+        .single();
+
+      if (error) throw error;
+      setUser(data as Usuario);
+    } catch (error) {
+      console.error('[AUTH] Error loading user data:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
-    let supabase = getSupabaseBrowserClient();
     const initAuth = async () => {
       try {
         // Obtener sesión inicial
@@ -55,24 +73,6 @@ export function useAuth() {
       subscription.unsubscribe();
     };
   }, []); // Sin dependencias para que solo se ejecute una vez
-  let supabase = getSupabaseBrowserClient();
-  const loadUserData = async (authId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('auth_id', authId)
-        .single();
-
-      if (error) throw error;
-      setUser(data as Usuario);
-    } catch (error) {
-      console.error('[AUTH] Error loading user data:', error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return { user, loading };
 }

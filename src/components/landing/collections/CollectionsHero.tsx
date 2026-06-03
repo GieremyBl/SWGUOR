@@ -3,24 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 
 function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const textRef = useRef<HTMLDivElement>(null);
+  const [textVisible, setTextVisible] = useState(false);
   useEffect(() => {
-    const el = ref.current;
+    const el = textRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      ([e]) => { if (e.isIntersecting) { setTextVisible(true); obs.disconnect(); } },
       { threshold }
     );
     obs.observe(el);
     return () => obs.disconnect();
   }, [threshold]);
-  return { ref, visible };
+  return { ref: textRef, visible: textVisible };
 }
 
 const CollectionsHero = () => {
-  const text = useScrollReveal();
-  const image = useScrollReveal();
+  const { ref: textRef, visible: textVisible } = useScrollReveal();
+  const { ref: imageRef, visible: imageVisible } = useScrollReveal();
 
   return (
     <section style={{
@@ -38,9 +38,9 @@ const CollectionsHero = () => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5rem", alignItems: "center" }} className="col-hero-grid">
 
           {/* TEXT */}
-          <div ref={text.ref} style={{
-            opacity: text.visible ? 1 : 0,
-            transform: text.visible ? "translateX(0)" : "translateX(-40px)",
+          <div ref={textRef} style={{
+            opacity: textVisible ? 1 : 0,
+            transform: textVisible ? "translateX(0)" : "translateX(-40px)",
             transition: "all 0.9s ease",
           }}>
             <span style={{
@@ -71,7 +71,7 @@ const CollectionsHero = () => {
 
           {/* IMAGE 3D */}
           <div
-            ref={image.ref}
+            ref={imageRef}
             style={{
               borderRadius: "32px", overflow: "hidden",
               minHeight: "580px", position: "relative",
@@ -79,8 +79,8 @@ const CollectionsHero = () => {
               boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
               backgroundImage: "url('/fotoColeccion.jpg')",
               backgroundSize: "cover", backgroundPosition: "center",
-              opacity: image.visible ? 1 : 0,
-              transform: image.visible ? "translateX(0)" : "translateX(40px)",
+              opacity: imageVisible ? 1 : 0,
+              transform: imageVisible ? "translateX(0)" : "translateX(40px)",
               transition: "all 1s ease 0.2s",
               willChange: "transform",
             }}

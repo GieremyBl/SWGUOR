@@ -3,22 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Gem, BadgePercent, Users, Truck } from "lucide-react";
 
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
 const benefits = [
   { title: "Producción Premium", icon: Gem, items: ["Producción eficiente", "Materiales seleccionados", "Control de calidad riguroso"] },
   { title: "Descuentos Exclusivos", icon: BadgePercent, items: ["20% en primera orden", "Beneficios recurrentes", "Precios corporativos"] },
@@ -27,13 +11,25 @@ const benefits = [
 ];
 
 const BenefitsGrid = () => {
-  const s = useScrollReveal();
+  const sRef = useRef<HTMLDivElement>(null);
+  const [sVisible, setSVisible] = useState(false);
+
+  useEffect(() => {
+    const el = sRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setSVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <section style={{ background: "#0a0806", padding: "4rem 2rem 6rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div
-          ref={s.ref}
+          ref={sRef}
           style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}
         >
           {benefits.map((b, i) => {
@@ -46,8 +42,8 @@ const BenefitsGrid = () => {
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid rgba(196,163,90,0.12)",
                   cursor: "default", willChange: "transform",
-                  opacity: s.visible ? 1 : 0,
-                  transform: s.visible ? "translateY(0)" : "translateY(40px)",
+                  opacity: sVisible ? 1 : 0,
+                  transform: sVisible ? "translateY(0)" : "translateY(40px)",
                   transition: `all 0.7s ease ${i * 0.1}s`,
                 }}
                 onMouseMove={(e) => {

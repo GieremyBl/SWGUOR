@@ -3,7 +3,7 @@ import { createAuditHandler } from '@/lib/api-handler';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export const withAudit = createAuditHandler(async (_req) => {
+export const withAudit = createAuditHandler(async () => {
     const cookieStore = await cookies();
 
     const supabase = createServerClient(

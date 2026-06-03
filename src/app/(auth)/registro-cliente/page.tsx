@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import GoldenThreadBackground from "@/components/auth/GoldenThreadBackground";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -10,7 +9,7 @@ import {
   ArrowRight, Loader2, CheckCircle2, AlertCircle,
   Phone, MapPin, Eye, EyeOff, Briefcase, Tag, ChevronDown
 } from 'lucide-react';
-import router from 'next/router';
+import { useRouter } from 'next/navigation';
 
 // Banderas usando flagcdn.com — imágenes reales, funcionan en todos los navegadores/SO
 const SOUTH_AMERICA_PREFIXES = [
@@ -45,6 +44,7 @@ function Flag({ code, size = 24 }: { code: string; size?: number }) {
 }
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -121,8 +121,8 @@ export default function RegisterPage() {
       if (!res.ok) throw new Error(data.error || 'Error al procesar el registro');
       setSuccess(true);
       router.push('/login-cliente');
-    } catch (err: any) {
-      setError(err.message || 'Error al procesar el registro');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Error al procesar el registro');
     } finally {
       setLoading(false);
     }

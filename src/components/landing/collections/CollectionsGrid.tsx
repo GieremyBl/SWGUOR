@@ -3,19 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 
 function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const textRef = useRef<HTMLDivElement>(null);
+  const [textVisible, setTextVisible] = useState(false);
   useEffect(() => {
-    const el = ref.current;
+    const el = textRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      ([e]) => { if (e.isIntersecting) { setTextVisible(true); obs.disconnect(); } },
       { threshold }
     );
     obs.observe(el);
     return () => obs.disconnect();
   }, [threshold]);
-  return { ref, visible };
+  return { ref: textRef, visible: textVisible };
 }
 
 const collections = [
@@ -26,13 +26,13 @@ const collections = [
 ];
 
 const CollectionsGrid = () => {
-  const s = useScrollReveal();
+  const { ref, visible } = useScrollReveal();
 
   return (
     <section style={{ background: "#0a0806", padding: "6rem 2rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div
-          ref={s.ref}
+          ref={ref}
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}
           className="col-grid"
         >
@@ -46,8 +46,8 @@ const CollectionsGrid = () => {
                 backgroundImage: `url('${item.image}')`,
                 backgroundSize: "cover", backgroundPosition: "center",
                 cursor: "pointer", willChange: "transform",
-                opacity: s.visible ? 1 : 0,
-                transform: s.visible ? "translateY(0) scale(1)" : "translateY(40px) scale(0.97)",
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0) scale(1)" : "translateY(40px) scale(0.97)",
                 transition: `all 0.8s ease ${i * 0.12}s`,
               }}
               onMouseMove={(e) => {

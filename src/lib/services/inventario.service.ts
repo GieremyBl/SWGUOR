@@ -7,6 +7,7 @@ import {
   type CategoriaInsumo,
   type UnidadMedida,
 } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import {
   insertarMovimiento,
   obtenerStockDisponible,
@@ -93,12 +94,14 @@ export interface ListarMovimientosParams {
 export const InventarioService = {
 
   async listar(params?: ListarInsumosParams) {
+    const where: Prisma.insumoWhereInput = {
+      ...(params?.categoria_insumo && { categoria_insumo: params.categoria_insumo }),
+      ...(params?.tipo && { tipo: params.tipo }),
+      ...(params?.busqueda && { nombre: { contains: params.busqueda, mode: 'insensitive' } }),
+    };
+
     const insumos = await prisma.insumo.findMany({
-      where: {
-        ...(params?.categoria_insumo && { categoria_insumo: params.categoria_insumo }),
-        ...(params?.tipo && { tipo: params.tipo }),
-        ...(params?.busqueda && { nombre: { contains: params.busqueda, mode: 'insensitive' } }),
-      },
+      where,
       include: { proveedores: { select: { id: true, razon_social: true } } },
       orderBy: params?.sort ? { precio_unitario: params.sort } : { nombre: 'asc' },
     });
@@ -125,7 +128,6 @@ export const InventarioService = {
         tipo: data.tipo,
         categoria_insumo: data.categoria_insumo ?? 'otro',
         unidad_medida: data.unidad_medida ?? 'unidades',
-        // Prisma espera Decimal como string
         stock_actual: (data.stock_actual ?? 0).toString(),
         stock_minimo: (data.stock_minimo ?? 10).toString(),
         stock_maximo: data.stock_maximo != null ? data.stock_maximo.toString() : null,
@@ -160,8 +162,6 @@ export const InventarioService = {
 
   /**
    * Ajusta el stock de un insumo y registra el movimiento en una transacción.
-   * NO llama a insertarMovimiento RPC: el trigger tr_procesar_movimiento_insumo
-   * se dispara automáticamente sobre el INSERT en movimientos_inventario.
    */
   async ajustarStock(id: string, input: AjustarStockInput) {
     return prisma.$transaction(async (tx) => {
@@ -177,7 +177,6 @@ export const InventarioService = {
 
       const cantidadMovimiento = Math.abs(nuevoStock - stockAnterior);
 
-      // Refleja el CHECK constraint chk_cantidad_positiva (cantidad > 0)
       if (cantidadMovimiento === 0)
         throw new Error('El stock no cambió. No se registrará ningún movimiento.');
 
@@ -199,7 +198,6 @@ export const InventarioService = {
             }),
           },
         }),
-        // Este INSERT dispara tr_procesar_movimiento_insumo y trg_actualizar_almacen_stock
         tx.movimientos_inventario.create({
           data: {
             insumo_id: BigInt(id),
@@ -223,24 +221,25 @@ export const InventarioService = {
   },
 
   async listarMovimientos(params?: ListarMovimientosParams) {
+    const where: Prisma.movimientos_inventarioWhereInput = {
+      ...(params?.insumo_id && { insumo_id: BigInt(params.insumo_id) }),
+      ...(params?.producto_id && { producto_id: BigInt(params.producto_id) }),
+      ...(params?.material_id && { material_id: BigInt(params.material_id) }),
+      ...(params?.tipo && { tipo_movimiento: params.tipo }),
+      ...(params?.referencia && { referencia_tipo: params.referencia }),
+      ...((params?.desde || params?.hasta) && {
+        created_at: {
+          ...(params.desde && { gte: new Date(params.desde) }),
+          ...(params.hasta && { lte: new Date(params.hasta) }),
+        },
+      }),
+      ...(params?.tipoItem === 'insumo' && { insumo_id: { not: null } }),
+      ...(params?.tipoItem === 'producto' && { producto_id: { not: null } }),
+      ...(params?.tipoItem === 'material' && { material_id: { not: null } }),
+    };
+
     const movimientos = await prisma.movimientos_inventario.findMany({
-      where: {
-        ...(params?.insumo_id && { insumo_id: BigInt(params.insumo_id) }),
-        ...(params?.producto_id && { producto_id: BigInt(params.producto_id) }),
-        ...(params?.material_id && { material_id: BigInt(params.material_id) }),
-        ...(params?.tipo && { tipo_movimiento: params.tipo }),
-        ...(params?.referencia && { referencia_tipo: params.referencia }),
-        ...((params?.desde || params?.hasta) && {
-          created_at: {
-            ...(params.desde && { gte: new Date(params.desde) }),
-            ...(params.hasta && { lte: new Date(params.hasta) }),
-          },
-        }),
-        // Filtros por tipo de ítem cuando no se especificó ID
-        ...(params?.tipoItem === 'insumo' && { insumo_id: { not: null } }),
-        ...(params?.tipoItem === 'producto' && { producto_id: { not: null } }),
-        ...(params?.tipoItem === 'material' && { material_id: { not: null } }),
-      },
+      where,
       include: {
         insumo: { select: { id: true, nombre: true, unidad_medida: true } },
         productos: { select: { id: true, nombre: true } },
@@ -261,7 +260,8 @@ export const InventarioService = {
 
   // ── FUNCIONES CON RPC ──────────────────────────────────────────────────────
 
-  async obtenerStockBajo(_almacenId?: number) {
+  // FIX: Removido el parámetro '_almacenId' que no se utilizaba para limpiar la advertencia de ESLint
+  async obtenerStockBajo() {
     try {
       const insumos = await prisma.insumo.findMany({
         where: { alerta_bajo_stock: true },
@@ -296,11 +296,8 @@ export const InventarioService = {
 
   /**
    * Registra un movimiento explícitamente vía RPC.
-   * Úsalo solo cuando NO insertes directamente en movimientos_inventario,
-   * porque los triggers solo se disparan en INSERT directo.
    */
   async registrarMovimientoRPC(data: RegistrarMovimientoRPCData) {
-    // Refleja chk_un_solo_recurso (= 1) y chk_cantidad_positiva (> 0)
     const recursos = [data.insumo_id, data.producto_id, data.material_id].filter(
       (v): v is number => v != null
     ).length;
@@ -309,7 +306,6 @@ export const InventarioService = {
     if (data.cantidad <= 0) throw new Error('La cantidad debe ser mayor a 0');
 
     try {
-      // INSERT directo — activa los dos triggers automáticamente
       const movimiento = await prisma.movimientos_inventario.create({
         data: {
           cantidad: data.cantidad,

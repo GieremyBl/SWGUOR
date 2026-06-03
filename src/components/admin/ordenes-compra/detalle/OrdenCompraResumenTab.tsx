@@ -4,6 +4,7 @@ import {
   ESTADOS_ORDEN_COMPRA,
   ESTADOS_PAGO_ORDEN_COMPRA,
 } from '@/lib/constants/estados';
+import type { EstadoOrdenCompra, EstadoPagoOrdenCompra } from '@prisma/client';
 import type { OrdenCompraRow } from '../types';
 
 interface Props {
@@ -11,8 +12,8 @@ interface Props {
 }
 
 export function OrdenCompraResumenTab({ orden }: Props) {
-  const est = ESTADOS_ORDEN_COMPRA[orden.estado];
-  const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago];
+  const est = ESTADOS_ORDEN_COMPRA[orden.estado as EstadoOrdenCompra];
+  const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago as EstadoPagoOrdenCompra];
   const saldo =
     orden.saldo_pendiente ??
     Number(orden.total_orden) - Number(orden.total_pagado);

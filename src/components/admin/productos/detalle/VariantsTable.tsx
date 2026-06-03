@@ -3,13 +3,14 @@
 import { Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-interface Variante {
+// Interfaz exportada y actualizada
+export interface Variante {
   id: number;
   color: string;
   talla: string;
   sku: string;
   stock: number;
-  estado: string;
+  estado?: string; 
 }
 
 interface Props {
@@ -72,8 +73,9 @@ export default function VariantsTable({ variantes }: Props) {
           </thead>
           <tbody className="divide-y divide-guor-peach/30">
             {variantes.map((v) => {
-              const stockLevel =
-                v.stock === 0 ? "empty" : v.stock < 50 ? "low" : "ok";
+              const stockLevel = v.stock === 0 ? "empty" : v.stock < 50 ? "low" : "ok";
+              // Controlamos de forma segura si el estado es indefinido
+              const currentEstado = v.estado || "inactivo";
 
               return (
                 <tr
@@ -141,12 +143,12 @@ export default function VariantsTable({ variantes }: Props) {
                     <Badge
                       variant="outline"
                       className={`rounded-full px-2.5 py-0.5 text-[8px] font-black border uppercase ${
-                        v.estado === "activo"
+                        currentEstado === "activo"
                           ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                           : "bg-guor-peach/40 text-guor-gold/70 border-guor-peach"
                       }`}
                     >
-                      {v.estado}
+                      {currentEstado}
                     </Badge>
                   </td>
                 </tr>

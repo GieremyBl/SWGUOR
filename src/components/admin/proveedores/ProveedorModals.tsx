@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, Loader2, Trash2, X } from 'lucide-react';
+import { Loader2, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Proveedor } from '@/lib/schemas/proveedor';
 

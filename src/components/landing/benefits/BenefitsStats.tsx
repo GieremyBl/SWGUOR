@@ -2,22 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 
-function useScrollReveal(threshold = 0.2) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
 const stats = [
   { number: "+6", label: "Años de experiencia" },
   { number: "100%", label: "Compromiso premium" },
@@ -26,13 +10,25 @@ const stats = [
 ];
 
 const BenefitsStats = () => {
-  const s = useScrollReveal();
+  const sRef = useRef<HTMLDivElement>(null);
+  const [sVisible, setSVisible] = useState(false);
+
+  useEffect(() => {
+    const el = sRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setSVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
     <section style={{ background: "#0f0d0b", padding: "2rem 2rem 4rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div
-          ref={s.ref}
+          ref={sRef}
           style={{
             borderRadius: "32px",
             background: "linear-gradient(135deg, rgba(196,163,90,0.08) 0%, rgba(196,163,90,0.02) 100%)",
@@ -49,8 +45,8 @@ const BenefitsStats = () => {
               style={{
                 textAlign: "center", padding: "1.5rem 2rem",
                 borderRight: i < 3 ? "1px solid rgba(196,163,90,0.15)" : "none",
-                opacity: s.visible ? 1 : 0,
-                transform: s.visible ? "translateY(0)" : "translateY(20px)",
+                opacity: sVisible ? 1 : 0,
+                transform: sVisible ? "translateY(0)" : "translateY(20px)",
                 transition: `all 0.7s ease ${i * 0.1}s`,
               }}
             >

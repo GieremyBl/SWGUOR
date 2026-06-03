@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { usePortal } from '@/app/portal/_contexts/PortalContext';
+import { usePortal } from './usePortal';
 
 export interface InsightIA {
   mensaje: string;
@@ -9,19 +9,19 @@ export interface InsightIA {
 }
 
 export function useAnalisisIA() {
-  const { items, resumen } = usePortal();
+  const { itemsBorrador, resumenBorrador } = usePortal();
   const [loading, setLoading] = useState(false);
   const [insight, setInsight] = useState<InsightIA | null>(null);
 
   const analizarCotizacion = async () => {
-    if (items.length === 0) return;
+    if (itemsBorrador.length === 0) return;
     setLoading(true);
 
     try {
       const res = await fetch('/api/portal/analizar-cotizacion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items, resumen }),
+        body: JSON.stringify({ items: itemsBorrador, resumen: resumenBorrador }),
       });
 
       if (!res.ok) throw new Error('Error en el análisis');

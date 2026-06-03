@@ -9,7 +9,6 @@ import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { useRouter } from "next/navigation";
 import type { PersonalRow } from "@/lib/services/personal-interno.service";
 
 interface Props {
@@ -43,7 +42,6 @@ const CARGO_COLORS: Record<string, string> = {
 
 // ─── Componente ───────────────────────────────────────────────
 function PersonalTable({ data, loading, onEdit, onSuspender, onDetalle }: Props) {
-  const router = useRouter();
   const showActions = !!onEdit || !!onSuspender;
   const colSpan = 5 + (showActions ? 1 : 0);
 

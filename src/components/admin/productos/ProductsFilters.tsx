@@ -44,7 +44,7 @@ const COLOR_MAP: Record<string, string> = {
   gris: "#808080",
   guinda: "#800000",
   lila: "#C8A2C8",
-  marron: "#5C4033",
+ marron: "#5C4033",
   melange: "#BFC1C2",
   melon: "#FEB236",
   negro: "#000000",
@@ -60,6 +60,13 @@ const COLOR_MAP: Record<string, string> = {
   animal_print: "#D2B48C"
 };
 
+// ── Definición de Interfaces Estrictas ──────────────────────────────────
+
+export interface CategoriaBaseFiltro {
+  id: string | number;
+  nombre: string;
+}
+
 export interface ProductFiltersProps {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -71,7 +78,7 @@ export interface ProductFiltersProps {
   setSortOrder: (value: 'asc' | 'desc' | 'none') => void;
   selectedCategoria: string;
   setSelectedCategoria: (value: string) => void;
-  categorias: any[];
+  categorias: CategoriaBaseFiltro[];
   colors: string[];
 }
 
@@ -108,7 +115,7 @@ export default function ProductFilters({
             className="pl-10 h-11 border-guor-peach bg-guor-cream/60 focus:bg-guor-cream rounded-xl"
           />
           {searchTerm && (
-            <button onClick={() => setSearchTerm("")} className="absolute right-3 top-3 text-guor-gold/70">
+            <button type="button" onClick={() => setSearchTerm("")} className="absolute right-3 top-3 text-guor-gold/70">
               <X className="w-4 h-4" />
             </button>
           )}
@@ -125,7 +132,7 @@ export default function ProductFilters({
               <SelectItem value="all">Todas las categorías</SelectItem>
 
               {categorias?.map((cat) => (
-                <SelectItem key={cat.id} value={String(cat.id)}>
+                <SelectItem key={String(cat.id)} value={String(cat.id)}>
                   {cat.nombre}
                 </SelectItem>
               ))}
@@ -135,6 +142,7 @@ export default function ProductFilters({
 
         {/* ORDEN */}
         <Button 
+          type="button"
           variant="outline" 
           onClick={() => {
             if (sortOrder === 'none') setSortOrder('asc');
@@ -158,27 +166,35 @@ export default function ProductFilters({
           <Filter className="w-3 h-3 text-guor-brown/70" /> Colores
         </Label>
 
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-2 mt-2 items-center">
 
           <button
+            type="button"
             onClick={() => setColorFilter("")}
-            className={`w-9 h-9 rounded-full ${
+            className={`w-9 h-9 rounded-full relative border border-guor-peach ${
               colorFilter === "" ? "bg-guor-brown" : "bg-guor-peach/40"
             }`}
+            title="Todos los colores"
           />
 
           {DESTACADOS.map((color) => {
             const c = color.toLowerCase();
+            const backgroundColor = COLOR_MAP[c] || "#ccc";
+            const isWhite = backgroundColor.toUpperCase() === "#FFFFFF";
+            
             return (
               <button
                 key={color}
+                type="button"
                 onClick={() => setColorFilter(c)}
-                className={`w-9 h-9 rounded-full ${
-                  colorFilter === c ? "ring-2 ring-guor-brown" : ""
+                className={`w-9 h-9 rounded-full border border-guor-peach/50 flex items-center justify-center transition-all ${
+                  colorFilter === c ? "ring-2 ring-guor-brown scale-105" : "hover:scale-105"
                 }`}
-                style={{ backgroundColor: COLOR_MAP[c] || "#ccc" }}
+                style={{ backgroundColor }}
               >
-                {colorFilter === c && <Check className="w-3 h-3 text-white mx-auto" />}
+                {colorFilter === c && (
+                  <Check className={`w-4 h-4 ${isWhite ? "text-slate-900" : "text-white"}`} />
+                )}
               </button>
             );
           })}
@@ -186,21 +202,26 @@ export default function ProductFilters({
           {/* MÁS COLORES */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" className="h-9 w-9 rounded-full">
+              <Button type="button" variant="ghost" className="h-9 w-9 rounded-full border border-dashed border-guor-peach/80">
                 <Plus className="w-4 h-4" />
               </Button>
             </PopoverTrigger>
 
-            <PopoverContent className="w-64 p-3 rounded-2xl">
-              {coloresRestantes.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => setColorFilter(color)}
-                  className="block w-full text-left px-2 py-1 text-sm hover:bg-guor-cream/60"
-                >
-                  {color}
-                </button>
-              ))}
+            <PopoverContent className="w-64 p-3 rounded-2xl bg-white max-h-60 overflow-y-auto">
+              {coloresRestantes.length === 0 ? (
+                <p className="text-xs text-center text-guor-gold/60 py-2">No hay colores adicionales</p>
+              ) : (
+                coloresRestantes.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setColorFilter(color.toLowerCase())}
+                    className="block w-full text-left px-3 py-2 text-sm rounded-xl hover:bg-guor-cream/60 text-guor-dark font-medium transition-colors"
+                  >
+                    {color}
+                  </button>
+                ))
+              )}
             </PopoverContent>
           </Popover>
 
@@ -215,9 +236,10 @@ export default function ProductFilters({
 
         <div className="flex flex-wrap gap-2 mt-2">
           <button
+            type="button"
             onClick={() => setSizeFilter("")}
-            className={`px-3 h-9 rounded-xl ${
-              sizeFilter === "" ? "bg-guor-brown text-white" : "bg-guor-peach/40"
+            className={`px-3 h-9 rounded-xl font-bold text-xs tracking-wider transition-all ${
+              sizeFilter === "" ? "bg-guor-brown text-white shadow-sm" : "bg-guor-peach/40 text-guor-brown hover:bg-guor-peach/60"
             }`}
           >
             TODAS
@@ -226,9 +248,10 @@ export default function ProductFilters({
           {Object.values(TallaProductos).map((talla) => (
             <button
               key={talla}
+              type="button"
               onClick={() => setSizeFilter(talla)}
-              className={`px-3 h-9 rounded-xl ${
-                sizeFilter === talla ? "bg-guor-brown text-white" : "bg-guor-peach/40"
+              className={`px-3 h-9 rounded-xl font-bold text-xs transition-all ${
+                sizeFilter === talla ? "bg-guor-brown text-white shadow-sm" : "bg-guor-peach/40 text-guor-brown hover:bg-guor-peach/60"
               }`}
             >
               {talla}

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
 import {
   fetchUsuarios,
   fetchUsuarioById,
@@ -13,11 +14,11 @@ import {
 
 export const USUARIOS_KEY = 'usuarios';
 
-// Definimos una interfaz rápida para las respuestas de la API
 interface MutationResponse {
-  success?: boolean;
-  error?: string;
-  data?: any;
+  success: boolean;
+  error?: string | null;
+  message?: string | null;
+  data?: unknown;
 }
 
 export function useUsuarios() {
@@ -28,9 +29,9 @@ export function useUsuarios() {
     queryFn: fetchUsuarios,
   });
 
-  const createMutation = useMutation({
+  const createMutation = useMutation<MutationResponse, Error, Record<string, unknown>>({
     mutationFn: createUsuario,
-    onSuccess: (res: MutationResponse) => { // Especificamos el tipo aquí
+    onSuccess: (res) => {
       if (!res.success) {
         toast.error(res.error || 'Error al crear');
       } else {
@@ -38,30 +39,25 @@ export function useUsuarios() {
         queryClient.invalidateQueries({ queryKey: [USUARIOS_KEY] });
       }
     },
-    onError: (err: any) => toast.error(err.message || 'Error de conexión'),
+    onError: (err) => toast.error(err.message || 'Error de conexión'),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateUsuario(id, data),
-    onSuccess: (res: any) => { // Usamos any temporalmente para evitar el error de 'never'
+  const updateMutation = useMutation<PostgrestSingleResponse<null>, Error, { id: string; data: Record<string, unknown> }>({
+    mutationFn: ({ id, data }) => updateUsuario(id, data),
+    onSuccess: (res) => {
       if (res?.error) {
-        toast.error(typeof res.error === 'string' ? res.error : 'Error al actualizar');
+        toast.error(res.error.message || 'Error al actualizar');
       } else {
         toast.success('Usuario actualizado');
         queryClient.invalidateQueries({ queryKey: [USUARIOS_KEY] });
-        // Invalidamos específicamente este ID si existe en la respuesta
-        const updatedId = res?.data?.[0]?.id || res?.id;
-        if (updatedId) {
-            queryClient.invalidateQueries({ queryKey: [USUARIOS_KEY, updatedId.toString()] });
-        }
       }
     },
+    onError: (err) => toast.error(err.message || 'Error al actualizar'),
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, estado }: { id: string; estado: string }) =>
-      toggleEstadoUsuario(id, estado),
-    onSuccess: (res: MutationResponse) => {
+  const toggleMutation = useMutation<MutationResponse, Error, { id: string; estado: string }>({
+    mutationFn: ({ id, estado }) => toggleEstadoUsuario(id, estado),
+    onSuccess: (res) => {
       if (!res.success) {
         toast.error(res.error || 'Error al actualizar estado');
       } else {
@@ -69,11 +65,12 @@ export function useUsuarios() {
         queryClient.invalidateQueries({ queryKey: [USUARIOS_KEY] });
       }
     },
+    onError: (err) => toast.error(err.message || 'Error de conexión'),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteUsuario(id), // Aseguramos que reciba el string
-    onSuccess: (res: MutationResponse) => {
+  const deleteMutation = useMutation<MutationResponse, Error, string>({
+    mutationFn: (id) => deleteUsuario(id),
+    onSuccess: (res) => {
       if (!res.success) {
         toast.error(res.error || 'Error al eliminar');
       } else {
@@ -81,6 +78,7 @@ export function useUsuarios() {
         queryClient.invalidateQueries({ queryKey: [USUARIOS_KEY] });
       }
     },
+    onError: (err) => toast.error(err.message || 'Error al eliminar'),
   });
 
   return {
@@ -89,8 +87,8 @@ export function useUsuarios() {
     isError: query.isError,
     refetch: query.refetch,
 
-    create: (data: any) => createMutation.mutate(data),
-    update: (id: string, data: any) => updateMutation.mutate({ id, data }),
+    create: (data: Record<string, unknown>) => createMutation.mutate(data),
+    update: (id: string, data: Record<string, unknown>) => updateMutation.mutate({ id, data }),
     toggleEstado: (id: string, estado: string) => toggleMutation.mutate({ id, estado }),
     remove: (id: string) => deleteMutation.mutate(id),
 

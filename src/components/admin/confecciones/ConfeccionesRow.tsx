@@ -2,7 +2,7 @@
 
 import { memo }        from "react";
 import { useRouter }   from "next/navigation";
-import { Eye, ChevronRight, Scissors, Calendar, Pencil, XCircle } from "lucide-react";
+import { Eye, ChevronRight, Scissors, Calendar, Pencil, XCircle, ClipboardCheck } from "lucide-react";
 import { Button }      from "@/components/ui/button";
 import { Badge }       from "@/components/ui/badge";
 import { usePermissions } from "@/lib/hooks/usePermissions";
@@ -58,6 +58,7 @@ const ConfeccionRow = memo(({ orden, onEstadoChange }: ConfeccionRowProps) => {
   const puedeActualizar =
     hasRole(["administrador", "gerente", "representante_taller", "disenador"]) ||
     can("update_status", "confecciones");
+  const puedeConformidad = hasRole(["ayudante", "administrador", "gerente"]);
 
   const siguientes = SIGUIENTE_ESTADO[orden.estado] ?? [];
   const iniciales  = (orden.prenda ?? "??").substring(0, 2).toUpperCase();
@@ -158,6 +159,18 @@ const ConfeccionRow = memo(({ orden, onEstadoChange }: ConfeccionRowProps) => {
           >
             <Eye size={16} />
           </Button>
+
+          {puedeConformidad && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push(`/ayudante/confecciones/${orden.id}`)}
+              className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-teal-600 hover:bg-teal-50"
+              title="Conformidad de taller"
+            >
+              <ClipboardCheck size={16} />
+            </Button>
+          )}
 
           {/* Editar: Solo si el usuario tiene permisos */} 
           {puedeActualizar && (

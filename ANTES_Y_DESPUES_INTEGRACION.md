@@ -199,7 +199,7 @@ export {
 // 👇 RPC Schemas (NUEVO)
 export {
   CalcularCostoFichaSchema,
-  CrearReservaStockSchema,
+  CrearStockSchema,
   ActualizarPrecioSchema,
   InsertarMovimientoSchema,
   CrearNotificacionSchema,

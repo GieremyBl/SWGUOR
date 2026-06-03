@@ -1,15 +1,14 @@
 /**
- * rpc-service.ts
  * ──────────────────────────────────────────────────────────────────────────────
  * Punto único de acceso a las operaciones que llaman a funciones RPC /
  * lógica de base de datos que antes estaba repartida en:
  *
- *   - notificaciones-rpc-service.ts
- *   - fichas-tecnicas-rpc-service.ts
- *   - fichas-tecnicas-services.ts       (partes RPC)
- *   - inventario-rpc-service.ts
- *   - inventario-services.ts            (partes RPC)
- *   - movimientos-inventario-services.ts
+ * - notificaciones-rpc-service.ts
+ * - fichas-tecnicas-rpc-service.ts
+ * - fichas-tecnicas-services.ts       (partes RPC)
+ * - inventario-rpc-service.ts
+ * - inventario-services.ts            (partes RPC)
+ * - movimientos-inventario-services.ts
  *
  * Todos los imports del proyecto deben apuntar a este archivo.
  * ──────────────────────────────────────────────────────────────────────────────
@@ -127,6 +126,14 @@ export interface RegistrarMovimientoParams {
   usuario_id?: string | number;
   almacen_id?: string | number;
   referencia_id?: string | number;
+}
+
+// Interface auxiliar para el tipado seguro del mapeo de búsqueda en movimientos
+interface MovimientoConRelaciones extends movimientos_inventario {
+  insumo?: { id: bigint; nombre: string; unidad_medida: string } | null;
+  materiales?: { id: bigint; nombre: string } | null;
+  productos?: { id: bigint; nombre: string } | null;
+  usuarios?: { id: bigint; email: string } | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -460,7 +467,7 @@ export async function aprobarFichaTecnica(
 
   await insertarMovimiento({
     tipoMovimiento: 'ajuste',
-    referenciaType: 'AJUSTE_MANUAL' as ReferenciaMovimiento,
+    referenciaType: 'AJUSTE_MANUAL',
     referenciaId:   fichaId,
     cantidad:        0,
     motivo:          `Ficha técnica #${fichaId} aprobada por usuario ${usuarioId}`,
@@ -638,11 +645,11 @@ export async function obtenerItemsConStockBajo(almacenId?: number) {
  * Registra un movimiento de inventario y actualiza el stock del ítem
  * correspondiente, todo en una sola transacción.
  */
-export async function registrarMovimiento(params: RegistrarMovimientoParams) : Promise<any> {
+export async function registrarMovimiento(params: RegistrarMovimientoParams) : Promise<{ success: boolean }> {
   const {
     insumo_id, material_id, producto_id,
     cantidad, tipo_movimiento, referencia_tipo,
-    motivo, usuario_id, almacen_id, referencia_id,
+    motivo, usuario_id, referencia_id,
   } = params;
 
   if (!insumo_id && !material_id && !producto_id)
@@ -651,8 +658,8 @@ export async function registrarMovimiento(params: RegistrarMovimientoParams) : P
     throw new Error('La cantidad debe ser mayor a 0');
 
   await insertarMovimiento({
-    tipoMovimiento: tipo_movimiento as any,
-    referenciaType: referencia_tipo as any,
+    tipoMovimiento: tipo_movimiento,
+    referenciaType: referencia_tipo,
     referenciaId:   referencia_id ? Number(referencia_id) : 0,
     cantidad,
     motivo,
@@ -703,7 +710,7 @@ export async function listarMovimientos(params?: {
   busqueda?: string;
   limite?: number;
 }) : Promise<movimientos_inventario[]> {
-  const where: Record<string, any> = {};
+  const where: Prisma.movimientos_inventarioWhereInput = {};
 
   if (params?.desde || params?.hasta)
     where.created_at = {
@@ -731,17 +738,18 @@ export async function listarMovimientos(params?: {
     take:    params?.limite ?? 100,
   });
 
-  let resultado = serializeBigInt(movimientos);
+  let resultado = serializeBigInt(movimientos) as MovimientoConRelaciones[];
 
   if (params?.busqueda) {
     const q = params.busqueda.toLowerCase();
-    resultado = resultado.filter((m: any) => {
+    resultado = resultado.filter((m) => {
       const nombre = m.insumo?.nombre ?? m.materiales?.nombre ?? m.productos?.nombre ?? '';
       return nombre.toLowerCase().includes(q) || (m.motivo ?? '').toLowerCase().includes(q);
     });
+    return resultado as movimientos_inventario[];
   }
 
-  return serializeBigInt(movimientos) as movimientos_inventario[];
+  return resultado as movimientos_inventario[];
 }
 
 /**
@@ -753,7 +761,8 @@ export async function obtenerResumenMovimientos(params?: {
   desde?: Date;
   hasta?: Date;
 }) {
-  const where: Record<string, any> = {};
+  // FIX: Tipado seguro para filtros de conteo
+  const where: Prisma.movimientos_inventarioWhereInput = {};
   if (params?.tipo_movimiento) where.tipo_movimiento = params.tipo_movimiento;
   if (params?.desde || params?.hasta)
     where.created_at = {

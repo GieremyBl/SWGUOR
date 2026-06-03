@@ -3,22 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ShieldCheck, Gem, Truck, Users } from "lucide-react";
 
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
 const values = [
   { title: "Producción Premium", icon: Gem, text: "Materiales seleccionados y acabados de alta calidad en cada prenda." },
   { title: "Atención Estratégica", icon: Users, text: "Asesoría personalizada para cada cliente y negocio." },
@@ -27,18 +11,43 @@ const values = [
 ];
 
 const ValuesSection = () => {
-  const title = useScrollReveal();
-  const cards = useScrollReveal(0.1);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const [titleVisible, setTitleVisible] = useState(false);
+  const [cardsVisible, setCardsVisible] = useState(false);
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    const observe = (
+      el: HTMLDivElement | null,
+      setVisible: (v: boolean) => void,
+      threshold = 0.1,
+    ) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+        { threshold },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    };
+
+    observe(titleRef.current, setTitleVisible);
+    observe(cardsRef.current, setCardsVisible);
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
   return (
     <section style={{ background: "#0a0806", padding: "8rem 2rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
         {/* Title */}
-        <div ref={title.ref} style={{
+        <div ref={titleRef} style={{
           textAlign: "center", marginBottom: "5rem",
-          opacity: title.visible ? 1 : 0,
-          transform: title.visible ? "translateY(0)" : "translateY(30px)",
+          opacity: titleVisible ? 1 : 0,
+          transform: titleVisible ? "translateY(0)" : "translateY(30px)",
           transition: "all 0.8s ease",
         }}>
           <span style={{
@@ -61,7 +70,7 @@ const ValuesSection = () => {
 
         {/* Cards grid */}
         <div
-          ref={cards.ref}
+          ref={cardsRef}
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
@@ -78,8 +87,8 @@ const ValuesSection = () => {
                   background: "rgba(255,255,255,0.02)",
                   border: "1px solid rgba(196,163,90,0.12)",
                   cursor: "default",
-                  opacity: cards.visible ? 1 : 0,
-                  transform: cards.visible ? "translateY(0)" : "translateY(40px)",
+                  opacity: cardsVisible ? 1 : 0,
+                  transform: cardsVisible ? "translateY(0)" : "translateY(40px)",
                   transition: `all 0.7s ease ${i * 0.1}s`,
                   willChange: "transform",
                 }}
@@ -92,7 +101,7 @@ const ValuesSection = () => {
                   e.currentTarget.style.boxShadow = "0 20px 50px rgba(0,0,0,0.4), 0 0 30px rgba(196,163,90,0.08)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = `perspective(700px) rotateY(0) rotateX(0) scale(1) translateY(0)`;
+                  e.currentTarget.style.transform = "perspective(700px) rotateY(0) rotateX(0) scale(1) translateY(0)";
                   e.currentTarget.style.borderColor = "rgba(196,163,90,0.12)";
                   e.currentTarget.style.boxShadow = "none";
                 }}

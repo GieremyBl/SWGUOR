@@ -1,14 +1,24 @@
 import { prisma } from '@/lib/prisma';
-import type { almacenes } from '@prisma/client';
+import { Prisma, type almacenes } from '@prisma/client';
+
+export interface CapacidadAlmacen {
+  capacidadMaxima: number;
+  capacidadUsada: number;
+  disponible: number;
+  porcentaje: number;
+}
 
 export const almacenesService = {
-  crear: async (datos: Partial<almacenes>): Promise<almacenes> => {
-    if (!datos.nombre) throw new Error('El nombre del almacén es obligatorio');
+  
+  crear: async (datos: Prisma.almacenesCreateInput): Promise<almacenes> => {
+    if (!datos.nombre) {
+      throw new Error('El nombre del almacén es obligatorio');
+    }
 
     return await prisma.almacenes.create({
       data: {
         nombre: datos.nombre,
-        estado: true,
+        estado: datos.estado ?? true,
         descripcion: datos.descripcion,
         direccion: datos.direccion,
         telefono: datos.telefono,
@@ -32,7 +42,7 @@ export const almacenesService = {
     });
   },
 
-  actualizar: async (id: string, datos: Partial<almacenes>): Promise<almacenes> => {
+  actualizar: async (id: string, datos: Prisma.almacenesUpdateInput): Promise<almacenes> => {
     return await prisma.almacenes.update({
       where: { id: BigInt(id) },
       data: {
@@ -46,20 +56,24 @@ export const almacenesService = {
     });
   },
 
-  obtenerCapacidad: async (id: string) => {
+  obtenerCapacidad: async (id: string): Promise<CapacidadAlmacen | null> => {
     const almacen = await prisma.almacenes.findUnique({
       where: { id: BigInt(id) },
     });
+    
     if (!almacen) return null;
+    
+    const capacidadTotal = almacen.capacidad_total ? Number(almacen.capacidad_total) : 0;
+    
     return {
-      capacidadMaxima: almacen.capacidad_total ? Number(almacen.capacidad_total) : 0,
+      capacidadMaxima: capacidadTotal,
       capacidadUsada: 0,
-      disponible: almacen.capacidad_total ? Number(almacen.capacidad_total) : 0,
+      disponible: capacidadTotal,
       porcentaje: 0,
     };
   },
 
-  actualizarCapacidad: async (id: string, _nuevoUso: number): Promise<almacenes> => {
+  actualizarCapacidad: async (id: string): Promise<almacenes> => {
     return await prisma.almacenes.findUniqueOrThrow({
       where: { id: BigInt(id) },
     });

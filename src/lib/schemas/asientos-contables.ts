@@ -57,4 +57,25 @@ export type TipoAsiento = z.infer<typeof TipoAsientoEnum>;
 export type CuentaContable = z.infer<typeof CuentaContableEnum>;
 export type AsientoContable = z.infer<typeof asientoContableBaseSchema>;
 export type CrearAsientoContable = z.infer<typeof crearAsientoContableSchema>;
-export type DetalleAsiento = any;
+export type DetalleAsiento = AsientoContable & {
+  usuario: {
+    id: number;
+    nombre: string;
+    email: string;
+  } | null;
+};
+
+export const ESTADO_ASIENTO = [
+  "pendiente",
+  "confirmado",
+  "anulado",
+] as const;
+
+export type EstadoAsiento = typeof ESTADO_ASIENTO[number];
+
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}

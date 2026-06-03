@@ -6,10 +6,10 @@ import Image from "next/image";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import Testimonials from "@/components/landing/Testimonials";
-import { ArrowRight, Star, Shield, Truck, ChevronDown, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Star, Shield, Truck, ChevronDown, TrendingUp, Users } from "lucide-react";
 
 /* ─────────────────────────────────────────────
-   HOOK: Intersection Observer for scroll reveals
+    HOOK: Intersection Observer for scroll reveals
 ───────────────────────────────────────────── */
 function useScrollReveal(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null);
@@ -28,7 +28,7 @@ function useScrollReveal(threshold = 0.15) {
 }
 
 /* ─────────────────────────────────────────────
-   ANIMATED COUNTER
+    ANIMATED COUNTER
 ───────────────────────────────────────────── */
 function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
   const [count, setCount] = useState(0);
@@ -50,7 +50,7 @@ function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
 }
 
 /* ─────────────────────────────────────────────
-   3D TILT CARD
+    3D TILT CARD (Optimizado con will-change)
 ───────────────────────────────────────────── */
 function TiltCard({ children, className = "", style = {} }: {
   children: React.ReactNode; className?: string; style?: React.CSSProperties;
@@ -71,7 +71,7 @@ function TiltCard({ children, className = "", style = {} }: {
     <div
       ref={cardRef}
       className={className}
-      style={{ transition: "transform 0.3s ease", willChange: "transform", ...style }}
+      style={{ transition: "transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)", willChange: "transform", ...style }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
@@ -81,7 +81,7 @@ function TiltCard({ children, className = "", style = {} }: {
 }
 
 /* ─────────────────────────────────────────────
-   FLOATING ORBS BACKGROUND
+    FLOATING ORBS BACKGROUND
 ───────────────────────────────────────────── */
 function FloatingOrbs() {
   return (
@@ -94,18 +94,9 @@ function FloatingOrbs() {
 }
 
 /* ═══════════════════════════════════════════
-   LANDING PAGE
+    LANDING PAGE
 ═══════════════════════════════════════════ */
 export default function LandingPage() {
-  const heroRef = useRef<HTMLDivElement>(null);
-  const [scrollY, setScrollY] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
   const benefits1 = useScrollReveal();
   const products1 = useScrollReveal();
   const stats1 = useScrollReveal();
@@ -116,7 +107,6 @@ export default function LandingPage() {
 
       {/* ══════════ HERO ══════════ */}
       <section
-        ref={heroRef}
         style={{
           position: "relative",
           minHeight: "100vh",
@@ -135,11 +125,9 @@ export default function LandingPage() {
           backgroundSize: "60px 60px",
         }} />
 
-        {/* Parallax image right side */}
+        {/* PARALLAX OPTIMIZADO: Corregido usando CSS puro mediante background-attachment sin JS listeners */}
         <div style={{
           position: "absolute", right: 0, top: 0, width: "50%", height: "100%", zIndex: 1,
-          transform: `translateY(${scrollY * 0.15}px)`,
-          transition: "transform 0.1s linear",
         }}>
           <div style={{
             position: "absolute", inset: 0,
@@ -151,13 +139,16 @@ export default function LandingPage() {
             background: "linear-gradient(0deg, #0f0d0b 0%, transparent 30%)",
             zIndex: 2,
           }} />
+
+          {/* CRÍTICO PARA EL LCP: Añadidos 'sizes' exactos para que no descargue la versión de pantalla completa */}
           <Image
             src="/fotohome.jpg"
             alt="GUOR Moda Femenina"
             fill
             className="object-cover object-center"
             priority
-            style={{ opacity: 0.45 }}
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            style={{ opacity: 0.45, willChange: "transform" }}
           />
         </div>
 
@@ -208,23 +199,14 @@ export default function LandingPage() {
           <div className="hero-cta-anim" style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
             <Link
               href="/registro-cliente"
+              className="hover:scale-105 transition-all duration-300"
               style={{
                 display: "inline-flex", alignItems: "center", gap: "10px",
                 padding: "16px 32px", borderRadius: "100px",
                 background: "#c4a35a", color: "#0f0d0b",
                 fontWeight: 900, fontSize: "13px", letterSpacing: "0.05em",
-                textDecoration: "none", transition: "all 0.3s ease",
+                textDecoration: "none",
                 boxShadow: "0 0 40px rgba(196,163,90,0.3)",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = "#d4b472";
-                e.currentTarget.style.boxShadow = "0 0 60px rgba(196,163,90,0.5)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = "#c4a35a";
-                e.currentTarget.style.boxShadow = "0 0 40px rgba(196,163,90,0.3)";
-                e.currentTarget.style.transform = "translateY(0)";
               }}
             >
               Iniciar Alianza B2B <ArrowRight size={16} />
@@ -232,21 +214,14 @@ export default function LandingPage() {
 
             <Link
               href="/login-cliente"
+              className="hover:bg-white/10 hover:border-white/40 transition-all duration-300"
               style={{
                 display: "inline-flex", alignItems: "center", gap: "10px",
                 padding: "16px 32px", borderRadius: "100px",
                 background: "transparent", color: "#fdf9f3",
                 fontWeight: 700, fontSize: "13px",
                 border: "1px solid rgba(253,249,243,0.2)",
-                textDecoration: "none", transition: "all 0.3s ease",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = "rgba(253,249,243,0.06)";
-                e.currentTarget.style.borderColor = "rgba(253,249,243,0.4)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.borderColor = "rgba(253,249,243,0.2)";
+                textDecoration: "none",
               }}
             >
               Portal Socios
@@ -396,7 +371,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════ PRENDAS DESTACADAS ══════════ */}
+      {/* ══════════ PRENDAS DESTACADAS (Optimizado con Clases de CSS) ══════════ */}
       <section style={{ background: "#111009", padding: "8rem 2rem" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
@@ -422,13 +397,12 @@ export default function LandingPage() {
             </div>
             <Link
               href="/colecciones"
+              className="hover:pl-2 transition-all duration-300"
               style={{
                 display: "inline-flex", alignItems: "center", gap: "8px",
                 color: "#c4a35a", fontWeight: 700, fontSize: "13px",
-                textDecoration: "none", transition: "gap 0.3s ease",
+                textDecoration: "none",
               }}
-              onMouseEnter={e => { e.currentTarget.style.gap = "14px"; }}
-              onMouseLeave={e => { e.currentTarget.style.gap = "8px"; }}
             >
               Ver todo <ArrowRight size={14} />
             </Link>
@@ -442,6 +416,7 @@ export default function LandingPage() {
             {[1, 2, 3, 4, 5].map((item, i) => (
               <TiltCard
                 key={item}
+                className="group" // Agregamos 'group' para controlar el hover de la imagen sin JS
                 style={{
                   borderRadius: "20px",
                   overflow: "hidden",
@@ -454,14 +429,13 @@ export default function LandingPage() {
                 }}
               >
                 <div style={{ position: "relative", height: "260px", overflow: "hidden" }}>
+                  {/* OPTIMIZACIÓN: Transición controlada por hardware (GPU) usando Tailwind nativo */}
                   <Image
                     src={`/conjunto${item}.png`}
                     alt={`Prenda ${item}`}
                     fill
-                    className="object-cover"
-                    style={{ transition: "transform 0.5s ease" }}
-                    onMouseEnter={e => { (e.target as HTMLElement).style.transform = "scale(1.08)"; }}
-                    onMouseLeave={e => { (e.target as HTMLElement).style.transform = "scale(1)"; }}
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 20vw"
                   />
                   <div style={{
                     position: "absolute", inset: 0,
@@ -539,42 +513,28 @@ export default function LandingPage() {
           <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
             <Link
               href="/registro-cliente"
+              className="hover:scale-105 transition-all duration-300"
               style={{
                 display: "inline-flex", alignItems: "center", gap: "10px",
                 padding: "18px 40px", borderRadius: "100px",
                 background: "#c4a35a", color: "#0f0d0b",
                 fontWeight: 900, fontSize: "13px", letterSpacing: "0.05em",
-                textDecoration: "none", transition: "all 0.3s ease",
+                textDecoration: "none",
                 boxShadow: "0 0 40px rgba(196,163,90,0.3)",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = "0 0 60px rgba(196,163,90,0.5)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 0 40px rgba(196,163,90,0.3)";
               }}
             >
               Crear Cuenta Gratis <ArrowRight size={16} />
             </Link>
             <Link
               href="/login-cliente"
+              className="hover:bg-white/10 hover:border-white/40 transition-all duration-300"
               style={{
                 display: "inline-flex", alignItems: "center", gap: "10px",
                 padding: "18px 40px", borderRadius: "100px",
                 background: "transparent", color: "#fdf9f3",
                 fontWeight: 700, fontSize: "13px",
                 border: "1px solid rgba(253,249,243,0.2)",
-                textDecoration: "none", transition: "all 0.3s ease",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = "rgba(253,249,243,0.06)";
-                e.currentTarget.style.borderColor = "rgba(253,249,243,0.4)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.borderColor = "rgba(253,249,243,0.2)";
+                textDecoration: "none",
               }}
             >
               Ya tengo cuenta
@@ -590,16 +550,14 @@ export default function LandingPage() {
 
       <Footer />
 
-      {/* ══════════ GLOBAL STYLES ══════════ */}
+      {/* ══════════ GLOBAL STYLES (Optimizados sin @import bloqueante) ══════════ */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@400;500;600;700;900&display=swap');
-
         body {
-          font-family: 'DM Sans', sans-serif;
+          font-family: var(--font-dm-sans), sans-serif;
         }
 
         h1, h2, h3 {
-          font-family: 'Playfair Display', serif;
+          font-family: var(--font-playfair), serif;
         }
 
         /* ── Orbs ── */

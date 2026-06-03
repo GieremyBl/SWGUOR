@@ -71,7 +71,7 @@ export async function deleteInsumo(id: string): Promise<ApiResponse> {
 
 export async function ajustarStock(id: string, data: any) {
   // Traducimos 'sumar'/'restar' a stock_delta para el servicio de backend
-  let payload: any = {
+  const payload: any = {
     id,
     motivo: data.motivo,
     costo_unitario: data.costo_unitario,

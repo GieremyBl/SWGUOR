@@ -1,14 +1,29 @@
 "use client";
 
 import { Edit2, Trash2, Loader2, CircleDollarSign } from "lucide-react";
-import type { insumo } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 
 interface InventarioTableProps {
-  data: insumo[];
+  data: {
+    id: bigint | number | string;
+    nombre: string;
+    tipo: string;
+    categoria_insumo?: string;
+    unidad_medida: string;
+    stock_actual: any; // Se deja en any o number/Decimal debido a las mutaciones de Prisma
+    stock_minimo: any;
+    stock_maximo?: any;
+    precio_unitario?: any;
+    created_at?: Date | string;
+    updated_at?: Date | string | null;
+    proveedor_id?: bigint | number | null;
+    ubicacion_almacen?: string | null;
+    alerta_bajo_stock?: boolean | null;
+    almacen_id?: bigint | number | null;
+  }[];
   loading?: boolean;
-  onEdit: (item: insumo) => void;
-  onDelete: (item: insumo) => void;
+  onEdit: (item: any) => void;
+  onDelete: (item: any) => void;
   canEdit: boolean;
   canDelete: boolean;
 }
@@ -48,8 +63,11 @@ export default function InsumosTable({ data, loading, onEdit, onDelete, canEdit,
             const status = getStockStatus(Number(item.stock_actual), Number(item.stock_minimo));
             const precio = item.precio_unitario ? Number(item.precio_unitario) : 0;
 
+            // Aseguramos un ID compatible para la directiva 'key' de React
+            const rowKey = item.id ? item.id.toString() : Math.random().toString();
+
             return (
-              <tr key={item.id} className="group transition-all duration-200">
+              <tr key={rowKey} className="group transition-all duration-200">
                 {/* Nombre */}
                 <td className="bg-white border-y border-l border-slate-100 py-4 px-6 rounded-l-2xl shadow-sm group-hover:shadow-md transition-all">
                   <div className="flex items-center gap-4">
@@ -67,7 +85,7 @@ export default function InsumosTable({ data, loading, onEdit, onDelete, canEdit,
                   </span>
                 </td>
 
-                {/* Precio Reposición (Clave para la automatización) */}
+                {/* Precio Reposición */}
                 <td className="bg-white border-y border-slate-100 text-center shadow-sm">
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex items-center gap-1.5 px-3 py-1 bg-pink-50/50 rounded-lg border border-pink-100">
@@ -82,7 +100,7 @@ export default function InsumosTable({ data, loading, onEdit, onDelete, canEdit,
                 {/* Stock Numérico */}
                 <td className="bg-white border-y border-slate-100 text-center shadow-sm">
                   <div className="flex flex-col items-center">
-                    <span className={`text-sm font-black ${item.stock_actual <= item.stock_minimo ? 'text-rose-600' : 'text-slate-800'}`}>
+                    <span className={`text-sm font-black ${Number(item.stock_actual) <= Number(item.stock_minimo) ? 'text-rose-600' : 'text-slate-800'}`}>
                       {Number(item.stock_actual)}
                     </span>
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Cant. Disponible</span>
@@ -99,30 +117,27 @@ export default function InsumosTable({ data, loading, onEdit, onDelete, canEdit,
                 {/* Acciones */}
                 <td className="bg-white border-y border-r border-slate-100 px-6 rounded-r-2xl text-right shadow-sm group-hover:shadow-md transition-all">
                   <div className="flex justify-end gap-2">
-
-                    {/* Solo mostrar si tiene permiso de edición */}
                     {canEdit && (
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      onClick={() => onEdit(item)}
-                      title="Gestionar Stock y Precios"
-                      className="h-10 w-10 rounded-xl border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-900 cursor-pointer transition-all active:scale-90"
-                    >
-                      <Edit2 size={16}/>
-                    </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => onEdit(item)}
+                        title="Gestionar Stock y Precios"
+                        className="h-10 w-10 rounded-xl border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-900 cursor-pointer transition-all active:scale-90"
+                      >
+                        <Edit2 size={16}/>
+                      </Button>
                     )}
 
-                    {/* Solo mostrar si tiene permiso de eliminación */}
                     {canDelete && (
-                    <Button 
-                      variant="outline" 
-                      size="icon"
-                      onClick={() => onDelete(item)}
-                      className="h-10 w-10 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-all active:scale-90"
-                    >
-                      <Trash2 size={16}/>
-                    </Button>
+                      <Button 
+                        variant="outline" 
+                        size="icon"
+                        onClick={() => onDelete(item)}
+                        className="h-10 w-10 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-all active:scale-90"
+                      >
+                        <Trash2 size={16}/>
+                      </Button>
                     )}
 
                     {!canEdit && !canDelete && (

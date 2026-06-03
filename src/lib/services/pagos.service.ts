@@ -3,20 +3,20 @@ import { pagos, Prisma, EstadoPago, MetodoPago, TipoPago } from '@prisma/client'
 import { randomUUID } from 'crypto';
 
 interface FiltrosPagos {
-  estado?:      EstadoPago;
+  estado?: EstadoPago;
   metodo_pago?: MetodoPago;
-  pedido_id?:   number | bigint;
+  pedido_id?: number | bigint;
 }
 
 interface CrearPagoInput {
-  pedido_id:        number | bigint;
-  monto:            Prisma.Decimal | number | string;
-  metodo_pago:      MetodoPago;
-  tipo?:            TipoPago;
-  fecha_pago?:      Date;
+  pedido_id: number | bigint;
+  monto: Prisma.Decimal | number | string;
+  metodo_pago: MetodoPago;
+  tipo?: TipoPago;
+  fecha_pago?: Date;
   comprobante_url?: string;
-  notas?:           string;
-  usuario_id?:      number | bigint;
+  notas?: string;
+  usuario_id?: number | bigint;
 }
 
 export const pagosService = {
@@ -24,16 +24,16 @@ export const pagosService = {
   crear: async (datos: CrearPagoInput): Promise<pagos> => {
     return prisma.pagos.create({
       data: {
-        id_uuid:         randomUUID(),
-        pedido_id:       BigInt(datos.pedido_id),
-        monto:           datos.monto,
-        metodo_pago:     datos.metodo_pago,
-        fecha_pago:      datos.fecha_pago      ?? new Date(),
-        tipo:            datos.tipo            ?? 'pago_completo',
-        estado:          'pendiente',
+        id_uuid: randomUUID(),
+        pedido_id: BigInt(datos.pedido_id),
+        monto: datos.monto,
+        metodo_pago: datos.metodo_pago,
+        fecha_pago: datos.fecha_pago ?? new Date(),
+        tipo: datos.tipo ?? 'pago_completo',
+        estado: 'pendiente',
         comprobante_url: datos.comprobante_url ?? null,
-        notas:           datos.notas           ?? null,
-        usuario_id:      datos.usuario_id ? BigInt(datos.usuario_id) : null,
+        notas: datos.notas ?? null,
+        usuario_id: datos.usuario_id ? BigInt(datos.usuario_id) : null,
       },
     });
   },
@@ -41,9 +41,9 @@ export const pagosService = {
   obtenerTodas: async (filtros?: FiltrosPagos): Promise<pagos[]> => {
     return prisma.pagos.findMany({
       where: {
-        ...(filtros?.estado      && { estado:      filtros.estado }),
+        ...(filtros?.estado && { estado: filtros.estado }),
         ...(filtros?.metodo_pago && { metodo_pago: filtros.metodo_pago }),
-        ...(filtros?.pedido_id   && { pedido_id:   BigInt(filtros.pedido_id) }),
+        ...(filtros?.pedido_id && { pedido_id: BigInt(filtros.pedido_id) }),
       },
       orderBy: { fecha_pago: 'desc' },
     });
@@ -59,8 +59,8 @@ export const pagosService = {
     return prisma.pagos.update({
       where: { id_uuid },
       data: {
-        estado:         'verificado',
-        verificado_at:  new Date(),
+        estado: EstadoPago.pago_parcial,
+        verificado_at: new Date(),
         verificado_por: verificadoPor ?? null,
       },
     });
@@ -69,7 +69,7 @@ export const pagosService = {
   rechazar: async (id_uuid: string, motivo: string): Promise<pagos> => {
     return prisma.pagos.update({
       where: { id_uuid },
-      data:  { estado: 'rechazado', notas: motivo },
+      data: { estado: EstadoPago.anulado, notas: motivo },
     });
   },
 
@@ -80,13 +80,13 @@ export const pagosService = {
   ): Promise<pagos> => {
     return prisma.pagos.update({
       where: { id_uuid },
-      data:  { notas: `REEMBOLSO (${montoReembolso}): ${motivo}` },
+      data: { notas: `REEMBOLSO (${montoReembolso}): ${motivo}` },
     });
   },
 
   obtenerPendientes: async (): Promise<pagos[]> => {
     return prisma.pagos.findMany({
-      where:   { estado: 'pendiente' },
+      where: { estado: EstadoPago.pendiente },
       orderBy: { fecha_pago: 'asc' },
     });
   },
@@ -94,7 +94,7 @@ export const pagosService = {
   obtenerVerificados: async (desde: Date, hasta: Date): Promise<pagos[]> => {
     return prisma.pagos.findMany({
       where: {
-        estado:     'verificado',
+        estado: EstadoPago.pagado,
         fecha_pago: { gte: desde, lte: hasta },
       },
       orderBy: { fecha_pago: 'desc' },

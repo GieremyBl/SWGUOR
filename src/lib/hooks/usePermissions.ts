@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { usePermissionsContext } from '@/components/providers/PermissionsProvider';
 import {
   type RolUsuario,
@@ -55,4 +54,4 @@ export function usePermissions(): UsePermissionsReturn {
     can: () => false,
     hasRole: () => false,
   };
-}
+}

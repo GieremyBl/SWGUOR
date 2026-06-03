@@ -42,6 +42,12 @@ export const EstadoPedidoEnum = z.enum([
   "cancelado",
 ]);
 
+// Helper para preprocesar y transformar strings ISO a objetos Date de forma segura
+const dateSchema = z.preprocess((arg) => {
+  if (typeof arg === "string" || arg instanceof Date) return new Date(arg);
+  return arg;
+}, z.date());
+
 // ============================================================================
 // SCHEMAS PARA OPERACIONES RPC
 // ============================================================================
@@ -256,12 +262,8 @@ export const FiltrosAuditoriaSchema = z.object({
     .number()
     .int()
     .optional(),
-  fechaInicio: z
-    .date()
-    .optional(),
-  fechaFin: z
-    .date()
-    .optional(),
+  fechaInicio: dateSchema.optional(),
+  fechaFin: dateSchema.optional(),
   limit: z
     .number()
     .int()
@@ -286,7 +288,8 @@ export type FiltrosAuditoriaInput = z.infer<
 export const RespuestaOperacionSchema = z.object({
   exito: z.boolean(),
   mensaje: z.string(),
-  data: z.any().optional(),
+  // FIX: Reemplazado z.any() por z.unknown() para garantizar seguridad de tipos
+  data: z.unknown().optional(),
   errores: z.array(z.string()).optional(),
 });
 
@@ -339,8 +342,8 @@ export const BuscarMovimientosSchema = PaginacionSchema.extend({
   materialId: z.number().int().optional(),
   tipoMovimiento: TipoMovimientoEnum.optional(),
   referenciaType: ReferenciaMovimientoEnum.optional(),
-  fechaInicio: z.date().optional(),
-  fechaFin: z.date().optional(),
+  fechaInicio: dateSchema.optional(),
+  fechaFin: dateSchema.optional(),
   almacenId: z.number().int().optional(),
 });
 
@@ -355,15 +358,15 @@ export const BuscarNotificacionesSchema = PaginacionSchema.extend({
   usuarioId: z.number().int().positive(),
   tipo: TipoNotificacionEnum.optional(),
   leido: z.boolean().optional(),
-  fechaInicio: z.date().optional(),
-  fechaFin: z.date().optional(),
+  fechaInicio: dateSchema.optional(),
+  fechaFin: dateSchema.optional(),
 });
 
 export type BuscarNotificacionesInput = z.infer<
   typeof BuscarNotificacionesSchema
 >;
 
-export default {
+const rpcSchemas = {
   // Enums
   TipoMovimientoEnum,
   ReferenciaMovimientoEnum,
@@ -390,3 +393,5 @@ export default {
   BuscarMovimientosSchema,
   BuscarNotificacionesSchema,
 };
+
+export default rpcSchemas;

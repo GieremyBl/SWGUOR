@@ -10,6 +10,7 @@ import {
   ESTADOS_ORDEN_COMPRA,
   ESTADOS_PAGO_ORDEN_COMPRA,
 } from '@/lib/constants/estados';
+import type { EstadoOrdenCompra, EstadoPagoOrdenCompra } from '@prisma/client';
 import { formatNumeroOc } from '@/lib/helpers/ordenes-compra-helpers';
 import type { OrdenCompraRow } from './types';
 
@@ -22,8 +23,8 @@ interface Props {
 export default function OrdenCompraDetailSheet({ orden, open, onOpenChange }: Props) {
   if (!orden) return null;
 
-  const est = ESTADOS_ORDEN_COMPRA[orden.estado];
-  const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago];
+  const est = ESTADOS_ORDEN_COMPRA[orden.estado as keyof typeof ESTADOS_ORDEN_COMPRA];
+  const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago as keyof typeof ESTADOS_PAGO_ORDEN_COMPRA];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

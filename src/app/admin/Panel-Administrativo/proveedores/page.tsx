@@ -23,7 +23,7 @@ export default function ProveedoresPage() {
   const { can, isLoading: authLoading } = usePermissions();
   
   // ── UI state ───────────────────────────────────────────────
-  const [page,              setPage]              = useState(1);
+  const [page,               setPage]               = useState(1);
   const [busqueda,          setBusqueda]          = useState('');
   const [debouncedBusqueda, setDebouncedBusqueda] = useState('');
   const [estadoFilter,      setEstadoFilter]      = useState<EstadoProveedor>('');
@@ -32,7 +32,7 @@ export default function ProveedoresPage() {
   const [deleteTarget,      setDeleteTarget]      = useState<Proveedor | null>(null);
   const [detailTarget,      setDetailTarget]      = useState<Proveedor | null>(null);
   
-  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+  // Estados de carga para las exportaciones
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
 
@@ -44,15 +44,23 @@ export default function ProveedoresPage() {
 
   // ── Data ───────────────────────────────────────────────────
   const {
-    proveedores, pagination, isLoading, refetch,
-    save, deactivate, isSaving, isDeactivating,
+    proveedores = [] as Proveedor[], 
+    pagination, 
+    isLoading, 
+    refetch,
+    save, 
+    deactivate, 
+    isSaving, 
+    isDeactivating,
   } = useProveedores({
     page,
     limit:       PAGE_SIZE,
     busqueda:    debouncedBusqueda,
     estadoFilter,
     editingId:   editingProveedor?.id,
-  });
+  }) as any;
+
+  const listaProveedores = (proveedores ?? []) as Proveedor[];
 
   // ── Permisos ───────────────────────────────────────────────
   const canView   = can('view',   'proveedores');
@@ -84,14 +92,13 @@ export default function ProveedoresPage() {
 
   // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
   const handleExportExcel = async () => {
-    if (proveedores.length === 0) {
+    if (listaProveedores.length === 0) {
       toast.error('No hay datos para exportar');
       return;
     }
     try {
       setExportingExcel(true);
-      // Corrección de Tipo implícito 'any' agregando (: Proveedor)
-      const datosExcel = proveedores.map((p: Proveedor) => ({
+      const datosExcel = listaProveedores.map((p: Proveedor) => ({
         'Razón Social': p.razon_social,
         'RUC': p.ruc,
         'Contacto': p.contacto || '—',
@@ -110,18 +117,38 @@ export default function ProveedoresPage() {
   };
 
   const handleExportPDF = async () => {
-    if (proveedores.length === 0) {
+    if (listaProveedores.length === 0) {
       toast.error('No hay datos para exportar');
       return;
     }
     const toastId = toast.loading('Preparando reporte PDF...');
     try {
       setExportingPDF(true);
-      // Corrección de función usando la utilitaria genérica exportToPDF
-      await exportToPDF(proveedores, [], {
-        title: 'REPORTE DE PROVEEDORES',
-        filename: `Proveedores_GUOR_${new Date().toISOString().split('T')[0]}`,
-      });
+
+      // 1. Definimos los encabezados en formato de matriz string[][]
+      const cabecerasPDF = [['Razón Social', 'RUC', 'Contacto', 'Teléfono', 'Email', 'Estado']];
+
+      // 2. Mapeamos explícitamente los objetos a un arreglo bidimensional de textos (string[][])
+      // Tipamos (p: Proveedor) para solucionar el error de tipo 'any' implícito (TS 7006)
+      const cuerpoPDF = listaProveedores.map((p: Proveedor) => [
+        p.razon_social,
+        p.ruc,
+        p.contacto || '—',
+        p.telefono || '—',
+        p.email || '—',
+        p.estado === 'activo' ? 'Activo' : 'Inactivo'
+      ]);
+      
+      // 3. Enviamos los parámetros en el orden exacto que espera tu función utilitaria
+      await exportToPDF(
+        cabecerasPDF,
+        cuerpoPDF,
+        {
+          title: 'REPORTE DE PROVEEDORES',
+          filename: `Proveedores_GUOR_${new Date().toISOString().split('T')[0]}`,
+        }
+      );
+      
       toast.success('PDF generado correctamente', { id: toastId });
     } catch (error) {
       console.error(error);
@@ -167,7 +194,6 @@ export default function ProveedoresPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
             <Button
               variant="outline"
               onClick={handleExportExcel}
@@ -178,7 +204,6 @@ export default function ProveedoresPage() {
               {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
             </Button>
 
-            {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
             <Button
               variant="outline"
               onClick={handleExportPDF}
@@ -211,14 +236,14 @@ export default function ProveedoresPage() {
           />
           <ProveedorStatCard
             label="ACTIVOS"
-            value={proveedores.filter((p: Proveedor) => p.estado === 'activo').length}
+            value={listaProveedores.filter((p: Proveedor) => p.estado === 'activo').length}
             color="emerald"
             isActive={estadoFilter === 'activo'}
             onClick={() => { setEstadoFilter('activo'); setPage(1); }}
           />
           <ProveedorStatCard
             label="INACTIVOS"
-            value={proveedores.filter((p: Proveedor) => p.estado === 'inactivo').length}
+            value={listaProveedores.filter((p: Proveedor) => p.estado === 'inactivo').length}
             color="orange"
             isActive={estadoFilter === 'inactivo'}
             onClick={() => { setEstadoFilter('inactivo'); setPage(1); }}
@@ -244,7 +269,7 @@ export default function ProveedoresPage() {
         {/* Tabla */}
         <div className="space-y-4">
           <ProveedorTable
-            data={proveedores}
+            data={listaProveedores}
             loading={isLoading}
             onEdit={handleEdit}
             onDelete={handleDelete}
@@ -256,7 +281,7 @@ export default function ProveedoresPage() {
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border shadow-sm">
               <p className="text-xs text-gray-500">
                 Mostrando{' '}
-                <span className="font-bold text-gray-900">{proveedores.length}</span>{' '}
+                <span className="font-bold text-gray-900">{listaProveedores.length}</span>{' '}
                 de{' '}
                 <span className="font-bold text-gray-900">{pagination.total}</span>
               </p>

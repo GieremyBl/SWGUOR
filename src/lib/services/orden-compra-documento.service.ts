@@ -20,14 +20,14 @@ export async function ordenCompraPdfExists(
   ordenId: string | number,
 ): Promise<boolean> {
   const supabase = createAdminClient();
-  const path = ordenCompraPdfStoragePath(ordenId);
   const folder = `${STORAGE_PATH_ORDENES_COMPRA}/${ordenId}`;
   const { data, error } = await supabase.storage
     .from(STORAGE_BUCKET_DOCUMENTOS)
     .list(folder, { search: 'orden.pdf' });
 
   if (error) return false;
-  return (data ?? []).some((f) => f.name === 'orden.pdf');
+  
+  return Array.isArray(data) && data.some((f) => f.name === 'orden.pdf');
 }
 
 /**

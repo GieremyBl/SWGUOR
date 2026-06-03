@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import type { Cargo, EstadoPersonal } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 type Serialize<T> = {
   [K in keyof T]: T[K] extends bigint
@@ -18,10 +19,11 @@ export const PersonalInternoService = {
 
   // ── Listar ──────────────────────────────────────────────────
   async listar(params?: { cargo?: string; estado?: string; busqueda?: string }) {
-    const where: any = {};
+    // FIX: Tipado estricto con el contrato WhereInput nativo de Prisma
+    const where: Prisma.personal_internoWhereInput = {};
 
     if (params?.cargo) {
-      where.cargo = params.cargo;
+      where.cargo = params.cargo as Cargo;
     }
 
     if (params?.estado && params.estado !== '') {
@@ -102,7 +104,7 @@ export const PersonalInternoService = {
     fecha_ingreso: string;
     estado: string;
   }>) {
-    const { dni, telefono, fecha_ingreso, cargo, estado, ...rest } = data as any;
+    const { dni, telefono, fecha_ingreso, cargo, estado, ...rest } = data;
 
     const personal = await prisma.personal_interno.update({
       where: { id: BigInt(id) },

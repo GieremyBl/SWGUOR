@@ -2,25 +2,34 @@
 
 import { useEffect, useRef, useState } from "react";
 
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
 const QuestionsHero = () => {
-  const text = useScrollReveal();
-  const image = useScrollReveal();
+  const textRef  = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
+  const [textVisible,  setTextVisible]  = useState(false);
+  const [imageVisible, setImageVisible] = useState(false);
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    const observe = (
+      el: HTMLDivElement | null,
+      setVisible: (v: boolean) => void,
+      threshold = 0.1,
+    ) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+        { threshold },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    };
+
+    observe(textRef.current,  setTextVisible);
+    observe(imageRef.current, setImageVisible);
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
   return (
     <section style={{
@@ -38,9 +47,9 @@ const QuestionsHero = () => {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5rem", alignItems: "center" }} className="q-hero-grid">
 
           {/* TEXT */}
-          <div ref={text.ref} style={{
-            opacity: text.visible ? 1 : 0,
-            transform: text.visible ? "translateX(0)" : "translateX(-40px)",
+          <div ref={textRef} style={{
+            opacity: textVisible ? 1 : 0,
+            transform: textVisible ? "translateX(0)" : "translateX(-40px)",
             transition: "all 0.9s ease",
           }}>
             <span style={{
@@ -72,7 +81,7 @@ const QuestionsHero = () => {
 
           {/* IMAGE 3D */}
           <div
-            ref={image.ref}
+            ref={imageRef}
             style={{
               borderRadius: "32px", overflow: "hidden",
               minHeight: "560px",
@@ -80,8 +89,8 @@ const QuestionsHero = () => {
               backgroundImage: "url('/fotoPreguntas.jpg')",
               backgroundSize: "cover", backgroundPosition: "center",
               boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
-              opacity: image.visible ? 1 : 0,
-              transform: image.visible ? "translateX(0)" : "translateX(40px)",
+              opacity: imageVisible ? 1 : 0,
+              transform: imageVisible ? "translateX(0)" : "translateX(40px)",
               transition: "all 1s ease 0.2s",
               willChange: "transform",
             }}

@@ -6,13 +6,17 @@ import type { CrearMovimientoInput } from "@/lib/schemas/movimientos-inventario"
 
 export function useMovimientosInventario() {
   
-  const registrarMovimiento = useCallback(
+ const registrarMovimiento = useCallback(
     async (params: CrearMovimientoInput) => {
       try {
-        // Filtrar valores null/undefined antes de enviar
-        const dataLimpia = Object.fromEntries(
-          Object.entries(params).filter(([_, value]) => value !== null && value !== undefined)
-        );
+        const dataLimpia = {} as CrearMovimientoInput;
+
+        Object.keys(params).forEach((key) => {
+          const value = params[key as keyof CrearMovimientoInput];
+          if (value !== null && value !== undefined) {
+            (dataLimpia as Record<string, unknown>)[key] = value;
+          }
+        });
 
         const response = await fetch("/api/admin/movimientos-inventario", {
           method: "POST",
@@ -30,9 +34,10 @@ export function useMovimientosInventario() {
         const data = await response.json();
         toast.success("Movimiento de inventario registrado");
         return data.data;
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error registrando movimiento:", error);
-        toast.error(error.message || "Error al registrar movimiento");
+        const mensajeError = error instanceof Error ? error.message : "Error al registrar movimiento";
+        toast.error(mensajeError);
         throw error;
       }
     },
@@ -79,7 +84,7 @@ export function useMovimientosInventario() {
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "devolucion_a_proveedor", // Sincronizado con Supabase Enum
+        tipo_movimiento: "devolucion_a_proveedor", 
         referencia_tipo: "DEVOLUCION",
         motivo: `Devolución a proveedor: ${params.motivo}`,
       });
@@ -123,7 +128,7 @@ export function useMovimientosInventario() {
         almacen_id: params.almacen_id,
         producto_id: params.producto_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "devolucion_a_cliente", // Sincronizado con Supabase Enum
+        tipo_movimiento: "devolucion_a_cliente",
         referencia_tipo: "DEVOLUCION",
         motivo: `Devolución de cliente: ${params.motivo}`,
       });
@@ -147,7 +152,7 @@ export function useMovimientosInventario() {
         insumo_id: params.insumo_id,
         material_id: params.material_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "consumo_orden_produccion", // Sincronizado con Supabase Enum
+        tipo_movimiento: "consumo_orden_produccion",
         referencia_tipo: "ORDEN_PRODUCCION",
         motivo: params.motivo || "Materia prima enviada a línea de confección",
       });
@@ -199,7 +204,7 @@ export function useMovimientosInventario() {
         material_id: params.material_id,
         producto_id: params.producto_id,
         cantidad: params.cantidad,
-        tipo_movimiento: "incidencia_taller", // Sincronizado con Supabase Enum
+        tipo_movimiento: "incidencia_taller",
         referencia_tipo: "MERMA_INCIDENCIA",
         motivo: `Incidencia en taller: ${params.motivo}`,
       });

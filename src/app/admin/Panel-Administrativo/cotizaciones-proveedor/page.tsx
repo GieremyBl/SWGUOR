@@ -59,7 +59,7 @@ export default function CotizacionesProveedorPage() {
     estadoFilter: estadoFilter === 'todos' ? '' : estadoFilter,
   });
 
-  const rows = (items ?? []) as CotizacionRow[];
+  const rows = (items ?? []) as unknown as CotizacionRow[];
 
   const stats = useMemo(
     () => ({

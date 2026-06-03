@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import type { OrdenCompraRow } from '../types';
 import { OrdenCompraResumenTab } from './OrdenCompraResumenTab';
 import { OrdenCompraDocumentoTab } from './OrdenCompraDocumentoTab';
+import type { EstadoOrdenCompra, EstadoPagoOrdenCompra } from '@prisma/client';
 
 const TABS = [
   { id: 'resumen', label: 'Resumen', icon: LayoutList },
@@ -43,10 +44,8 @@ export function OrdenCompraDetalle({ orden: initialOrden }: Props) {
     enabled: false,
   });
 
-  const canEdit = can('edit', 'ordenes_compra');
-  const canCancel = can('cancel', 'ordenes_compra');
-  const est = ESTADOS_ORDEN_COMPRA[orden.estado];
-  const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago];
+  const est = ESTADOS_ORDEN_COMPRA[orden.estado as EstadoOrdenCompra];
+  const pago = ESTADOS_PAGO_ORDEN_COMPRA[orden.estado_pago as EstadoPagoOrdenCompra];
 
   const handleConfirmar = async () => {
     try {
@@ -122,7 +121,7 @@ export function OrdenCompraDetalle({ orden: initialOrden }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {canEdit && orden.estado === 'pendiente' && (
+              {can('edit', 'ordenes_compra') && orden.estado === 'pendiente' && (
                 <Button
                   onClick={handleConfirmar}
                   disabled={isConfirming}
@@ -136,7 +135,7 @@ export function OrdenCompraDetalle({ orden: initialOrden }: Props) {
                   Confirmar
                 </Button>
               )}
-              {canCancel &&
+              {can('cancel', 'ordenes_compra') &&
                 orden.estado !== 'cancelada' &&
                 orden.estado !== 'completada' && (
                   <Button
@@ -160,11 +159,10 @@ export function OrdenCompraDetalle({ orden: initialOrden }: Props) {
                   key={id}
                   type="button"
                   onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all w-full text-left ${
-                    activeTab === id
-                      ? 'bg-amber-600 text-white shadow-md'
-                      : 'text-slate-600 hover:bg-amber-50'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all w-full text-left ${activeTab === id
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-amber-50'
+                    }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   {label}

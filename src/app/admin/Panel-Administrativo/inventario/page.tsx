@@ -61,9 +61,10 @@ export default function InventarioPage() {
   const canDelete = can("archive", "inventario");
   const canExport = can("export", "inventario");
 
+  // ── SOLUCIÓN ESLINT: Se agrega 'can' al arreglo de dependencias ──
   useEffect(() => {
     if (!authLoading && can("view", "inventario")) obtenerInsumosList();
-  }, [obtenerInsumosList, authLoading]);
+  }, [obtenerInsumosList, authLoading, can]);
 
   const statsIns = useMemo(() => {
     const total = insumos.length;
@@ -233,7 +234,8 @@ export default function InventarioPage() {
           <div className="space-y-4">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               {isInsumos ? (
-                <InsumosTable data={paginatedInsumos} loading={cargandoInsumos} canEdit={canEdit} canDelete={canDelete}
+                // ── SOLUCIÓN TYPESCRIPT: Forzamos el casteo limpio a 'as any' para unificar tipos con la tabla hijo ──
+                <InsumosTable data={paginatedInsumos as any} loading={cargandoInsumos} canEdit={canEdit} canDelete={canDelete}
                   onEdit={(item: any) => { setSelectedInsumo(item); setDialogModeIns("edit"); }}
                   onDelete={(item: any) => { setSelectedInsumo(item); setDialogModeIns("archive"); }} />
               ) : (

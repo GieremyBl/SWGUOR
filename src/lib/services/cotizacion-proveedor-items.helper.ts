@@ -7,7 +7,7 @@ type Tx = Prisma.TransactionClient;
 function toBigIntOrNull(value: string | number | null | undefined): bigint | null {
   if (value === null || value === undefined || value === '') return null;
   const n = BigInt(value);
-  return n > 0 ? n : null;
+  return n > BigInt(0) ? n : null;
 }
 
 function mapUnidadMedida(unidad?: string | null): UnidadMedida {

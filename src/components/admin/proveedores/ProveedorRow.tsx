@@ -1,8 +1,7 @@
-// src/components/admin/proveedores/ProveedorRow.tsx
 'use client';
 
 import { memo } from 'react';
-import { Building2, Eye, Pencil, Trash2, Tag, Package, ShoppingCart } from 'lucide-react';
+import { Eye, Pencil, Trash2, Tag, Package, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { usePermissions } from '@/lib/hooks/usePermissions';

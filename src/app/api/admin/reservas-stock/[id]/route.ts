@@ -50,8 +50,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    await prisma.reservas_stock.delete({ where: { id: BigInt(id) } });
-    return NextResponse.json({ success: true });
+    await prisma.reservas_stock.update({
+      where: { id: BigInt(id) },
+      data: { estado: 'cancelada' },
+    });
+    return NextResponse.json({ success: true, mensaje: 'Reserva liberada (cancelada)' });
   } catch (error: any) {
     console.error('[DELETE /reservas-stock/:id]', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

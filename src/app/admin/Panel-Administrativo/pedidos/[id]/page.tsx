@@ -1,7 +1,10 @@
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { serializeBigInt } from "@/lib/utils/serialize";
-import PedidoDetalle from "@/components/admin/pedidos/detalles/PedidoDetalle";
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/utils/serialize';
+import { getServerAuthUser } from '@/lib/auth/server';
+import PedidoDetalle, {
+  type DetallePedidoData,
+} from '@/components/admin/pedidos/detalles/PedidoDetalle';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,11 +12,24 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const ROLES_CAMBIO_ESTADO = ['administrador', 'gerente'] as const;
+
 export default async function PedidoDetallePage({ params }: PageProps) {
   const { id } = await params;
 
+  const auth = await getServerAuthUser();
+  if (!auth.success) {
+    notFound();
+  }
+
+  const puedeCambiarEstado = ROLES_CAMBIO_ESTADO.includes(
+    auth.user.rol as (typeof ROLES_CAMBIO_ESTADO)[number],
+  );
+
+  let pedido;
+
   try {
-    const pedido = await prisma.pedidos.findUnique({
+    pedido = await prisma.pedidos.findUnique({
       where: { id: BigInt(id) },
       include: {
         clientes: {
@@ -24,47 +40,73 @@ export default async function PedidoDetallePage({ params }: PageProps) {
             nombre_comercial: true,
             telefono: true,
             email: true,
+            tipo_cliente: true,
+          },
+        },
+        cotizacion: {
+          select: {
+            id: true,
+            numero: true,
           },
         },
         pedido_items: {
           include: {
-            productos: { select: { id: true, nombre: true, sku: true, imagen: true, fichas_tecnicas: true } },
-            variantes_producto: { select: { id: true, color: true, talla: true, sku: true } },
-          },
-        },
-        seguimiento_pedido: { orderBy: { created_at: 'desc' } },
-        ordenes_produccion: {
-          include: {
-            fichas_tecnicas: { select: { id: true, version: true, estado: true } },
-            talleres: { select: { id: true, nombre: true } },
-            seguimiento_produccion: {
-              where: { activo: true },
-              take: 1,
-              orderBy: { created_at: 'desc' },
+            productos: {
+              select: {
+                id: true,
+                nombre: true,
+                sku: true,
+                imagen: true,
+              },
+            },
+            variantes_producto: {
+              select: {
+                id: true,
+                color: true,
+                talla: true,
+                sku: true,
+              },
             },
           },
-          orderBy: { created_at: 'desc' },
+          orderBy: { id: 'asc' },
+        },
+        seguimiento_pedido: {
+          orderBy: { created_at: 'asc' },
         },
       },
     });
 
     if (!pedido) notFound();
-
-    // Talleres activos para el modal
-    const talleres = await prisma.talleres.findMany({
-      where: { estado: 'activo' },
-      orderBy: { nombre: 'asc' },
-      select: { id: true, nombre: true, especialidad: true, contacto: true, email: true },
-    });
-
-    return (
-      <PedidoDetalle
-        pedido={serializeBigInt(pedido)}
-        talleres={serializeBigInt(talleres)}
-      />
-    );
   } catch (error) {
-    console.error("Error cargando pedido:", error);
+    console.error('[PedidoDetallePage] Error cargando pedido:', error);
     notFound();
   }
+
+  const serializado = serializeBigInt(pedido) as Record<string, unknown>;
+
+  const pedidoFormateado: DetallePedidoData = {
+    ...(serializado as unknown as DetallePedidoData),
+    seguimiento_pedido: (
+      (serializado.seguimiento_pedido as Array<Record<string, unknown>>) ?? []
+    ).map((s) => ({
+      id: String(s.id),
+      estado: String(s.status ?? s.estado ?? 'pendiente'),
+      notas: (s.notas as string | null) ?? null,
+      created_at: (s.created_at as string | null) ?? null,
+      created_by: (s.creado_por as string | null) ?? null,
+    })),
+    cotizacion: serializado.cotizacion
+      ? {
+          id: String((serializado.cotizacion as { id: unknown }).id),
+          numero: String((serializado.cotizacion as { numero: string }).numero),
+        }
+      : null,
+  };
+
+  return (
+    <PedidoDetalle
+      pedido={pedidoFormateado}
+      puedeCambiarEstado={puedeCambiarEstado}
+    />
+  );
 }

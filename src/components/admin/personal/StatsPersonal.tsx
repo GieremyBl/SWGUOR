@@ -10,7 +10,7 @@ interface Props {
   onFilterChange?: (f: "activo" | "inactivo" | "suspendido" | null) => void;
 }
 
-export default function StatsPersonal({ personal, loading, statusFilter = null, onFilterChange }: Props) {
+export default function StatsPersonal({ personal, statusFilter = null, onFilterChange }: Props) {
   const total = personal.length;
   const activos = personal.filter((p) => p.estado === "activo").length;
   const suspendidos = personal.filter((p) => p.estado === "suspendido").length;

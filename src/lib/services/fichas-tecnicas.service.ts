@@ -54,8 +54,9 @@ export const FichasTecnicasService = {
 
   async obtenerPorProducto(producto_id: string) {
     const ficha = await prisma.fichas_tecnicas.findFirst({
-      where:   { id_producto: BigInt(producto_id) },
+      where: { id_producto: BigInt(producto_id) },
       include: { ficha_medidas: { orderBy: [{ talla: 'asc' }, { punto_medida: 'asc' }] } },
+      orderBy: { created_at: 'desc' },
     });
     return ficha ? serializeBigInt(ficha) : null;
   },
@@ -68,11 +69,19 @@ export const FichasTecnicasService = {
     costo_estimado?:        number;
     ficha_url?:             string;
     imagen_geometral?:      string;
+    estado?:                EstadoFicha;
+    created_by?:            string | number;
+    permitir_duplicado?:    boolean;
   }) {
-    const existe = await prisma.fichas_tecnicas.findFirst({
-      where: { id_producto: BigInt(data.producto_id) },
-    });
-    if (existe) throw new Error('Ya existe una ficha para este producto');
+    if (!data.permitir_duplicado) {
+      const existe = await prisma.fichas_tecnicas.findFirst({
+        where: {
+          id_producto: BigInt(data.producto_id),
+          estado: { not: 'obsoleta' },
+        },
+      });
+      if (existe) throw new Error('Ya existe una ficha para este producto');
+    }
 
     return prisma.$transaction(async (tx) => {
       const ficha = await tx.fichas_tecnicas.create({
@@ -84,7 +93,10 @@ export const FichasTecnicasService = {
           costo_estimado:        data.costo_estimado        ?? null,
           ficha_url:             data.ficha_url             ?? null,
           imagen_geometral:      data.imagen_geometral      ?? null,
-          estado:                'borrador',
+          estado:                data.estado ?? 'borrador',
+          created_by:            data.created_by
+            ? BigInt(data.created_by)
+            : null,
         },
       });
 

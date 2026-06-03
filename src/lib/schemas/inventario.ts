@@ -78,7 +78,7 @@ export type AjusteStockFormValues = z.infer<typeof ajusteStockSchema>;
 export type MovimientoFormValues = z.infer<typeof movimientoSchema>;
 export type InsumoOutput = z.infer<typeof insumoOutputSchema>;
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

@@ -3,14 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Plus, FileText, Truck, CheckCircle2, AlertCircle, Layers, Sparkles } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react'; // ◄ Importado para tipado estricto
-
-import { usePortal } from '../_contexts/PortalContext';
+import type { LucideIcon } from 'lucide-react';
+import { usePortal } from '@/lib/hooks/usePortal';
 import { KpiCards } from '@/components/portal/dashboard/KpiCards';
 import { RecentQuotes } from '@/components/portal/dashboard/RecentQuotes';
 import { RecentOrders } from '@/components/portal/dashboard/RecentOrders';
+import { DashboardSkeleton } from '@/components/portal/dashboard/DashboardSkeleton';
 import { formatCurrency } from '@/lib/helpers/format-helpers';
-import { cn } from '@/lib/utils';
 import type { EstadoCotizacion, EstadoPedido } from '@prisma/client';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -56,45 +55,6 @@ interface KpiItem {
   href: string;
 }
 
-// ─── Skeleton Optimizado (Mismo tamaño que el layout real) ─────────────────────
-
-function Pulse({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-xl bg-guor-100/60', className)} />;
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-      {/* Cabecera Skeleton */}
-      <div className="flex justify-between items-center pb-4 border-b border-guor-line">
-        <div className="space-y-2">
-          <Pulse className="h-4 w-24 rounded-full" />
-          <Pulse className="h-8 w-64 rounded-xl" />
-          <Pulse className="h-3 w-32 rounded-md" />
-        </div>
-        <div className="flex gap-3">
-          <Pulse className="hidden md:block h-12 w-36 rounded-xl" />
-          <Pulse className="h-11 w-40 rounded-xl" />
-        </div>
-      </div>
-      {/* KPIs Cards Skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Pulse key={i} className="h-20 rounded-2xl" />
-        ))}
-      </div>
-      {/* Contenido Principal Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Pulse className="h-[340px] rounded-2xl" />
-        </div>
-        <div>
-          <Pulse className="h-[340px] rounded-2xl" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Componente Principal ──────────────────────────────────────────────────────
 
@@ -140,7 +100,7 @@ export default function DashboardPage() {
   }
 
   const s = data?.stats;
-  const primerNombre = cliente?.razon_social?.split(' ')[0] ?? 'Cliente';
+  const primerNombre = cliente?.nombre_comercial ?? 'Cliente';
   const hora = new Date().getHours();
   const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
 
@@ -154,7 +114,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
-      
+
       {/* ── Cabecera Compacta ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-guor-line">
         <div className="space-y-1.5">
@@ -171,7 +131,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex flex-col items-end justify-center px-4 py-2 bg-white border border-guor-line rounded-xl shadow-sm">
+          <div className="hidden md:flex flex-col items-end justify-center px-4 py-2 bg-guor-surface border border-guor-line rounded-xl shadow-card">
             <span className="text-[9px] font-bold text-guor-soft uppercase tracking-wider">Inversión Total</span>
             <span className="text-lg font-black text-guor-ink">{formatCurrency(s?.total_gastado ?? 0)}</span>
           </div>

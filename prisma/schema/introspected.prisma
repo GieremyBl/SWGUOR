@@ -530,6 +530,7 @@ model almacen_zonas {
   almacen_id    BigInt
   nombre        String
   descripcion   String?
+  activo        Boolean         @default(true)
   created_at    DateTime        @default(now()) @db.Timestamptz(6)
   almacen_stock almacen_stock[]
   almacenes     almacenes       @relation(fields: [almacen_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -626,7 +627,7 @@ model clientes {
   ruc                  String                 @unique @db.VarChar(20)
   razon_social         String?                @db.VarChar(255)
   telefono             String?                @db.VarChar(50)
-  activo               EstadoCliente?         @default(activo)
+  estado           EstadoCliente @default(activo)
   created_at           DateTime               @default(now()) @db.Timestamptz(6)
   updated_at           DateTime               @default(now()) @db.Timestamptz(6)
   usuario_id           BigInt?                @unique
@@ -1191,7 +1192,7 @@ model incidencias_cliente {
   id            BigInt                   @id @default(autoincrement())
   cliente_id    BigInt?
   pedido_id     BigInt?
-  tipo          tipo_incidencia_cliente?
+  tipo          TipoIncidenciaCliente?
   descripcion   String?
   estado        String?                  @default("abierta")
   evidencia_url String[]
@@ -2126,6 +2127,9 @@ enum EstadoDespacho {
   entregado
   preparando
   incidencia
+  en_almacen
+  devuelto
+  cancelado
 
   @@schema("public")
 }
@@ -2200,8 +2204,9 @@ enum EstadoOrdenProduccion {
 
 enum EstadoPago {
   pendiente
-  verificado
-  rechazado
+  pago_parcial
+  pagado
+  anulado
 
   @@schema("public")
 }
@@ -2402,6 +2407,7 @@ enum TipoBeneficio {
 enum TipoCliente {
   corporativo
   minorista
+  mayorista
   distribuidor
 
   @@schema("public")
@@ -2444,7 +2450,7 @@ enum TipoIncidencia {
   @@schema("public")
 }
 
-enum tipo_incidencia_cliente {
+enum TipoIncidenciaCliente {
   defecto_confeccion
   pedido_equivocado
   talla_incorrecta
@@ -2521,7 +2527,7 @@ enum TipoPago {
   @@schema("public")
 }
 
-enum UnidadMedida {
+  enum UnidadMedida {
   metros
   unidades
   conos

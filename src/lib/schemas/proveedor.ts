@@ -28,7 +28,7 @@ export type Proveedor = ProveedorForm & {
 
 export type EstadoProveedor = 'activo' | 'inactivo' | '';
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success:     boolean;
   data:        T;
   pagination?: { total: number; page: number; totalPages: number };

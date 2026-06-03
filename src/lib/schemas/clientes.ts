@@ -40,7 +40,7 @@ export const ESTADO_CLIENTE_LABELS: Record<typeof ESTADO_CLIENTE[number], string
   potencial:  "Potencial",
 };
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success:  boolean;
   data?:    T;
   error?:   string;

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { Building2, FileText, MapPin, ShieldCheck, Download, PencilLine, Save, Loader2 } from 'lucide-react';
-import { usePortal } from '../_contexts/PortalContext';
+import { usePortal } from '@/lib/hooks/usePortal';
 
 type ReverseGeocodeData = {
   address?: {
@@ -45,7 +45,7 @@ export default function PerfilPage() {
   const [isLocating, setIsLocating] = useState(false);
   const [form, setForm] = useState(() => ({
     nombre_comercial: cliente?.nombre_comercial ?? '',
-    direccion_fiscal: cliente?.direccion ?? '',
+    direccion_fiscal: cliente?.direccion_fiscal ?? '',
   }));
 
   type PerfilApiResponse = {
@@ -80,7 +80,7 @@ export default function PerfilPage() {
 
       actualizarCliente({
         nombre_comercial: body?.data?.nombre_comercial ?? form.nombre_comercial.trim(),
-        direccion: body?.data?.direccion_fiscal ?? form.direccion_fiscal.trim(),
+        direccion_fiscal: body?.data?.direccion_fiscal ?? form.direccion_fiscal.trim(),
       });
 
       toast.success('Perfil actualizado correctamente');
@@ -212,7 +212,7 @@ export default function PerfilPage() {
                   <div className="mt-1 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 focus-within:border-slate-400 transition-colors">
                     <MapPin size={14} className="text-slate-400 mt-0.5 shrink-0" />
                     <textarea
-                      value={form.direccion_fiscal || cliente?.direccion || ''}
+                      value={form.direccion_fiscal || cliente?.direccion_fiscal || ''}
                       onChange={(e) => setForm((prev) => ({ ...prev, direccion_fiscal: e.target.value }))}
                       placeholder="Pulsa 'Usar mi ubicación actual' o escribe tu dirección actual"
                       className="min-h-[90px] w-full resize-none bg-transparent text-sm text-slate-900 outline-none"

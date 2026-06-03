@@ -42,8 +42,8 @@ export default function LoginAdminPage() {
       } else {
         throw new Error('Sin permisos');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Error inesperado');
       setLoading(false);
     }
   };

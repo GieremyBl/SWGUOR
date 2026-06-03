@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { X, Loader2, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,43 +22,52 @@ const ROLES: { value: Rol; label: string }[] = [
 // ── Password helpers ──────────────────────────────────────────
 
 interface PasswordChecks {
-  length: boolean;
+  length:    boolean;
   uppercase: boolean;
   lowercase: boolean;
-  number: boolean;
-  symbol: boolean;
+  number:    boolean;
+  symbol:    boolean;
 }
 
 function getPasswordChecks(p: string): PasswordChecks {
   return {
-    length: p.length >= 8,
+    length:    p.length >= 8,
     uppercase: /[A-Z]/.test(p),
     lowercase: /[a-z]/.test(p),
-    number: /[0-9]/.test(p),
-    symbol: /[^A-Za-z0-9]/.test(p),
+    number:    /[0-9]/.test(p),
+    symbol:    /[^A-Za-z0-9]/.test(p),
   };
 }
 
 type StrengthLevel = 'empty' | 'very-weak' | 'weak' | 'medium' | 'strong' | 'very-strong';
 
 interface StrengthInfo {
-  level: StrengthLevel;
-  label: string;
-  segmentColor: string;
-  textColor: string;
+  level:          StrengthLevel;
+  label:          string;
+  segmentColor:   string;
+  textColor:      string;
   filledSegments: number;
 }
 
 function getStrengthInfo(p: string, c: PasswordChecks): StrengthInfo {
-  if (!p) return { level: 'empty', label: '', segmentColor: 'bg-gray-200', textColor: 'text-gray-400', filledSegments: 0 };
+  if (!p) {
+    return { 
+      level: 'empty', 
+      label: '', 
+      segmentColor: 'bg-gray-200', 
+      textColor: 'text-gray-400', 
+      filledSegments: 0 
+    };
+  }
+  
   const score = Object.values(c).filter(Boolean).length;
   const map: Record<number, StrengthInfo> = {
-    0: { level: 'very-weak', label: 'Muy débil', segmentColor: 'bg-red-600', textColor: 'text-red-600', filledSegments: 1 },
-    1: { level: 'very-weak', label: 'Muy débil', segmentColor: 'bg-red-600', textColor: 'text-red-600', filledSegments: 1 },
-    2: { level: 'weak', label: 'Débil', segmentColor: 'bg-orange-500', textColor: 'text-orange-500', filledSegments: 2 },
-    3: { level: 'medium', label: 'Intermedio', segmentColor: 'bg-amber-400', textColor: 'text-amber-500', filledSegments: 3 },
-    4: { level: 'strong', label: 'Fuerte', segmentColor: 'bg-lime-500', textColor: 'text-lime-600', filledSegments: 4 },
-    5: { level: 'very-strong', label: 'Muy fuerte', segmentColor: 'bg-green-500', textColor: 'text-green-600', filledSegments: 5 },
+    0: { level: 'very-weak',   label: 'Muy débil',  segmentColor: 'bg-red-600',    textColor: 'text-red-600',    filledSegments: 1 },
+    1: { level: 'very-weak',   label: 'Muy débil',  segmentColor: 'bg-red-600',    textColor: 'text-red-600',    filledSegments: 1 },
+    2: { level: 'weak',        label: 'Débil',      segmentColor: 'bg-orange-500', textColor: 'text-orange-500', filledSegments: 2 },
+    3: { level: 'medium',      label: 'Intermedio', segmentColor: 'bg-amber-400',  textColor: 'text-amber-500',  filledSegments: 3 },
+    4: { level: 'strong',      label: 'Fuerte',     segmentColor: 'bg-lime-500',   textColor: 'text-lime-600',   filledSegments: 4 },
+    5: { level: 'very-strong', label: 'Muy fuerte', segmentColor: 'bg-green-500',  textColor: 'text-green-600',  filledSegments: 5 },
   };
   return map[score];
 }
@@ -66,10 +75,11 @@ function getStrengthInfo(p: string, c: PasswordChecks): StrengthInfo {
 function RequirementRow({ met, label }: { met: boolean; label: string }) {
   return (
     <span className={`flex items-center gap-1.5 text-[11px] font-medium transition-colors duration-200 ${met ? 'text-green-600' : 'text-gray-400'}`}>
-      {met
-        ? <Check className="w-3 h-3 text-green-500 shrink-0" />
-        : <AlertCircle className="w-3 h-3 text-gray-300  shrink-0" />
-      }
+      {met ? (
+        <Check className="w-3 h-3 text-green-500 shrink-0" />
+      ) : (
+        <AlertCircle className="w-3 h-3 text-gray-300 shrink-0" />
+      )}
       {label}
     </span>
   );
@@ -78,37 +88,50 @@ function RequirementRow({ met, label }: { met: boolean; label: string }) {
 // ── Types ─────────────────────────────────────────────────────
 
 interface FormState {
-  email: string;
+  email:    string;
   password: string;
-  rol: string;
+  rol:      string;
 }
 
 interface Props {
-  usuario: usuarios | null;
-  onClose: () => void;
+  usuario:   usuarios | null;
+  onClose:   () => void;
   onSuccess: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────
 
 export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [loading, setLoading]                 = useState<boolean>(false);
+  const [showPassword, setShowPassword]       = useState<boolean>(false);
+  const [errors, setErrors]                   = useState<Record<string, string>>({});
+  const [passwordTouched, setPasswordTouched] = useState<boolean>(false);
 
   const [form, setForm] = useState<FormState>({
-    email: usuario?.email ?? '',
+    email:    usuario?.email ?? '',
     password: '',
-    rol: usuario?.rol ?? '',
+    rol:      usuario?.rol ?? '',
   });
 
+  const isMountedRef = useRef<boolean>(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const passwordChecks = useMemo(() => getPasswordChecks(form.password), [form.password]);
-  const strengthInfo = useMemo(() => getStrengthInfo(form.password, passwordChecks), [form.password, passwordChecks]);
+  const strengthInfo   = useMemo(() => getStrengthInfo(form.password, passwordChecks), [form.password, passwordChecks]);
 
   const handleChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    setErrors((prev) => { const c = { ...prev }; delete c[field]; return c; });
+    setErrors((prev) => {
+      const c = { ...prev };
+      delete c[field];
+      return c;
+    });
     if (field === 'password') setPasswordTouched(true);
   };
 
@@ -124,11 +147,11 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props)
         newErrors.password = 'Requerido';
       } else {
         const c = getPasswordChecks(form.password);
-        if (!c.length) newErrors.password = 'Mínimo 8 caracteres';
+        if (!c.length)       newErrors.password = 'Mínimo 8 caracteres';
         else if (!c.uppercase) newErrors.password = 'Debe incluir al menos una mayúscula';
         else if (!c.lowercase) newErrors.password = 'Debe incluir al menos una minúscula';
-        else if (!c.number) newErrors.password = 'Debe incluir al menos un número';
-        else if (!c.symbol) newErrors.password = 'Debe incluir al menos un símbolo (ej: @, #, !)';
+        else if (!c.number)    newErrors.password = 'Debe incluir al menos un número';
+        else if (!c.symbol)    newErrors.password = 'Debe incluir al menos un símbolo (ej: @, #, !)';
       }
     }
 
@@ -143,30 +166,35 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props)
       if (usuario) {
         // Edición: solo rol (email y estado se gestionan por separado)
         const res = await fetch(`/api/admin/usuarios/${usuario.id}`, {
-          method: 'PATCH',
+          method:  'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rol: form.rol }),
+          body:    JSON.stringify({ rol: form.rol }),
         });
         if (!res.ok) throw new Error('Error actualizando usuario');
         toast.success('Privilegios actualizados correctamente');
       } else {
         // Creación: email + password + rol
         const res = await fetch('/api/admin/usuarios', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: form.email.trim(), password: form.password, rol: form.rol }),
+          body:    JSON.stringify({ email: form.email.trim(), password: form.password, rol: form.rol }),
         });
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body?.message ?? 'Error al crear usuario');
         toast.success('Usuario registrado en el sistema');
       }
 
-      onSuccess();
-      onClose();
-    } catch (err: any) {
-      toast.error(err.message ?? 'Error inesperado');
+      if (isMountedRef.current) {
+        onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error inesperado';
+      toast.error(message);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -263,10 +291,11 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props)
                       {[1, 2, 3, 4, 5].map((seg) => (
                         <div
                           key={seg}
-                          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${seg <= strengthInfo.filledSegments
+                          className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+                            seg <= strengthInfo.filledSegments
                               ? strengthInfo.segmentColor
                               : 'bg-gray-200'
-                            }`}
+                          }`}
                         />
                       ))}
                       <span className={`text-[11px] font-semibold ml-1 w-20 ${strengthInfo.textColor}`}>
@@ -279,12 +308,14 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props)
                       <RequirementRow met={passwordChecks.uppercase} label="Una mayúscula (A-Z)" />
                       <RequirementRow met={passwordChecks.lowercase} label="Una minúscula (a-z)" />
                       <RequirementRow met={passwordChecks.number} label="Un número (0-9)" />
-                      <RequirementRow met={passwordChecks.symbol} label="Un símbolo (@, #, !…)" />
+                      {/* FIX: Sanitización de hilos literales y elipsis para cumplir con JSX */}
+                      <RequirementRow met={passwordChecks.symbol} label={"Un símbolo (@, #, !…)"} />
                     </div>
                   </div>
                 )}
               </div>
             )}
+            
             {/* Rol */}
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -293,8 +324,9 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props)
               <select
                 value={form.rol}
                 onChange={(e) => handleChange('rol', e.target.value)}
-                className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${errors.rol ? 'border-red-400' : 'border-gray-200'
-                  }`}
+                className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 ${
+                  errors.rol ? 'border-red-400' : 'border-gray-200'
+                }`}
               >
                 <option value="">Seleccionar rol...</option>
                 {ROLES.map((r) => (
@@ -314,10 +346,16 @@ export default function UsuarioFormModal({ usuario, onClose, onSuccess }: Props)
               className="flex-1 h-11 bg-pink-600 hover:bg-pink-700 text-white"
               disabled={loading}
             >
-              {loading
-                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Guardando...</>
-                : usuario ? 'Actualizar Rol' : 'Registrar Usuario'
-              }
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Guardando...
+                </span>
+              ) : usuario ? (
+                'Actualizar Rol'
+              ) : (
+                'Registrar Usuario'
+              )}
             </Button>
           </div>
         </form>

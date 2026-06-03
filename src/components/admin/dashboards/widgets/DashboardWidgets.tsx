@@ -284,7 +284,7 @@ export function StockCriticoList({ data }: { data: StockCriticoData[] }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {data?.length === 0 ? (
           <div style={{ fontSize: 12, color: '#10b981', textAlign: 'center', padding: '12px 0' }}>
-            Todo en orden ✓
+            Todo en orden
           </div>
         ) : (
           data?.map((item, i) => {

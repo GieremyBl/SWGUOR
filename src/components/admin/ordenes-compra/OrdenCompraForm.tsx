@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Save, ArrowLeft, Plus, Trash2 } from 'lucide-react';
@@ -29,10 +29,8 @@ import { fetchProveedores } from '@/lib/helpers/proveedores-helpers';
 import { fetchMateriales } from '@/lib/helpers/materiales-helpers';
 import { fetchInsumos } from '@/lib/helpers/inventario-helpers';
 import { useOrdenesCompra } from '@/lib/hooks/useOrdenesCompra';
+import { type MaterialCatalogo } from '@/lib/schemas/material'; 
 
-// ─────────────────────────────────────────────────────────────
-// ESQUEMAS DE VALIDACIÓN CORREGIDOS
-// ─────────────────────────────────────────────────────────────
 const itemFormSchema = z.object({
   tipo: z.enum(['material', 'insumo']),
   ref_id: z.string().min(1, 'Seleccione un ítem'), 
@@ -56,6 +54,16 @@ interface Props {
   modoCotizacion?: boolean; 
 }
 
+interface ItemCatalogo {
+  id: number;
+  nombre: string;
+}
+
+interface ProveedorCatalogo {
+  id: string | number;
+  razon_social: string;
+}
+
 export function OrdenCompraForm({
   cotizacionId, 
   proveedorIdPreselect, 
@@ -65,8 +73,8 @@ export function OrdenCompraForm({
   const { crear, crearDesdeCotizacion, isCreating } = useOrdenesCompra({ enabled: false }); 
 
   const [proveedores, setProveedores] = useState<{ id: string; razon_social: string }[]>([]);
-  const [materiales, setMateriales] = useState<{ id: number; nombre: string }[]>([]);
-  const [insumos, setInsumos] = useState<{ id: number; nombre: string }[]>([]); 
+  const [materiales, setMateriales] = useState<ItemCatalogo[]>([]);
+  const [insumos, setInsumos] = useState<ItemCatalogo[]>([]); 
   const [loadingCatalogos, setLoadingCatalogos] = useState(true); 
 
   const form = useForm<FormValues>({
@@ -82,28 +90,39 @@ export function OrdenCompraForm({
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'items' });
-  const watchedItems = form.watch('items');
+  
+  const watchedItems = useWatch({
+    control: form.control,
+    name: 'items',
+    defaultValue: form.getValues('items'),
+  });
 
   useEffect(() => {
     async function load() {
       try {
         const [provRes, mats, insRes] = await Promise.all([
-          fetchProveedores(1, 200, '', 'activo'), 
-          fetchMateriales(), 
-          fetchInsumos(), 
+          fetchProveedores(1, 200, '', 'activo'),
+          fetchMateriales(),
+          fetchInsumos(),
         ]);
-        const provList = provRes.data ?? []; 
+
+        const provList = (provRes?.data as ProveedorCatalogo[]) ?? [];
         setProveedores(
-          provList.map((p: { id: string | number; razon_social: string }) => ({ 
-            id: String(p.id), 
-            razon_social: p.razon_social, 
+          provList.map((p) => ({
+            id: String(p.id),
+            razon_social: p.razon_social,
           })),
         );
-        setMateriales(mats.map((m: { id: number; nombre: string }) => ({ id: m.id, nombre: m.nombre }))); 
+
+        const materialesValidos = (mats as MaterialCatalogo[]) ?? [];
+        setMateriales(materialesValidos.map((m) => ({ id: m.id, nombre: m.nombre })));
+
+        // Adaptado de forma segura por si insRes no tuviera una interfaz definida
+        const insumosLista = (insRes as any)?.insumos ?? [];
         setInsumos(
-          (insRes.insumos ?? []).map((i: { id: number; nombre: string }) => ({ 
-            id: i.id, 
-            nombre: i.nombre, 
+          insumosLista.map((i: { id: number; nombre: string }) => ({
+            id: i.id,
+            nombre: i.nombre,
           })),
         );
       } catch {
@@ -115,8 +134,8 @@ export function OrdenCompraForm({
     load(); 
   }, []);
 
-  const subtotal = watchedItems.reduce(
-    (acc, item) => acc + (item.cantidad_pedida || 0) * (item.precio_unitario || 0), 
+  const subtotal = (watchedItems ?? []).reduce(
+    (acc, item) => acc + (item?.cantidad_pedida || 0) * (item?.precio_unitario || 0), 
     0, 
   );
 
@@ -278,7 +297,7 @@ export function OrdenCompraForm({
             </div>
 
             {fields.map((field, index) => {
-              const tipo = form.watch(`items.${index}.tipo`); 
+              const tipo = watchedItems?.[index]?.tipo ?? 'insumo'; 
               const opciones = tipo === 'material' ? materiales : insumos; 
               return (
                 <div
@@ -330,7 +349,6 @@ export function OrdenCompraForm({
                     )}
                   />
 
-                  {/* CANTIDAD CONTROLADA CONTRA NaN */}
                   <FormField
                     control={form.control} 
                     name={`items.${index}.cantidad_pedida`}
@@ -352,7 +370,6 @@ export function OrdenCompraForm({
                     )}
                   />
 
-                  {/* PRECIO UNITARIO CONTROLADO CONTRA NaN */}
                   <FormField
                     control={form.control}
                     name={`items.${index}.precio_unitario`}
@@ -401,7 +418,7 @@ export function OrdenCompraForm({
             Cancelar 
           </Button>
           <Button type="submit" disabled={isCreating} className="bg-rose-600 hover:bg-rose-700"> 
-            {isCreating ? ( 
+            {isCreating ? (
               <Loader2 className="w-4 h-4 animate-spin mr-2" /> 
             ) : (
               <Save className="w-4 h-4 mr-2" /> 

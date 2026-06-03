@@ -1,35 +1,49 @@
-import React from 'react';
-import { Zap, CheckCircle2, Clock } from 'lucide-react';
+'use client';
 
-interface StatsProps {
-  enProceso: number;
-  completadas: number;
-  promedio: number;
+import { Scissors, Zap, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import StatCard from '@/components/admin/common/StatCard';
+
+interface ConfeccionesStatsProps {
+  stats: { total: number; activas: number; urgentes: number; completadas: number };
+  statusFilter: string | null;
+  onFilterChange: (filter: string | null) => void;
 }
 
-export const ConfeccionesStats = ({ enProceso, completadas, promedio }: StatsProps) => {
+export default function ConfeccionesStats({ stats, statusFilter, onFilterChange }: ConfeccionesStatsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <KpiCard label="En Proceso" value={enProceso} icon={<Zap />} color="orange" />
-      <KpiCard label="Completadas" value={completadas} icon={<CheckCircle2 />} color="emerald" />
-      <KpiCard label="Progreso Promedio" value={`${promedio}%`} icon={<Clock />} color="blue" />
-    </div>
-  );
-};
-
-function KpiCard({ label, value, icon, color }: any) {
-  const colors: any = {
-    orange: 'bg-orange-50 text-orange-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    blue: 'bg-blue-50 text-blue-600'
-  };
-  return (
-    <div className="bg-white p-6 rounded-4xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${colors[color]}`}>
-        {React.cloneElement(icon, { size: 24 })}
-      </div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{label}</p>
-      <p className="text-3xl font-black text-slate-900 mt-1 tracking-tighter">{value}</p>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <StatCard
+        title="Total Órdenes"
+        value={stats.total}
+        icon={Scissors}
+        color="pink"
+        isActive={statusFilter === null}
+        onClick={() => onFilterChange(null)}
+      />
+      <StatCard
+        title="En Producción"
+        value={stats.activas}
+        icon={Zap}
+        color="blue"
+        isActive={statusFilter === 'activas'}
+        onClick={() => onFilterChange('activas')}
+      />
+      <StatCard
+        title="Urgentes"
+        value={stats.urgentes}
+        icon={AlertTriangle}
+        color="orange"
+        isActive={statusFilter === 'urgentes'}
+        onClick={() => onFilterChange('urgentes')}
+      />
+      <StatCard
+        title="Completadas"
+        value={stats.completadas}
+        icon={CheckCircle2}
+        color="emerald"
+        isActive={statusFilter === 'completadas'}
+        onClick={() => onFilterChange('completadas')}
+      />
     </div>
   );
 }

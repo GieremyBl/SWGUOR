@@ -45,29 +45,27 @@ function getStrengthInfo(password: string, checks: PasswordChecks): StrengthInfo
   if (!password) {
     return { score: 0, label: '', segmentColor: 'bg-gray-200', textColor: 'text-gray-400', filledSegments: 0 };
   }
-
-  const score = Object.values(checks).filter(Boolean).length; // 0-5
-
+  const score = Object.values(checks).filter(Boolean).length;
   switch (score) {
-    case 1: return { score, label: 'Muy débil', segmentColor: 'bg-red-600', textColor: 'text-red-600', filledSegments: 1 };
-    case 2: return { score, label: 'Débil', segmentColor: 'bg-orange-500', textColor: 'text-orange-500', filledSegments: 2 };
-    case 3: return { score, label: 'Intermedio', segmentColor: 'bg-amber-400', textColor: 'text-amber-500', filledSegments: 3 };
-    case 4: return { score, label: 'Fuerte', segmentColor: 'bg-lime-500', textColor: 'text-lime-600', filledSegments: 4 };
-    case 5: return { score, label: 'Muy fuerte', segmentColor: 'bg-green-500', textColor: 'text-green-600', filledSegments: 5 };
-    default: return { score, label: 'Muy débil', segmentColor: 'bg-red-600', textColor: 'text-red-600', filledSegments: 1 };
+    case 1: return { score, label: 'Muy débil',   segmentColor: 'bg-red-600',    textColor: 'text-red-600',    filledSegments: 1 };
+    case 2: return { score, label: 'Débil',        segmentColor: 'bg-orange-500', textColor: 'text-orange-500', filledSegments: 2 };
+    case 3: return { score, label: 'Intermedio',   segmentColor: 'bg-amber-400',  textColor: 'text-amber-500',  filledSegments: 3 };
+    case 4: return { score, label: 'Fuerte',       segmentColor: 'bg-lime-500',   textColor: 'text-lime-600',   filledSegments: 4 };
+    case 5: return { score, label: 'Muy fuerte',   segmentColor: 'bg-green-500',  textColor: 'text-green-600',  filledSegments: 5 };
+    default: return { score, label: 'Muy débil',   segmentColor: 'bg-red-600',    textColor: 'text-red-600',    filledSegments: 1 };
   }
 }
 
-// ─── Validation (used by parent via submit) ───────────────────────────────────
+// ─── Validation ───────────────────────────────────────────────────────────────
 
 export const validatePassword = (password: string): { valid: boolean; errors: string[] } => {
   const checks = getPasswordChecks(password);
   const errors: string[] = [];
-  if (!checks.length) errors.push('Mínimo 8 caracteres');
+  if (!checks.length)    errors.push('Mínimo 8 caracteres');
   if (!checks.uppercase) errors.push('Al menos una mayúscula');
   if (!checks.lowercase) errors.push('Al menos una minúscula');
-  if (!checks.number) errors.push('Al menos un número');
-  if (!checks.symbol) errors.push('Al menos un símbolo especial (!@#$%^&* etc)');
+  if (!checks.number)    errors.push('Al menos un número');
+  if (!checks.symbol)    errors.push('Al menos un símbolo especial (!@#$%^&* etc)');
   return { valid: errors.length === 0, errors };
 };
 
@@ -88,32 +86,30 @@ function RequirementRow({ met, label }: { met: boolean; label: string }) {
 // ─── Strength block ───────────────────────────────────────────────────────────
 
 function PasswordStrength({ password }: { password: string }) {
-  const checks = useMemo(() => getPasswordChecks(password), [password]);
+  const checks   = useMemo(() => getPasswordChecks(password), [password]);
   const strength = useMemo(() => getStrengthInfo(password, checks), [password, checks]);
 
   return (
     <div className="mt-3 space-y-2.5 p-3 bg-gray-50 rounded-lg">
-      {/* Bar */}
       <div className="flex items-center gap-1.5">
         {[1, 2, 3, 4, 5].map((seg) => (
           <div
             key={seg}
-            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${seg <= strength.filledSegments ? strength.segmentColor : 'bg-gray-200'
-              }`}
+            className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
+              seg <= strength.filledSegments ? strength.segmentColor : 'bg-gray-200'
+            }`}
           />
         ))}
         <span className={`text-[11px] font-semibold ml-1 w-20 shrink-0 ${strength.textColor}`}>
           {strength.label}
         </span>
       </div>
-
-      {/* Checklist */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-0.5">
-        <RequirementRow met={checks.length} label="Mínimo 8 caracteres" />
+        <RequirementRow met={checks.length}    label="Mínimo 8 caracteres" />
         <RequirementRow met={checks.uppercase} label="Una mayúscula (A-Z)" />
         <RequirementRow met={checks.lowercase} label="Una minúscula (a-z)" />
-        <RequirementRow met={checks.number} label="Un número (0-9)" />
-        <RequirementRow met={checks.symbol} label="Un símbolo (@, #, !…)" />
+        <RequirementRow met={checks.number}    label="Un número (0-9)" />
+        <RequirementRow met={checks.symbol}    label="Un símbolo (@, #, !…)" />
       </div>
     </div>
   );
@@ -198,8 +194,6 @@ export function PasswordForm({ state, dispatch, isSaving, onSubmit }: PasswordFo
                   {state.showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-
-              {/* Strength bar + checklist */}
               {state.newPassword && <PasswordStrength password={state.newPassword} />}
             </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getSupabaseImageUrl } from '@/lib/utils/supabase-image-utils';
 
 /**

@@ -21,7 +21,9 @@ export async function createCotizacion(
   data: Omit<CreateCotizacionInput, 'empresa' | 'contacto' | 'tipo_destino' |
     'vendedor' | 'tipo_venta' | 'unidad_negocio' | 'forma_pago' | 'metodo' |
     'direccion_entrega' | 'direccion_factura' | 'condicion_entrega' |
-    'tiempo_entrega' | 'idioma' | 'referencia' | 'probabilidad' | 'fecha_cierre'>
+    'tiempo_entrega' | 'idioma' | 'referencia' | 'probabilidad' | 'fecha_cierre'> & {
+    estado_inicial?: 'borrador' | 'enviada';
+  }
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   const res = await fetch(API, {
     method:  'POST',
@@ -45,11 +47,13 @@ export async function actualizarEstadoCotizacion(
 }
 
 export async function aprobarCotizacion(
-  id: string
+  id: string,
+  items?: { item_id: number; precio_unitario: number }[],
 ): Promise<{ success: boolean; pedidoId?: number; error?: string }> {
   const res = await fetch(`${API}/${id}/aprobar`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(items?.length ? { items } : {}),
   });
   return res.json();
 }

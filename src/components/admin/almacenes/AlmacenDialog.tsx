@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { z } from 'zod';
 import { crearAlmacenSchema, type CrearAlmacen as AlmacenInput } from '@/lib/schemas/almacenes';
+import type { Almacen } from '@/components/admin/almacenes/AlmacenesTable';
 
 interface AlmacenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: AlmacenInput) => void;
-  almacen?: any;
+  almacen?: Almacen | null;
 }
 
 export default function AlmacenDialog({

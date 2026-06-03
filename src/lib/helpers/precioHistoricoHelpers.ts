@@ -2,6 +2,9 @@ import { PrecioHistorico } from '@/lib/schemas/precio-historico';
 
 const baseUrl = '/api/admin/precio-historico';
 
+export type CreatePrecioHistoricoInput = Omit<PrecioHistorico, 'id' | 'fechaCreacion'> & Record<string, unknown>;
+export type UpdatePrecioHistoricoInput = Partial<PrecioHistorico> & Record<string, unknown>;
+
 export async function fetchPrecioHistorico(productoId?: string): Promise<PrecioHistorico[]> {
   const url = productoId ? `${baseUrl}?producto_id=${encodeURIComponent(productoId)}` : baseUrl;
   const response = await fetch(url);
@@ -10,7 +13,7 @@ export async function fetchPrecioHistorico(productoId?: string): Promise<PrecioH
   return payload.data ?? payload;
 }
 
-export async function createPrecioHistorico(data: any) {
+export async function createPrecioHistorico(data: CreatePrecioHistoricoInput): Promise<Record<string, unknown>> {
   const response = await fetch(baseUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -20,7 +23,7 @@ export async function createPrecioHistorico(data: any) {
   return response.json();
 }
 
-export async function updatePrecioHistorico(id: string, data: any) {
+export async function updatePrecioHistorico(id: string, data: UpdatePrecioHistoricoInput): Promise<Record<string, unknown>> {
   const response = await fetch(`${baseUrl}/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -30,7 +33,7 @@ export async function updatePrecioHistorico(id: string, data: any) {
   return response.json();
 }
 
-export async function deletePrecioHistorico(id: string) {
+export async function deletePrecioHistorico(id: string): Promise<Record<string, unknown>> {
   const response = await fetch(`${baseUrl}/${id}`, {
     method: 'DELETE',
   });
@@ -50,13 +53,17 @@ export const precioHistoricoHelpers = {
     return precios.reduce((sum, p) => sum + p.precioNuevo, 0) / precios.length;
   },
 
-  obtenerPrecioMaximo: (precios: PrecioHistorico[]): PrecioHistorico | undefined =>
-    precios.reduce((prev, curr) => (curr.precioNuevo > prev.precioNuevo ? curr : prev)),
+  obtenerPrecioMaximo: (precios: PrecioHistorico[]): PrecioHistorico | undefined => {
+    if (precios.length === 0) return undefined;
+    return precios.reduce((prev, curr) => (curr.precioNuevo > prev.precioNuevo ? curr : prev));
+  },
 
-  obtenerPrecioMinimo: (precios: PrecioHistorico[]): PrecioHistorico | undefined =>
-    precios.reduce((prev, curr) => (curr.precioNuevo < prev.precioNuevo ? curr : prev)),
+  obtenerPrecioMinimo: (precios: PrecioHistorico[]): PrecioHistorico | undefined => {
+    if (precios.length === 0) return undefined;
+    return precios.reduce((prev, curr) => (curr.precioNuevo < prev.precioNuevo ? curr : prev));
+  },
 
-  agruparPorRazon: (precios: PrecioHistorico[]) =>
+  agruparPorRazon: (precios: PrecioHistorico[]): Record<string, PrecioHistorico[]> =>
     precios.reduce((acc, curr) => {
       if (!acc[curr.razonCambio]) acc[curr.razonCambio] = [];
       acc[curr.razonCambio].push(curr);
@@ -73,7 +80,8 @@ export const precioHistoricoHelpers = {
   },
 
   formatearPrecio: (precio: number, moneda: string = 'PEN'): string => {
-    const simbolo = { PEN: 'S/', USD: '$', EUR: '€' }[moneda] || moneda;
-    return `${simbolo} ${precio.toFixed(2)}`;
+    const simbolo: Record<string, string> = { PEN: 'S/', USD: '$', EUR: '€' };
+    const prefijo = simbolo[moneda] || moneda;
+    return `${prefijo} ${precio.toFixed(2)}`;
   },
 };

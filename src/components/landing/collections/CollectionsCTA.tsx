@@ -5,36 +5,36 @@ import { ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 function useScrollReveal(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const textRef = useRef<HTMLDivElement>(null);
+  const [textVisible, setTextVisible] = useState(false);
   useEffect(() => {
-    const el = ref.current;
+    const el = textRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      ([e]) => { if (e.isIntersecting) { setTextVisible(true); obs.disconnect(); } },
       { threshold }
     );
     obs.observe(el);
     return () => obs.disconnect();
   }, [threshold]);
-  return { ref, visible };
+  return { ref: textRef, visible: textVisible };
 }
 
 const CollectionsCTA = () => {
-  const s = useScrollReveal();
+  const { ref, visible } = useScrollReveal();
 
   return (
     <section style={{ background: "#0a0806", padding: "4rem 2rem 8rem" }}>
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <div
-          ref={s.ref}
+          ref={ref}
           style={{
             borderRadius: "40px", padding: "6rem 4rem", textAlign: "center",
             background: "linear-gradient(135deg,#1a1410 0%,#2a1e10 50%,#1a1410 100%)",
             border: "1px solid rgba(196,163,90,0.2)",
             position: "relative", overflow: "hidden",
-            opacity: s.visible ? 1 : 0,
-            transform: s.visible ? "translateY(0)" : "translateY(40px)",
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(40px)",
             transition: "all 0.9s ease",
             boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
           }}

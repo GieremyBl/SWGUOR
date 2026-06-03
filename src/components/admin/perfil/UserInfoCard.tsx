@@ -1,7 +1,8 @@
 'use client';
 
+import Image from "next/image";
 import { User, Mail, Phone, Shield, CheckCircle2, Calendar } from "lucide-react";
-import type { usuarios} from "@prisma/client";
+import type { usuarios } from "@prisma/client";
 
 interface UserInfoCardProps {
   usuario: usuarios;
@@ -17,7 +18,21 @@ export function UserInfoCard({
   nombreCompleto,
   email,
   telefono,
-}: UserInfoCardProps): import("react/jsx-runtime").JSX.Element {
+}: UserInfoCardProps) {
+  
+  // Helper dinámico para cambiar el color del badge según el estado real en base de datos
+  const getEstadoStyles = (estado: string | null) => {
+    switch (estado?.toLowerCase()) {
+      case 'activo':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'suspendido':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'inactivo':
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   return (
     <div className="lg:col-span-1">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -26,12 +41,15 @@ export function UserInfoCard({
         <div className="relative px-6 pb-6">
           {/* Avatar */}
           <div className="flex flex-col items-center -mt-12 mb-6">
-            <div className="relative group">
+            <div className="relative group w-24 h-24">
               {avatarUrl ? (
-                <img
+                <Image
                   src={avatarUrl}
-                  alt="Avatar"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                  alt={`Avatar de ${nombreCompleto}`}
+                  fill
+                  sizes="96px"
+                  priority
+                  className="rounded-full object-cover border-4 border-white shadow-lg"
                 />
               ) : (
                 <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
@@ -71,8 +89,8 @@ export function UserInfoCard({
               <CheckCircle2 className="w-5 h-5 text-gray-400" />
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Estado</p>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 capitalize">
-                  {usuario.estado}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getEstadoStyles(usuario.estado)} capitalize`}>
+                  {usuario.estado ?? 'Desconocido'}
                 </span>
               </div>
             </div>

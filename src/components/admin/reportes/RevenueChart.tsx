@@ -10,13 +10,22 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
+import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+
+// Estructura estricta para los puntos de rendimiento financiero
+export interface RevenueItem {
+  fecha: string;
+  ventas: number;
+}
 
 interface RevenueChartProps {
-  data: any[];
+  data: RevenueItem[];
   totalPeriodo: number;
   formatCurrency: (val: number) => string;
   isMounted: boolean;
-  CustomTooltip: React.ComponentType<any>;
+  // Tipado exacto y seguro para el componente Tooltip personalizado de Recharts
+  CustomTooltip: React.ComponentType<TooltipProps<ValueType, NameType>>;
 }
 
 export default function RevenueChart({
@@ -29,17 +38,17 @@ export default function RevenueChart({
   return (
     <Card className="border border-border shadow-sm rounded-[2rem] bg-card overflow-hidden">
       <CardHeader className="p-6 pb-2">
-        <div className="flex justify-between items-end">
-          <div>
+        <div className="flex justify-between items-end gap-4">
+          <div className="min-w-0">
             <CardTitle className="text-base font-bold text-foreground tracking-tight">
               Rendimiento Financiero
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
               Historial acumulado de operaciones reales
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-black text-foreground tracking-tight">
+          <div className="text-right shrink-0">
+            <p className="text-2xl font-black text-foreground tracking-tight break-all">
               {formatCurrency(totalPeriodo)}
             </p>
             <p className="text-[9px] font-bold text-rose-500 uppercase tracking-widest mt-1">
@@ -50,14 +59,13 @@ export default function RevenueChart({
       </CardHeader>
 
       <CardContent className="p-6 h-[340px]">
-        {isMounted && (
+        {isMounted && data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
-                {/* Gradiente rose en lugar de indigo */}
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#e11d48" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#e11d48" stopOpacity={0}    />
+                  <stop offset="5%" stopColor="#e11d48" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#e11d48" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -76,7 +84,8 @@ export default function RevenueChart({
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))', fontWeight: 500 }}
-                tickFormatter={(v) => `S/${(v / 1000).toFixed(0)}k`}
+                tickFormatter={(v: number) => `S/${(v / 1000).toFixed(0)}k`}
+                width={45}
               />
               <Tooltip
                 content={<CustomTooltip />}
@@ -94,6 +103,10 @@ export default function RevenueChart({
               />
             </AreaChart>
           </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground/50 border border-dashed rounded-2xl">
+            <p className="font-medium text-xs">Sin información financiera en el periodo seleccionado</p>
+          </div>
         )}
       </CardContent>
     </Card>

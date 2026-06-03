@@ -12,7 +12,7 @@ const routePermissions: Record<string, string[]> = {
   '/admin/Panel-Administrativo/inventario': ['administrador', 'disenador', 'gerente', 'cortador', 'ayudante', 'representante_taller', 'almacenero'],
   '/admin/Panel-Administrativo/movimientos': ['administrador', 'gerente', 'disenador', 'cortador', 'ayudante', 'representante_taller', 'almacenero'],
   '/admin/Panel-Administrativo/ordenes-produccion': ['administrador', 'gerente', 'disenador', 'cortador', 'representante_taller', 'ayudante'],
-  '/admin/Panel-Administrativo/confecciones': ['administrador', 'representante_taller', 'gerente', 'almacenero'],
+  '/admin/Panel-Administrativo/confecciones': ['administrador', 'representante_taller', 'gerente', 'almacenero', 'ayudante'],
   '/admin/Panel-Administrativo/cotizaciones': ['administrador', 'recepcionista', 'gerente'],
   '/admin/Panel-Administrativo/categorias': ['administrador', 'disenador', 'gerente'],
   '/admin/Panel-Administrativo/talleres': ['administrador', 'gerente', 'representante_taller', 'almacenero'],
@@ -25,11 +25,15 @@ const routePermissions: Record<string, string[]> = {
   '/admin/Panel-Administrativo/incidencias-taller': ['administrador', 'gerente', 'representante_taller', 'almacenero'],
   '/admin/Panel-Administrativo/incidencias-clientes': ['administrador', 'gerente', 'representante_taller', 'almacenero'],
   '/portal/dashboard': ['cliente'],
+  '/disenador/pedidos': ['disenador', 'administrador', 'gerente'],
+  '/cortador/pedidos': ['cortador', 'administrador', 'gerente'],
+  '/representante/ordenes': ['representante_taller', 'administrador', 'gerente'],
+  '/ayudante/confecciones': ['ayudante', 'administrador', 'gerente'],
 };
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   // 1. RUTAS PÚBLICAS
   const publicPaths = ['/auth/login', '/auth/signup', '/admin/acceso-denegado'];
@@ -109,5 +113,9 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/portal/:path*',
+    '/disenador/:path*',
+    '/cortador/:path*',
+    '/representante/:path*',
+    '/ayudante/:path*',
   ],
 };

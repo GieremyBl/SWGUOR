@@ -1,59 +1,87 @@
 'use client';
 
-import { Clock3, CheckCircle2, Truck, AlertCircle } from 'lucide-react';
-import type { DespachoFlat } from '@/lib/services/despachos.service';
+import { Clock3, CheckCircle2, Truck, AlertCircle, CalendarRange } from 'lucide-react';
+import type { DespachoPortal } from '../_contexts/PortalContext';
 import { formatFecha } from '@/lib/helpers/despachos-helpers';
 
 interface EtaWidgetProps {
-  despacho: DespachoFlat;
+  despacho: DespachoPortal;
 }
 
 export default function EtaWidget({ despacho }: EtaWidgetProps) {
-  const { estado, ultimo_estado, fecha_entrega } = despacho;
+  const { estado, fecha_entrega, historial_grupo } = despacho;
 
-  // Mensaje según estado
-  const config: Record<string, { icon: React.ReactNode; mensaje: string; color: string }> = {
+  // 1. Obtener de manera dinámica el último hito registrado en la línea de tiempo
+  const ultimoHito = historial_grupo && historial_grupo.length > 0
+    ? historial_grupo[historial_grupo.length - 1]
+    : null;
+
+  // 2. Configuración de mensajes, iconos y estilos según el ENUM de EstadoDespacho
+  const config: Record<string, { icon: React.ReactNode; mensaje: string; color: string; textStyle: string }> = {
     pendiente: {
-      icon: <Clock3 className="w-4 h-4 text-[#8A7676]" />,
-      mensaje: 'Pendiente de preparación — en almacén.',
-      color: 'bg-[#F5EBEB] border-[#E7D7D7]',
+      icon: <Clock3 className="w-4 h-4 text-slate-400" />,
+      mensaje: 'Pendiente de preparación — El lote se encuentra en almacén central.',
+      color: 'bg-slate-50 border-slate-200/60',
+      textStyle: 'text-slate-600',
     },
-    preparando: {
+    programado: {
+      icon: <CalendarRange className="w-4 h-4 text-[#B8962D]" />,
+      mensaje: 'Despacho programado — Asignando bloque horario de transporte.',
+      color: 'bg-amber-50/40 border-amber-200/40',
+      textStyle: 'text-slate-700',
+    },
+    en_almacen: {
       icon: <Clock3 className="w-4 h-4 text-[#B8962D]" />,
-      mensaje: 'En preparación — próximamente en ruta.',
-      color: 'bg-[#FDF6E3] border-[#D4AF37]/30',
+      mensaje: 'En zona de carga — Pasando controles de empaquetado final.',
+      color: 'bg-amber-50/40 border-amber-200/40',
+      textStyle: 'text-slate-700',
     },
     en_ruta: {
-      icon: <Truck className="w-4 h-4 text-[#4A3737]" />,
-      mensaje: `En camino — entrega estimada ${formatFecha(fecha_entrega)}.`,
-      color: 'bg-[#FDF6E3] border-[#D4AF37]/30',
+      icon: <Truck className="w-4 h-4 text-[#B8962D] animate-pulse" />,
+      mensaje: `En tránsito — Destino en camino. Entrega estimada: ${fecha_entrega ? formatFecha(fecha_entrega) : 'Por confirmar'}.`,
+      color: 'bg-amber-50/60 border-amber-200/50',
+      textStyle: 'text-slate-800 font-medium',
     },
     entregado: {
       icon: <CheckCircle2 className="w-4 h-4 text-emerald-600" />,
-      mensaje: `Entregado el ${formatFecha(fecha_entrega)}.`,
-      color: 'bg-emerald-50 border-emerald-100',
+      mensaje: `Lote entregado de manera conforme${fecha_entrega ? ` el ${formatFecha(fecha_entrega)}` : ''}.`,
+      color: 'bg-emerald-50/50 border-emerald-100',
+      textStyle: 'text-emerald-800',
     },
     incidencia: {
-      icon: <AlertCircle className="w-4 h-4 text-red-500" />,
-      mensaje: 'Incidencia registrada — contacta a soporte.',
-      color: 'bg-red-50 border-red-100',
+      icon: <AlertCircle className="w-4 h-4 text-rose-600" />,
+      mensaje: 'Incidencia en ruta registrada — El equipo de operaciones está gestionando el caso.',
+      color: 'bg-rose-50/60 border-rose-100',
+      textStyle: 'text-rose-900 font-semibold',
     },
   };
 
-  const current = config[estado] ?? config.pendiente;
+  // Fallback por si llega un estado imprevisto del backend
+  const current = config[estado] ?? {
+    icon: <Clock3 className="w-4 h-4 text-slate-400" />,
+    mensaje: `Estado actual: ${estado.replace('_', ' ')}.`,
+    color: 'bg-slate-50 border-slate-200',
+    textStyle: 'text-slate-600',
+  };
 
   return (
-    <div className={`flex flex-col gap-2 border rounded-xl px-4 py-3 ${current.color}`}>
-      <div className="flex items-center gap-2">
-        {current.icon}
-        <p className="text-xs text-[#6D5A5A]">{current.mensaje}</p>
+    <div className={`flex flex-col gap-2 border rounded-xl px-4 py-3.5 shadow-2xs transition-colors duration-300 ${current.color}`}>
+      <div className="flex items-start gap-2.5">
+        <div className="mt-0.5 flex-shrink-0">
+          {current.icon}
+        </div>
+        <p className={`text-xs leading-relaxed ${current.textStyle}`}>
+          {current.mensaje}
+        </p>
       </div>
 
-      {/* Última nota de seguimiento */}
-      {ultimo_estado?.notas && (
-        <p className="text-[11px] text-[#9A8080] italic pl-6">
-          "{ultimo_estado.notas}"
-        </p>
+      {/* 3. Renderizado de la última nota extraída de tu tabla 'seguimiento_despachos' */}
+      {ultimoHito?.notas && (
+        <div className="pl-6 border-l border-slate-200/80 ml-2 mt-1">
+          <p className="text-[11px] text-slate-500 font-medium italic leading-normal">
+            Última actualización: "{ultimoHito.notas}"
+          </p>
+        </div>
       )}
     </div>
   );

@@ -54,7 +54,7 @@ export const ETAPA_LABELS: Record<typeof ETAPAS_PRODUCCION[number], string> = {
   listo_entrega: "Listo para Entrega",
 };
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

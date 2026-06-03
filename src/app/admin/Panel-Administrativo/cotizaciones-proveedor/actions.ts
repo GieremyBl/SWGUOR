@@ -10,7 +10,7 @@ import {
 import { proveedorSchema } from '@/lib/schemas/proveedor';
 import { cotizacionesProveedorService } from '@/lib/services/cotizaciones-proveedor.service';
 import type { CotizacionExtraccionIA } from '@/lib/schemas/cotizacion-extraccion-ia';
-import { cotizacionExtraccionIASchema } from '@/lib/schemas/cotizacion-extraccion-ia';
+import { cotizacionExtraccionIaSchema } from '@/lib/schemas/cotizacion-extraccion-ia';
 import {
   buscarProveedoresSimilares,
   crearProveedorDesdeExtraccion,
@@ -32,7 +32,7 @@ export async function resolverProveedorExtraccionAction(payload: unknown) {
     return { success: false as const, error: auth.error };
   }
 
-  const parsed = cotizacionExtraccionIASchema.safeParse(payload);
+  const parsed = cotizacionExtraccionIaSchema.safeParse(payload);
   if (!parsed.success) {
     return { success: false as const, error: 'Extracción inválida' };
   }

@@ -10,7 +10,7 @@ interface EstadoBadgeProps {
 }
 
 export function EstadoBadge({ estado, tipo, className }: EstadoBadgeProps) {
-  const info = getEstadoInfo(estado, tipo as any);
+  const info = getEstadoInfo(estado, tipo);
 
   // Mapeo manual de colores de bordes basados en el bgColor
   const borderStyles: Record<string, string> = {

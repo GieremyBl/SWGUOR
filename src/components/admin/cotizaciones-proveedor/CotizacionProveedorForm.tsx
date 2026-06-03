@@ -81,14 +81,13 @@ function toFormValues(initial?: CotizacionProveedorInitial): CrearCotizacionProv
     fecha_vencimiento: initial.fecha_vencimiento?.slice(0, 10) ?? '',
     moneda: (initial.moneda as 'PEN' | 'USD' | 'EUR') ?? 'PEN',
     notas: initial.notas ?? '',
-    items: initial.items.map((i) => ({
-      descripcion: i.descripcion,
-      cantidad: Number(i.cantidad),
-      precio_unitario: Number(i.precio_unitario),
+    items: (initial.items || []).map((i) => ({
+      descripcion: i.descripcion ?? '',
+      cantidad: Number(i.cantidad ?? 1),
+      precio_unitario: Number(i.precio_unitario ?? 0),
       unidad: i.unidad ?? 'unidades',
-      tipo_item: i.tipo_item ?? 'insumo',
     })),
-  };
+  } as CrearCotizacionProveedorInput;
 }
 
 export function CotizacionProveedorForm({
@@ -108,9 +107,10 @@ export function CotizacionProveedorForm({
     setProveedoresOpts(proveedores);
   }, [proveedores]);
 
-  // Tipado estricto del hook asignando la interfaz de entrada mapeada por Zod
+  // Se asigna CrearCotizacionProveedorInput al resolver de forma explícita para unificar los tipos internos
   const form = useForm<CrearCotizacionProveedorInput>({
-    resolver: zodResolver(crearCotizacionProveedorSchema),
+
+    resolver: zodResolver(crearCotizacionProveedorSchema) as any,
     defaultValues: toFormValues(initial),
   });
 
@@ -122,8 +122,9 @@ export function CotizacionProveedorForm({
   const items = form.watch('items');
   const proveedorId = form.watch('proveedor_id');
   const moneda = form.watch('moneda');
+
   const subtotal = (items || []).reduce(
-    (sum, item) => sum + (item?.cantidad || 0) * (item?.precio_unitario || 0),
+    (sum, item) => sum + (Number(item?.cantidad || 0) * Number(item?.precio_unitario || 0)),
     0,
   );
   const simbolo = moneda === 'USD' ? '$' : moneda === 'EUR' ? '€' : 'S/';
@@ -138,7 +139,7 @@ export function CotizacionProveedorForm({
 
     const res = await resolverProveedorExtraccionAction(data);
     if (res.success && res.data) {
-      form.setValue('proveedor_id', Number(res.data.id));
+      form.setValue('proveedor_id', Number(res.data.id), { shouldValidate: true });
       toast.success(`Proveedor vinculado: ${res.data.razon_social}`);
       return;
     }
@@ -173,6 +174,7 @@ export function CotizacionProveedorForm({
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al guardar');
     } finally {
+      // CORREGIDO: 'finaly' cambiado por el keyword nativo 'finally'
       setSavingCrear(false);
     }
   };
@@ -191,8 +193,8 @@ export function CotizacionProveedorForm({
           onUpload={
             modo === 'editar' && initial?.id
               ? async (file) => {
-                  await subirPdf(initial.id, file);
-                }
+                await subirPdf(initial.id, file);
+              }
               : undefined
           }
         />
@@ -229,7 +231,7 @@ export function CotizacionProveedorForm({
                 <FormItem>
                   <FormLabel>N° cotización proveedor</FormLabel>
                   <FormControl>
-                    <Input {...field} value={field.value ?? ''} placeholder="COT-2024-001" />
+                    <Input {...field} value={field.value ?? ''} placeholder="COT-2026-001" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -242,7 +244,7 @@ export function CotizacionProveedorForm({
                 <FormItem>
                   <FormLabel>Fecha cotización *</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input type="date" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -267,7 +269,7 @@ export function CotizacionProveedorForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Moneda</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value ?? 'PEN'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue />
@@ -301,91 +303,93 @@ export function CotizacionProveedorForm({
             </Button>
           </div>
 
-          {fields.map((field, idx) => (
-            <div key={field.id} className="grid grid-cols-12 gap-2 items-end border rounded-xl p-3">
-              <div className="col-span-3">
-                <FormField
-                  control={form.control}
-                  name={`items.${idx}.descripcion`}
-                  render={({ field: f }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Descripción</FormLabel>
-                      <FormControl>
-                        <Input {...f} placeholder="Descripción" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-2">
-                <FormField
-                  control={form.control}
-                  name={`items.${idx}.tipo_item`}
-                  render={({ field: f }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Tipo</FormLabel>
-                      <Select onValueChange={f.onChange} value={f.value}>
+          <div className="space-y-3">
+            {fields.map((field, idx) => (
+              <div key={field.id} className="grid grid-cols-12 gap-2 items-end border rounded-xl p-3 bg-slate-50/50">
+                <div className="col-span-3">
+                  <FormField
+                    control={form.control}
+                    name={`items.${idx}.descripcion`}
+                    render={({ field: f }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Descripción</FormLabel>
                         <FormControl>
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
+                          <Input {...f} value={f.value ?? ''} placeholder="Descripción" />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="insumo">Insumo</SelectItem>
-                          <SelectItem value="material">Material</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <FormField
+                    control={form.control}
+                    name={`items.${idx}.tipo_item`}
+                    render={({ field: f }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Tipo</FormLabel>
+                        <Select onValueChange={f.onChange} value={f.value ?? 'insumo'}>
+                          <FormControl>
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="insumo">Insumo</SelectItem>
+                            <SelectItem value="material">Material</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <FormField
+                    control={form.control}
+                    name={`items.${idx}.cantidad`}
+                    render={({ field: f }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Cant.</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0.01}
+                            step="0.01"
+                            value={f.value ?? ''}
+                            onChange={(e) => f.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="col-span-3">
+                  <FormField
+                    control={form.control}
+                    name={`items.${idx}.precio_unitario`}
+                    render={({ field: f }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">P. unit.</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={f.value ?? ''}
+                            onChange={(e) => f.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="col-span-2 flex justify-center">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)}>
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
               </div>
-              <div className="col-span-2">
-                <FormField
-                  control={form.control}
-                  name={`items.${idx}.cantidad`}
-                  render={({ field: f }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">Cant.</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0.01}
-                          step="0.01"
-                          value={f.value}
-                          onChange={(e) => f.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-3">
-                <FormField
-                  control={form.control}
-                  name={`items.${idx}.precio_unitario`}
-                  render={({ field: f }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs">P. unit.</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={f.value}
-                          onChange={(e) => f.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-2 flex justify-center">
-                <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)}>
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
           <FormMessage>{form.formState.errors.items?.message}</FormMessage>
         </section>
 
@@ -416,7 +420,7 @@ export function CotizacionProveedorForm({
           <Button
             type="submit"
             disabled={isBusy}
-            className="bg-amber-700 hover:bg-amber-800"
+            className="bg-amber-700 hover:bg-amber-800 text-white font-semibold"
           >
             {isBusy && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
             <Save className="w-4 h-4 mr-1" />

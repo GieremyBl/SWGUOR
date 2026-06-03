@@ -2,38 +2,34 @@
 
 import { useEffect, useRef, useState } from "react";
 
-function useScrollReveal(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+const CollectionsBanner = () => {
+  const sRef = useRef<HTMLDivElement>(null);
+  const [sVisible, setSVisible] = useState(false);
+
   useEffect(() => {
-    const el = ref.current;
+    const el = sRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
+      ([e]) => { if (e.isIntersecting) { setSVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
-const CollectionsBanner = () => {
-  const s = useScrollReveal();
+  }, []);
 
   return (
     <section style={{ background: "#0f0d0b", padding: "6rem 2rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div
-          ref={s.ref}
+          ref={sRef}
           style={{
             position: "relative", borderRadius: "40px", overflow: "hidden",
             minHeight: "700px", display: "flex", alignItems: "center",
             border: "1px solid rgba(196,163,90,0.2)",
             backgroundImage: "url('/fotoColeccion2.jpg')",
             backgroundSize: "cover", backgroundPosition: "center",
-            opacity: s.visible ? 1 : 0,
-            transform: s.visible ? "translateY(0) scale(1)" : "translateY(40px) scale(0.98)",
+            opacity: sVisible ? 1 : 0,
+            transform: sVisible ? "translateY(0) scale(1)" : "translateY(40px) scale(0.98)",
             transition: "all 1s ease",
             boxShadow: "0 40px 80px rgba(0,0,0,0.6)",
             willChange: "transform",

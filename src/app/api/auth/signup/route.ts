@@ -1,3 +1,4 @@
+import { EstadoCliente } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
@@ -86,8 +87,8 @@ export async function POST(request: Request) {
         email,
         telefono: telefono ?? null,
         direccion_fiscal: direccion ?? null,
-        tipo_cliente: (tipo_cliente ?? 'corporativo') as any,
-        activo: 'activo' as any,
+        tipo_cliente: (tipo_cliente ?? 'corporativo'),
+        estado: EstadoCliente.activo,
       })
       .select('id')
       .single();

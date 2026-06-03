@@ -13,10 +13,11 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { exportToExcel, exportToPDF } from "@/lib/utils/export-utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-
-const TalleresTable      = dynamic(() => import("@/components/admin/talleres/TalleresTable"));
 import TallerFormModal from "@/components/admin/talleres/TallerFormModal";
 import { TallerDetailModal, TallerSuspendModal } from "@/components/admin/talleres/TallerModals";
+import StatCard from '@/components/admin/common/StatCard';
+
+const TalleresTable      = dynamic(() => import("@/components/admin/talleres/TalleresTable"));
 const TallerSkeleton     = dynamic(() => import("@/components/admin/talleres/TallerSkeleton"));
 
 type DialogMode = "create" | "edit" | "view" | "delete" | null;
@@ -189,10 +190,10 @@ export default function TalleresPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="TOTAL"       value={stats.total}       icon={<Factory />}       isActive={statusFilter === "todos"}      color="pink"  onClick={() => { setStatusFilter("todos"); setCurrentPage(0); }} />
-          <StatCard title="ACTIVOS"     value={stats.activos}     icon={<CheckCircle />}   isActive={statusFilter === "activo"}     color="green" onClick={() => { setStatusFilter("activo"); setCurrentPage(0); }} />
-          <StatCard title="INACTIVOS"   value={stats.inactivos}   icon={<XCircle />}       isActive={statusFilter === "inactivo"}   color="gray"  onClick={() => { setStatusFilter("inactivo"); setCurrentPage(0); }} />
-          <StatCard title="SUSPENDIDOS" value={stats.suspendidos} icon={<AlertTriangle />} isActive={statusFilter === "suspendido"} color="red"   onClick={() => { setStatusFilter("suspendido"); setCurrentPage(0); }} />
+          <StatCard title="TOTAL"       value={stats.total}       icon={Factory}     isActive={statusFilter === "todos"}      color="pink"  onClick={() => { setStatusFilter("todos"); setCurrentPage(0); }} />
+          <StatCard title="ACTIVOS"     value={stats.activos}     icon={CheckCircle}   isActive={statusFilter === "activo"}     color="emerald" onClick={() => { setStatusFilter("activo"); setCurrentPage(0); }} />
+          <StatCard title="INACTIVOS"   value={stats.inactivos}   icon={XCircle}       isActive={statusFilter === "inactivo"}   color="slate"  onClick={() => { setStatusFilter("inactivo"); setCurrentPage(0); }} />
+          <StatCard title="SUSPENDIDOS" value={stats.suspendidos} icon={AlertTriangle} isActive={statusFilter === "suspendido"} color="amber"   onClick={() => { setStatusFilter("suspendido"); setCurrentPage(0); }} />
         </div>
 
         {/* Búsqueda */}
@@ -297,26 +298,5 @@ function LoadingTalleres() {
       <div className="h-16 w-16 rounded-full border-4 border-pink-100 border-t-pink-600 animate-spin" />
       <p className="text-xs font-black text-gray-400 uppercase tracking-widest animate-pulse">Cargando talleres...</p>
     </div>
-  );
-}
-
-function StatCard({ title, value, icon, isActive, color, onClick }: any) {
-  const styles: any = {
-    pink:  { active: "border-pink-500 ring-pink-50 bg-white",  iconActive: "bg-pink-600 text-white",  textActive: "text-pink-600"  },
-    green: { active: "border-green-500 ring-green-50 bg-white", iconActive: "bg-green-600 text-white", textActive: "text-green-600" },
-    gray:  { active: "border-gray-500 ring-gray-50 bg-white",  iconActive: "bg-gray-600 text-white",  textActive: "text-gray-600"  },
-    red:   { active: "border-red-500 ring-red-50 bg-white",    iconActive: "bg-red-600 text-white",   textActive: "text-red-600"   },
-  };
-  const s = styles[color];
-  return (
-    <button onClick={onClick} className={`group p-4 rounded-xl border transition-all duration-300 flex items-center gap-4 cursor-pointer ${isActive ? `ring-4 shadow-xl scale-[1.02] z-10 ${s.active}` : "bg-white border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-95"}`}>
-      <div className={`p-3 rounded-lg transition-all duration-300 ${isActive ? `${s.iconActive} rotate-3` : "bg-gray-100 text-gray-600 group-hover:rotate-3"}`}>
-        {icon}
-      </div>
-      <div className="text-left">
-        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{title}</p>
-        <p className={`text-2xl font-black tracking-tight ${isActive ? s.textActive : "text-gray-800"}`}>{value}</p>
-      </div>
-    </button>
   );
 }

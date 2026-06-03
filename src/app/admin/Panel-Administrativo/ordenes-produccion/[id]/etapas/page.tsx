@@ -6,8 +6,8 @@ import { Loader2, ArrowLeft } from "lucide-react";
 import { useOrdenesProduccion } from "@/lib/hooks/useOrdenProduccion";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { ETAPAS_PRODUCCION, ETAPA_LABELS } from "@/lib/schemas/ordenes-produccion";
-import OrdenStepper from "@/components/admin/ordenes/OrdenStepper";
-import { FormSelector, Badge } from "@/components/admin/ordenes/etapas";
+import OrdenStepper from "@/components/admin/ordenes-produccion/OrdenStepper";
+import { FormSelector, Badge } from "@/components/admin/ordenes-produccion/etapas";
 
 type Rol =
     | "gerente" | "administrador" | "recepcionista"

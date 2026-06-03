@@ -53,7 +53,7 @@ export function aplicarExtraccionAlFormulario(
 
 export function fusionarExtracciones(extracciones: CotizacionExtraccionIA[]): CotizacionExtraccionIA {
   if (extracciones.length === 0) {
-    return { proveedor: {}, cotizacion: { total_estimado: 0 }, items: [] };
+    return { proveedor: {}, cotizacion: { total_estimado: 0 }, items: [] } as unknown as CotizacionExtraccionIA;
   }
 
   const base = extracciones[extracciones.length - 1];

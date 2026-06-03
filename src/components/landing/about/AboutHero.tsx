@@ -3,25 +3,34 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
-function useScrollReveal(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
 const AboutHero = () => {
-  const text = useScrollReveal();
-  const image = useScrollReveal();
+  const textRef  = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLDivElement>(null);
+  const [textVisible,  setTextVisible]  = useState(false);
+  const [imageVisible, setImageVisible] = useState(false);
+
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+
+    const observe = (
+      el: HTMLDivElement | null,
+      setVisible: (v: boolean) => void,
+      threshold = 0.15,
+    ) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+        { threshold },
+      );
+      obs.observe(el);
+      observers.push(obs);
+    };
+
+    observe(textRef.current,  setTextVisible);
+    observe(imageRef.current, setImageVisible);
+
+    return () => observers.forEach((o) => o.disconnect());
+  }, []);
 
   return (
     <section
@@ -49,9 +58,9 @@ const AboutHero = () => {
       <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
 
         {/* Badge */}
-        <div ref={text.ref} style={{
-          opacity: text.visible ? 1 : 0,
-          transform: text.visible ? "translateY(0)" : "translateY(30px)",
+        <div ref={textRef} style={{
+          opacity: textVisible ? 1 : 0,
+          transform: textVisible ? "translateY(0)" : "translateY(30px)",
           transition: "all 0.8s ease",
         }}>
           <span style={{
@@ -69,8 +78,8 @@ const AboutHero = () => {
 
           {/* TEXT */}
           <div style={{
-            opacity: text.visible ? 1 : 0,
-            transform: text.visible ? "translateX(0)" : "translateX(-40px)",
+            opacity: textVisible ? 1 : 0,
+            transform: textVisible ? "translateX(0)" : "translateX(-40px)",
             transition: "all 0.9s ease 0.1s",
           }}>
             <h1 style={{
@@ -98,13 +107,13 @@ const AboutHero = () => {
 
           {/* IMAGE with 3D tilt */}
           <div
-            ref={image.ref}
+            ref={imageRef}
             style={{
               borderRadius: "32px", overflow: "hidden",
               border: "1px solid rgba(196,163,90,0.2)",
               minHeight: "560px", position: "relative",
-              opacity: image.visible ? 1 : 0,
-              transform: image.visible ? "translateX(0) rotateY(0deg)" : "translateX(40px) rotateY(8deg)",
+              opacity: imageVisible ? 1 : 0,
+              transform: imageVisible ? "translateX(0) rotateY(0deg)" : "translateX(40px) rotateY(8deg)",
               transition: "all 1s ease 0.2s",
               boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
             }}

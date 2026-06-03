@@ -1,81 +1,133 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { actualizarAlmacenSchema as almacenUpdateSchema } from '@/lib/schemas/almacenes';
-import { ZodError } from 'zod';
+import { Prisma, almacenes } from '@prisma/client';
 
-// Función helper para serializar de forma segura registros con BigInt
-function formatearRespuesta(data: any) {
-  return JSON.parse(
-    JSON.stringify(data, (_, value) =>
-      typeof value === 'bigint' ? value.toString() : value
-    )
-  );
+type RouteContext = { params: Promise<{ id: string }> };
+
+type AlmacenWithZonas = Prisma.almacenesGetPayload<{
+  include: {
+    almacen_zonas: {
+      include: { _count: { select: { almacen_stock: true } } };
+    };
+    _count: {
+      select: { almacen_stock: true; almacen_zonas: true };
+    };
+  };
+}>;
+
+function serializeAlmacenWithZonas(a: AlmacenWithZonas) {
+  return {
+    id: Number(a.id),
+    nombre: a.nombre,
+    descripcion: a.descripcion,
+    direccion: a.direccion,
+    telefono: a.telefono,
+    email: a.email,
+    capacidad_total: a.capacidad_total ? Number(a.capacidad_total) : null,
+    unidad_capacidad: a.unidad_capacidad,
+    estado: a.estado ? 'activo' : 'inactivo',
+    created_at: a.created_at.toISOString(),
+    zonas: a.almacen_zonas.map((z) => ({
+      id: Number(z.id),
+      almacen_id: Number(z.almacen_id),
+      nombre: z.nombre,
+      descripcion: z.descripcion,
+      activo: z.activo,
+      created_at: z.created_at.toISOString(),
+      _count: {
+        stock: z._count.almacen_stock
+      }
+    })),
+    _count: {
+      zonas: a._count.almacen_zonas,
+      stock: a._count.almacen_stock
+    }
+  };
 }
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
+function serializeAlmacen(a: almacenes) {
+  return {
+    ...a,
+    id: Number(a.id), // Cambiado BigInt stringificado a Number
+    responsable_id: a.responsable_id ? Number(a.responsable_id) : null,
+    capacidad_total: a.capacidad_total ? Number(a.capacidad_total) : null,
+    estado: a.estado ? 'activo' : 'inactivo',
+  };
+}
 
+// ─── Métodos HTTP ─────────────────────────────────────────────────────────────
+
+export async function GET(_req: NextRequest, { params }: RouteContext) {
+  const { id: rawId } = await params;
+  let id: bigint;
+  try { id = BigInt(rawId); } catch {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  }
+
+  try {
     const almacen = await prisma.almacenes.findUnique({
-      where: { id: BigInt(id) },
+      where: { id },
+      include: {
+        almacen_zonas: {
+          orderBy: { id: 'asc' }, // 💡 Modificado a 'id' para mantener un orden físico consistente al refrescar
+          include: { _count: { select: { almacen_stock: true } } },
+        },
+        _count: {
+          select: { almacen_stock: true, almacen_zonas: true },
+        },
+      },
     });
 
-    if (!almacen) {
-      return NextResponse.json({ error: 'Almacén no encontrado' }, { status: 404 });
-    }
+    if (!almacen) return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
 
-    return NextResponse.json(formatearRespuesta(almacen));
+    return NextResponse.json(serializeAlmacenWithZonas(almacen));
   } catch (error) {
-    console.error('Error fetching almacen:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    console.error('[GET /almacenes/[id]]', error);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: NextRequest, { params }: RouteContext) {
+  const { id: rawId } = await params;
+  let id: bigint;
+  try { id = BigInt(rawId); } catch {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  }
+
   try {
-    const { id } = await params;
-    const body = await request.json();
-    const validated = almacenUpdateSchema.parse(body);
+    const body: Prisma.almacenesUpdateInput = await req.json();
+
+    const data: Prisma.almacenesUpdateInput = { ...body };
+    if ('estado' in data) {
+      data.estado = (data.estado as string) === 'activo' || data.estado === true;
+    }
 
     const almacen = await prisma.almacenes.update({
-      where: { id: BigInt(id) },
-      data: {
-        nombre: validated.nombre,
-        direccion: validated.direccion,
-        telefono: validated.telefono,
-        email: validated.email,
-        descripcion: validated.descripcion,
-        unidad_capacidad: validated.unidad_capacidad,
-        capacidad_total: validated.capacidad_total,
-        estado: String(validated.estado).toLowerCase() === 'true',
-        responsable_id: validated.responsable_id ? BigInt(validated.responsable_id) : null,
-      },
+      where: { id },
+      data,
     });
 
-    return NextResponse.json(formatearRespuesta(almacen));
+    return NextResponse.json(serializeAlmacen(almacen));
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.issues }, { status: 400 });
-    }
-    console.error('Error updating almacen:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    console.error('[PUT /almacenes/[id]]', error);
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, { params }: RouteContext) {
+  const { id: rawId } = await params;
+  let id: bigint;
+  try { id = BigInt(rawId); } catch {
+    return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+  }
+
   try {
-    const { id } = await params;
-
     await prisma.almacenes.update({
-      where: { id: BigInt(id) },
-      data: {
-        estado: false
-      },
+      where: { id },
+      data: { estado: false },
     });
-
-    return NextResponse.json({ message: 'Almacén desactivado correctamente' });
+    return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('Error deactivating almacen:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

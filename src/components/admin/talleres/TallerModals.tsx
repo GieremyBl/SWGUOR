@@ -1,43 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Factory, Loader2, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { toast } from 'sonner';
+import type { Taller } from './TalleresTable'; // Importación limpia de la estructura compartida
 
 // ─────────────────────────────────────────────────────────────
 // SUSPEND MODAL
 // ─────────────────────────────────────────────────────────────
 
 interface SuspendProps {
-  taller: any;
-  onClose: () => void;
+  taller:    Taller;
+  onClose:   () => void;
   onSuccess: () => void;
 }
 
 export function TallerSuspendModal({ taller, onClose, onSuccess }: SuspendProps) {
-  const [isSuspending, setIsSuspending] = useState(false);
+  const [isSuspending, setIsSuspending] = useState<boolean>(false);
+  const isMountedRef = useRef<boolean>(true);
   const supabase = getSupabaseBrowserClient();
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleSuspend = async () => {
     if (!taller?.id) return;
     setIsSuspending(true);
+    
     try {
       const { error } = await supabase
         .from('talleres')
         .update({ estado: 'suspendido' })
-        .eq('id', taller.id);
+        .eq('id', Number(taller.id));
 
       if (error) throw error;
+      
       toast.success(`Taller "${taller.nombre}" suspendido correctamente`);
-      onSuccess();
-      onClose();
-    } catch (error: any) {
-      toast.error('No se pudo suspender el taller en este momento.');
+      
+      if (isMountedRef.current) {
+        onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      // FIX (error: any): Tipado estricto para el manejo de excepciones de Supabase
+      const msg = err instanceof Error ? err.message : 'No se pudo suspender el taller en este momento.';
+      toast.error(msg);
     } finally {
-      setIsSuspending(false);
+      if (isMountedRef.current) {
+        setIsSuspending(false);
+      }
     }
   };
 
@@ -68,10 +86,14 @@ export function TallerSuspendModal({ taller, onClose, onSuccess }: SuspendProps)
             className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white"
             disabled={isSuspending}
           >
-            {isSuspending
-              ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Suspendiendo...</>
-              : 'Suspender'
-            }
+            {isSuspending ? (
+              <span className="flex items-center justify-center">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Suspendiendo...
+              </span>
+            ) : (
+              'Suspender'
+            )}
           </Button>
         </div>
       </div>
@@ -84,32 +106,40 @@ export function TallerSuspendModal({ taller, onClose, onSuccess }: SuspendProps)
 // ─────────────────────────────────────────────────────────────
 
 const STATUS_MAP: Record<string, string> = {
-  activo: 'Activo',
-  inactivo: 'Inactivo',
+  activo:     'Activo',
+  inactivo:   'Inactivo',
   suspendido: 'Suspendido',
 };
 
+// Extendemos la interfaz base agregando la propiedad opcional de auditoría nativa de la BD
+interface TallerDetail extends Taller {
+  contacto?:   string | null;
+  email?:      string | null;
+  created_at?: string | null;
+}
+
 interface DetailProps {
-  taller: any;
+  taller:  TallerDetail;
   onClose: () => void;
 }
 
 export function TallerDetailModal({ taller, onClose }: DetailProps) {
+  // FIX: Se mapea una propiedad "preventCapitalize" para evitar romper la estética de correos y RUCs
   const fields = [
-    { label: 'RUC', value: taller.ruc },
-    { label: 'Nombre', value: taller.nombre },
-    { label: 'Contacto', value: taller.contacto },
-    { label: 'Teléfono', value: taller.telefono },
-    { label: 'Email', value: taller.email },
-    { label: 'Dirección', value: taller.direccion },
-    { label: 'Especialidad', value: taller.especialidad },
-    { label: 'Estado', value: STATUS_MAP[taller.estado] ?? taller.estado },
+    { label: 'RUC',          value: taller.ruc,          preventCapitalize: true },
+    { label: 'Nombre',       value: taller.nombre,       preventCapitalize: false },
+    { label: 'Contacto',     value: taller.contacto,     preventCapitalize: false },
+    { label: 'Teléfono',     value: taller.telefono,     preventCapitalize: true },
+    { label: 'Email',        value: taller.email,        preventCapitalize: true },
+    { label: 'Dirección',    value: taller.direccion,    preventCapitalize: false },
+    { label: 'Especialidad', value: taller.especialidad, preventCapitalize: false },
+    { label: 'Estado',       value: STATUS_MAP[taller.estado?.toLowerCase()] ?? taller.estado, preventCapitalize: false },
   ];
 
   const createdAt = taller.created_at
     ? new Date(taller.created_at).toLocaleDateString('es-PE', {
-      day: '2-digit', month: 'long', year: 'numeric',
-    })
+        day: '2-digit', month: 'long', year: 'numeric',
+      })
     : null;
 
   return (
@@ -128,8 +158,8 @@ export function TallerDetailModal({ taller, onClose }: DetailProps) {
               <Factory className="w-5 h-5 text-rose-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 uppercase">{taller.nombre}</h3>
-              <p className="text-xs text-gray-500">RUC: {taller.ruc}</p>
+              <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">{taller.nombre}</h3>
+              <p className="text-xs text-gray-500 font-mono">RUC: {taller.ruc}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
@@ -140,13 +170,17 @@ export function TallerDetailModal({ taller, onClose }: DetailProps) {
         {/* Fields */}
         <div className="p-6 space-y-3">
           {fields.map(f => (
-            <div key={f.label} className="flex justify-between items-center py-2 border-b last:border-0">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{f.label}</span>
-              <span className="text-sm font-medium text-gray-900 capitalize">{f.value || '—'}</span>
+            <div key={f.label} className="flex justify-between items-center py-2 border-b last:border-0 gap-4">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider shrink-0">{f.label}</span>
+              <span className={`text-sm font-medium text-gray-900 text-right break-words max-w-[70%] ${
+                f.preventCapitalize ? 'normal-case' : 'capitalize'
+              }`}>
+                {f.value || '—'}
+              </span>
             </div>
           ))}
           {createdAt && (
-            <p className="text-[11px] text-gray-400 font-medium pt-2">Registrado el {createdAt}</p>
+            <p className="text-[11px] text-gray-400 font-medium pt-2 text-left">Registrado el {createdAt}</p>
           )}
         </div>
       </div>

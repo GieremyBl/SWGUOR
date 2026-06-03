@@ -79,7 +79,7 @@ function getLabel(field: "estado" | "rol", value: string): string {
 
 // ─── Componente ───────────────────────────────────────────────
 export default function UsuarioFilters({
-  filters, onChange, totalCount, onRefresh, isRefreshing,
+  filters, onChange, onRefresh, isRefreshing,
 }: UsuarioFiltersProps) {
 
   const set = useCallback(

@@ -17,8 +17,7 @@ import {
   Minus, 
   User, 
   Package, 
-  Calculator, 
-  Loader2, 
+  Loader2,
   X,
   CreditCard,
   Receipt,
@@ -396,4 +395,4 @@ export default function CreatePedidoDialog({ isOpen, onClose, onSuccess }: any) 
       </DialogContent>
     </Dialog>
   );
-}
+}

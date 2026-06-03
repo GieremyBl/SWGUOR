@@ -1,21 +1,24 @@
 'use client';
 
-// GUOR PRO Modal Design — Almacenes
 import { Warehouse, Loader2, Trash2, X, Package, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
 import { useState } from 'react';
 import { toast } from 'sonner';
+import type { Almacen } from '@/components/admin/almacenes/AlmacenesTable';
 
+interface DeleteProps {
+  almacen: Almacen;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+interface DetailProps {
+  almacen: Almacen;
+  onClose: () => void;
+}
 // ─────────────────────────────────────────────────────────────
 // DELETE MODAL
 // ─────────────────────────────────────────────────────────────
-
-interface DeleteProps {
-  almacen:    any;
-  onClose:    () => void;
-  onSuccess:  () => void;
-}
 
 export function AlmacenDeleteModal({ almacen, onClose, onSuccess }: DeleteProps) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -81,19 +84,13 @@ export function AlmacenDeleteModal({ almacen, onClose, onSuccess }: DeleteProps)
 // ─────────────────────────────────────────────────────────────
 // DETAIL MODAL
 // ─────────────────────────────────────────────────────────────
-
-interface DetailProps {
-  almacen: any;
-  onClose: () => void;
-}
-
 export function AlmacenDetailModal({ almacen, onClose }: DetailProps) {
   const fields = [
-    { label: 'Nombre',     value: almacen.nombre },
-    { label: 'Dirección',  value: almacen.direccion },
-    { label: 'Capacidad',  value: almacen.capacidad_total ? `${almacen.capacidad_total} ${almacen.unidad_capacidad ?? ''}` : null },
-    { label: 'Estado',     value: almacen.estado === 'activo' ? 'Activo' : 'Inactivo' },
-    { label: 'Notas',      value: almacen.descripcion },
+    { label: 'Nombre', value: almacen.nombre },
+    { label: 'Dirección', value: almacen.direccion },
+    { label: 'Capacidad', value: almacen.capacidad_total ? `${almacen.capacidad_total} ${almacen.unidad_capacidad ?? ''}` : null },
+    { label: 'Estado', value: almacen.estado === 'activo' ? 'Activo' : 'Inactivo' },
+    { label: 'Notas', value: almacen.descripcion },
   ];
 
   return (
@@ -133,14 +130,6 @@ export function AlmacenDetailModal({ almacen, onClose }: DetailProps) {
               <span className="text-sm font-medium text-gray-900">{f.value || '—'}</span>
             </div>
           ))}
-          {typeof almacen._count?.insumos === 'number' && (
-            <div className="flex justify-between items-center py-2 border-b last:border-0">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
-                <Package className="w-3 h-3" /> Insumos
-              </span>
-              <span className="text-sm font-medium text-gray-900">{almacen._count.insumos}</span>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -38,7 +38,7 @@ export const PRIORIDAD_PEDIDO_LABELS: Record<typeof PRIORIDAD_PEDIDO[number], st
   urgente: "Urgente",
 };
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?:   T;
   error?:  string;

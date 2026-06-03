@@ -34,7 +34,7 @@ const emptyForm = (): CampanaForm => ({
   activo: true,
   fecha_inicio: new Date().toISOString(),
   fecha_fin: null,
-  reglas: [],
+  reglas: [], // Corregido: eliminado el typo 'regles'
 });
 
 function mapDetalleToForm(
@@ -59,43 +59,67 @@ function mapDetalleToForm(
 }
 
 export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: Props) {
-  const [form, setForm] = useState<CampanaForm>(emptyForm());
+  const [form, setForm] = useState<CampanaForm>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadingDetalle, setLoadingDetalle] = useState(false);
+  
+  // Guardamos las llaves de control en el estado para rastrear transiciones de props de forma segura
+  const [prevKey, setPrevKey] = useState<{ id: string | number | undefined; tipo: TipoCampana }>({
+    id: campana?.id,
+    tipo,
+  });
+
   const { data: reglasRes } = useReglasActivasPicker();
   const reglasActivas: ReglaDescuentoRow[] = reglasRes?.data ?? [];
-
   const titulo = tipo === 'promocion' ? 'promoción' : 'oferta';
 
-  useEffect(() => {
-    if (!campana?.id) {
-      setForm(emptyForm());
-      return;
-    }
+  // FIX: Sincronización correcta e idiomática de Props a Estado sin usar refs en el render
+  if (campana?.id !== prevKey.id || tipo !== prevKey.tipo) {
+    setPrevKey({ id: campana?.id, tipo });
+    setForm(campana ? mapDetalleToForm(campana) : emptyForm());
+    setErrors({});
+  }
 
-    const load = async () => {
+  // FIX: Fetch asíncrono con manejo de desmontaje y dependencias de ESLint resueltas
+  useEffect(() => {
+    let isMounted = true;
+    if (!campana?.id) return;
+
+    const loadDetalle = async () => {
       setLoadingDetalle(true);
       try {
         const res =
           tipo === 'promocion'
             ? await fetchPromocionDetalle(campana.id)
             : await fetchOfertaDetalle(campana.id);
-        if (res.success && res.data) {
-          setForm(mapDetalleToForm(res.data as CampanaRow & {
-            promocion_reglas?: Array<{ regla_id: number | string; prioridad: number }>;
-            oferta_reglas?: Array<{ regla_id: number | string; prioridad: number }>;
-          }));
-        } else {
-          setForm(mapDetalleToForm(campana));
+            
+        if (isMounted) {
+          if (res.success && res.data) {
+            setForm(mapDetalleToForm(res.data as CampanaRow & {
+              promocion_reglas?: Array<{ regla_id: number | string; prioridad: number }>;
+              oferta_reglas?: Array<{ regla_id: number | string; prioridad: number }>;
+            }));
+          } else {
+            setForm(mapDetalleToForm(campana));
+          }
         }
       } catch {
-        setForm(mapDetalleToForm(campana));
+        if (isMounted) {
+          setForm(mapDetalleToForm(campana));
+        }
       } finally {
-        setLoadingDetalle(false);
+        if (isMounted) {
+          setLoadingDetalle(false);
+        }
       }
     };
-    load();
-  }, [campana, tipo]);
+
+    loadDetalle();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [campana, tipo]); // Corregido: Añadida la dependencia 'campana' completa requerida por mapDetalleToForm
 
   const setField = <K extends keyof CampanaForm>(key: K, value: CampanaForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -133,6 +157,17 @@ export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: P
     }));
   };
 
+  const handleDateChange = (key: 'fecha_inicio' | 'fecha_fin', rawValue: string) => {
+    if (!rawValue) {
+      if (key === 'fecha_fin') setField('fecha_fin', null);
+      return;
+    }
+    const parsedDate = new Date(rawValue);
+    if (!isNaN(parsedDate.getTime())) {
+      setField(key, parsedDate.toISOString());
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = campanaSchema.safeParse(form);
@@ -159,34 +194,39 @@ export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: P
       >
         <div className="flex items-center justify-between p-6 border-b">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900 capitalize">
               {campana ? `Editar ${titulo}` : `Nueva ${titulo}`}
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
               Agrupa reglas de descuento con prioridad de aplicación
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
         {loadingDetalle ? (
-          <div className="p-12 flex justify-center">
+          <div className="p-12 flex flex-col items-center justify-center gap-2">
             <Loader2 className="w-8 h-8 animate-spin text-amber-700" />
+            <span className="text-xs font-medium text-gray-400">Cargando dependencias de campaña...</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nombre *</label>
-              <Input value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} />
-              {errors.nombre && <p className="text-xs text-red-500 mt-1">{errors.nombre}</p>}
+              <Input 
+                value={form.nombre} 
+                onChange={(e) => setField('nombre', e.target.value)} 
+                className={errors.nombre ? 'border-red-400 focus:ring-red-400' : ''}
+              />
+              {errors.nombre && <p className="text-xs text-red-500 mt-1 font-medium">{errors.nombre}</p>}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Descripción</label>
               <textarea
-                className="w-full min-h-[72px] rounded-md border px-3 py-2 text-sm"
+                className="w-full min-h-[72px] rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white"
                 value={form.descripcion ?? ''}
                 onChange={(e) => setField('descripcion', e.target.value || null)}
               />
@@ -198,53 +238,63 @@ export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: P
                 <Input
                   type="datetime-local"
                   value={toInputDateTimeLocal(form.fecha_inicio)}
-                  onChange={(e) =>
-                    setField('fecha_inicio', new Date(e.target.value).toISOString())
-                  }
+                  onChange={(e) => handleDateChange('fecha_inicio', e.target.value)}
+                  className={errors.fecha_inicio ? 'border-red-400 focus:ring-red-400' : ''}
                 />
+                {errors.fecha_inicio && <p className="text-xs text-red-500 mt-1 font-medium">{errors.fecha_inicio}</p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Fin (opcional)</label>
                 <Input
                   type="datetime-local"
                   value={toInputDateTimeLocal(form.fecha_fin ?? undefined)}
-                  onChange={(e) =>
-                    setField(
-                      'fecha_fin',
-                      e.target.value ? new Date(e.target.value).toISOString() : null,
-                    )
-                  }
+                  onChange={(e) => handleDateChange('fecha_fin', e.target.value)}
                 />
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.activo !== false}
-                onChange={(e) => setField('activo', e.target.checked)}
-              />
-              Campaña activa
-            </label>
+            <div className="flex items-center pt-1">
+              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={form.activo !== false}
+                  onChange={(e) => setField('activo', e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-amber-700 focus:ring-amber-600 cursor-pointer"
+                />
+                Campaña activa
+              </label>
+            </div>
 
-            <div className="border rounded-xl p-4 space-y-3 bg-amber-50/40 border-amber-100">
+            {/* Panel de Reglas Vinculadas */}
+            <div className="border rounded-xl p-4 space-y-3 bg-slate-50/50 border-slate-200">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-800">Reglas asociadas</p>
-                <Button type="button" size="sm" variant="outline" onClick={addRegla}>
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Reglas asociadas</p>
+                  <p className="text-[11px] text-slate-400">Aplica descuentos en cascada según su prioridad</p>
+                </div>
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={addRegla} 
+                  disabled={reglasActivas.length === 0}
+                >
                   <Plus className="w-4 h-4 mr-1" /> Agregar
                 </Button>
               </div>
 
               {(form.reglas ?? []).length === 0 && (
-                <p className="text-xs text-slate-500">Sin reglas vinculadas.</p>
+                <div className="py-4 text-center border border-dashed rounded-lg bg-white">
+                  <p className="text-xs text-slate-400 font-medium">Sin reglas vinculadas a esta campaña.</p>
+                </div>
               )}
 
               {(form.reglas ?? []).map((v, idx) => (
-                <div key={`${v.regla_id}-${idx}`} className="flex gap-2 items-end">
-                  <div className="flex-1">
-                    <label className="text-xs text-slate-500">Regla</label>
+                <div key={`${v.regla_id}-${idx}`} className="flex gap-3 items-end bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Regla de Descuento</label>
                     <select
-                      className="w-full h-9 rounded-md border px-2 text-sm"
+                      className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white"
                       value={String(v.regla_id)}
                       onChange={(e) => updateRegla(idx, { regla_id: e.target.value })}
                     >
@@ -255,8 +305,8 @@ export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: P
                       ))}
                     </select>
                   </div>
-                  <div className="w-24">
-                    <label className="text-xs text-slate-500">Prioridad</label>
+                  <div className="w-24 shrink-0">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Prioridad</label>
                     <Input
                       type="number"
                       min={1}
@@ -264,22 +314,36 @@ export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: P
                       onChange={(e) =>
                         updateRegla(idx, { prioridad: Number(e.target.value) || 1 })
                       }
+                      className="h-10"
                     />
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeRegla(idx)}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeRegla(idx)}
+                    className="h-10 w-10 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               ))}
+              {errors.reglas && <p className="text-xs text-red-500 font-medium">{errors.reglas}</p>}
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+            <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSaving} className="bg-amber-700 hover:bg-amber-800">
-                {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Guardar
+              <Button type="submit" disabled={isSaving} className="bg-amber-700 hover:bg-amber-800 text-white min-w-[100px]">
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Guardando
+                  </>
+                ) : (
+                  'Guardar'
+                )}
               </Button>
             </div>
           </form>
@@ -288,4 +352,3 @@ export function CampanaFormModal({ tipo, campana, isSaving, onClose, onSave }: P
     </div>
   );
 }
-

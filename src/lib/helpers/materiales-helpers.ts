@@ -1,30 +1,50 @@
-const API       = '/api/admin/materiales';
-const STOCK_API = '/api/admin/materiales';
+import { 
+  Material, 
+  MaterialCatalogo, 
+  MaterialFormValues, 
+  AjustarStockValues 
+} from '@/lib/schemas/material';
 
-export async function fetchMateriales(params?: {
-  tipo?:      string;
-  busqueda?:  string;
+const API = '/api/admin/materiales';
+
+interface FetchMaterialesParams {
+  tipo?: string;
+  busqueda?: string;
   stockBajo?: boolean;
-}): Promise<any[]> {
+}
+
+/**
+ * Obtiene la lista simplificada de materiales para catálogos/selects
+ */
+export async function fetchMateriales(params?: FetchMaterialesParams): Promise<MaterialCatalogo[]> {
   const query = new URLSearchParams();
-  if (params?.tipo      && params.tipo !== 'todos') query.set('tipo',      params.tipo);
-  if (params?.busqueda)                              query.set('busqueda',  params.busqueda);
-  if (params?.stockBajo)                             query.set('stockBajo', 'true');
+  if (params?.tipo && params.tipo !== 'todos') query.set('tipo', params.tipo);
+  if (params?.busqueda)                             query.set('busqueda', params.busqueda);
+  if (params?.stockBajo)                            query.set('stockBajo', 'true');
 
   const res = await fetch(`${API}?${query.toString()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Error al cargar materiales');
+  
   const result = await res.json();
-  return result.data ?? [];
+  // El helper ya extrae '.data', devolviendo el arreglo plano estricto
+  return (result.data as MaterialCatalogo[]) ?? [];
 }
 
-export async function fetchMaterialById(id: string): Promise<any> {
+/**
+ * Obtiene el detalle completo de un material por su ID (Tipado con la interfaz de Dominio)
+ */
+export async function fetchMaterialById(id: string): Promise<Material> {
   const res = await fetch(`${API}/${id}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Material no encontrado');
+  
   const result = await res.json();
-  return result.data;
+  return result.data as Material;
 }
 
-export async function createMaterial(data: any) {
+/**
+ * Crea un material validando la estructura exacta con los tipos de Zod
+ */
+export async function createMaterial(data: MaterialFormValues): Promise<{ success: boolean; data?: Material; error?: string }> {
   const res = await fetch(API, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -33,7 +53,10 @@ export async function createMaterial(data: any) {
   return res.json();
 }
 
-export async function updateMaterial(id: string, data: any) {
+/**
+ * Actualiza un material usando los valores del formulario de Zod
+ */
+export async function updateMaterial(id: string, data: MaterialFormValues): Promise<{ success: boolean; data?: Material; error?: string }> {
   const res = await fetch(API, {
     method:  'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -42,16 +65,22 @@ export async function updateMaterial(id: string, data: any) {
   return res.json();
 }
 
-export async function deleteMaterial(id: string) {
+/**
+ * Elimina un material del sistema
+ */
+export async function deleteMaterial(id: string): Promise<{ success: boolean; error?: string }> {
   const res = await fetch(`${API}?id=${id}`, { method: 'DELETE' });
   return res.json();
 }
 
+/**
+ * Ajusta el stock usando el tipo estricto inferido de ajustarStockSchema de Zod
+ */
 export async function ajustarStockMaterial(
   id: string,
-  data: { operacion: 'sumar' | 'restar' | 'absoluto'; cantidad: number; motivo?: string }
-) {
-  const res = await fetch(`${STOCK_API}/${id}/stock`, {
+  data: Omit<AjustarStockValues, 'id'> // Reutiliza el esquema de Zod omitiendo el ID que va por URL
+): Promise<{ success: boolean; nuevoStock?: number; error?: string }> {
+  const res = await fetch(`${API}/${id}/stock`, {
     method:  'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(data),

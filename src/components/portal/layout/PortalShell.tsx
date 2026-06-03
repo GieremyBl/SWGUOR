@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { usePortal } from '@/app/portal/_contexts/PortalContext';
+import { usePortal } from '@/lib/hooks/usePortal';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { AsistenteIA } from '@/components/portal/AsistenteIA';
+import { AsistenteIA } from '@/components/portal/layout/AsistenteIA';
 import { PortalSidebar } from './PortalSidebar';
 import { Navbar } from './PortalNavbar';
 

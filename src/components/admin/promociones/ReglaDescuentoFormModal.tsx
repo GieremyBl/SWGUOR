@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,16 +41,10 @@ const emptyForm = (): ReglaDescuentoForm => ({
 });
 
 export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Props) {
-  const [form, setForm] = useState<ReglaDescuentoForm>(emptyForm());
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [categorias, setCategorias] = useState<CategoriaOpt[]>([]);
-
-  useEffect(() => {
-    if (!regla) {
-      setForm(emptyForm());
-      return;
-    }
-    setForm({
+  // FIX: Inicialización perezosa directa para evitar renders en cascada iniciales
+  const [form, setForm] = useState<ReglaDescuentoForm>(() => {
+    if (!regla) return emptyForm();
+    return {
       id: regla.id,
       nombre: regla.nombre,
       cantidad_min: regla.cantidad_min,
@@ -62,11 +56,41 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
       categoria_id: regla.categoria_id,
       tipo_conteo: (regla.tipo_conteo as ReglaDescuentoForm['tipo_conteo']) ?? null,
       activo: regla.activo ?? true,
-    });
-  }, [regla]);
+    };
+  });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [categorias, setCategorias] = useState<CategoriaOpt[]>([]);
+  
+  // Ref para rastrear mutaciones del ID y recalcular el estado en fase de renderizado seguro
+  const prevReglaIdRef = useRef<number | string | undefined>(regla?.id);
+
+  if (regla?.id !== prevReglaIdRef.current) {
+    prevReglaIdRef.current = regla?.id;
+    setForm(regla ? {
+      id: regla.id,
+      nombre: regla.nombre,
+      cantidad_min: regla.cantidad_min,
+      monto_min_compra: regla.monto_min_compra,
+      tipo_beneficio: regla.tipo_beneficio as ReglaDescuentoForm['tipo_beneficio'],
+      valor_descuento: Number(regla.valor_descuento),
+      fecha_inicio: regla.fecha_inicio,
+      fecha_fin: regla.fecha_fin,
+      categoria_id: regla.categoria_id,
+      tipo_conteo: (regla.tipo_conteo as ReglaDescuentoForm['tipo_conteo']) ?? null,
+      activo: regla.activo ?? true,
+    } : emptyForm());
+    setErrors({});
+  }
+
+  // FIX: Fetch optimizado con AbortController para prevenir memory leaks en desmontaje acelerado
   useEffect(() => {
-    fetch('/api/admin/categorias', { cache: 'no-store' })
+    const controller = new AbortController();
+
+    fetch('/api/admin/categorias', { 
+      cache: 'no-store',
+      signal: controller.signal 
+    })
       .then((r) => r.json())
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.data ?? [];
@@ -74,7 +98,15 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
           list.map((c: { id: number; nombre: string }) => ({ id: c.id, nombre: c.nombre })),
         );
       })
-      .catch(() => setCategorias([]));
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          setCategorias([]);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   const setField = <K extends keyof ReglaDescuentoForm>(
@@ -87,6 +119,14 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
       delete copy[String(key)];
       return copy;
     });
+  };
+
+  const handleDateChange = (key: 'fecha_inicio' | 'fecha_fin', rawValue: string) => {
+    if (!rawValue) return;
+    const parsedDate = new Date(rawValue);
+    if (!isNaN(parsedDate.getTime())) {
+      setField(key, parsedDate.toISOString());
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -122,14 +162,18 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
               Condiciones y beneficio aplicable a cotizaciones
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <Field label="Nombre *" error={errors.nombre}>
-            <Input value={form.nombre} onChange={(e) => setField('nombre', e.target.value)} />
+            <Input 
+              value={form.nombre} 
+              onChange={(e) => setField('nombre', e.target.value)} 
+              className={errors.nombre ? 'border-red-400 focus:ring-red-400' : ''}
+            />
           </Field>
 
           <div className="grid grid-cols-2 gap-4">
@@ -139,6 +183,7 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
                 min={1}
                 value={form.cantidad_min}
                 onChange={(e) => setField('cantidad_min', Number(e.target.value))}
+                className={errors.cantidad_min ? 'border-red-400 focus:ring-red-400' : ''}
               />
             </Field>
             <Field label="Monto mín. compra" error={errors.monto_min_compra}>
@@ -150,6 +195,7 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
                 onChange={(e) =>
                   setField('monto_min_compra', e.target.value ? Number(e.target.value) : null)
                 }
+                className={errors.monto_min_compra ? 'border-red-400 focus:ring-red-400' : ''}
               />
             </Field>
           </div>
@@ -157,7 +203,9 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
           <div className="grid grid-cols-2 gap-4">
             <Field label="Tipo beneficio" error={errors.tipo_beneficio}>
               <select
-                className="w-full h-9 rounded-md border px-3 text-sm"
+                className={`w-full h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white ${
+                  errors.tipo_beneficio ? 'border-red-400' : 'border-gray-200'
+                }`}
                 value={form.tipo_beneficio}
                 onChange={(e) =>
                   setField('tipo_beneficio', e.target.value as ReglaDescuentoForm['tipo_beneficio'])
@@ -178,6 +226,7 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
                 step="0.01"
                 value={form.valor_descuento}
                 onChange={(e) => setField('valor_descuento', Number(e.target.value))}
+                className={errors.valor_descuento ? 'border-red-400 focus:ring-red-400' : ''}
               />
             </Field>
           </div>
@@ -185,7 +234,9 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
           <div className="grid grid-cols-2 gap-4">
             <Field label="Tipo conteo" error={errors.tipo_conteo}>
               <select
-                className="w-full h-9 rounded-md border px-3 text-sm"
+                className={`w-full h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white ${
+                  errors.tipo_conteo ? 'border-red-400' : 'border-gray-200'
+                }`}
                 value={form.tipo_conteo ?? ''}
                 onChange={(e) =>
                   setField(
@@ -204,7 +255,9 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
             </Field>
             <Field label="Categoría" error={errors.categoria_id}>
               <select
-                className="w-full h-9 rounded-md border px-3 text-sm"
+                className={`w-full h-10 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-600 bg-white ${
+                  errors.categoria_id ? 'border-red-400' : 'border-gray-200'
+                }`}
                 value={form.categoria_id ?? ''}
                 onChange={(e) =>
                   setField('categoria_id', e.target.value ? e.target.value : null)
@@ -225,38 +278,45 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
               <Input
                 type="datetime-local"
                 value={toInputDateTimeLocal(form.fecha_inicio)}
-                onChange={(e) =>
-                  setField('fecha_inicio', new Date(e.target.value).toISOString())
-                }
+                onChange={(e) => handleDateChange('fecha_inicio', e.target.value)}
+                className={errors.fecha_inicio ? 'border-red-400 focus:ring-red-400' : ''}
               />
             </Field>
             <Field label="Hasta *" error={errors.fecha_fin}>
               <Input
                 type="datetime-local"
                 value={toInputDateTimeLocal(form.fecha_fin)}
-                onChange={(e) =>
-                  setField('fecha_fin', new Date(e.target.value).toISOString())
-                }
+                onChange={(e) => handleDateChange('fecha_fin', e.target.value)}
+                className={errors.fecha_fin ? 'border-red-400 focus:ring-red-400' : ''}
               />
             </Field>
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={form.activo !== false}
-              onChange={(e) => setField('activo', e.target.checked)}
-            />
-            Regla activa
-          </label>
+          <div className="flex items-center pt-1">
+            <label className="flex items-center gap-2 text-sm text-gray-700 font-medium cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.activo !== false}
+                onChange={(e) => setField('activo', e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-amber-700 focus:ring-amber-600 cursor-pointer"
+              />
+              Regla activa
+            </label>
+          </div>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-3 pt-4 border-t mt-6">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSaving} className="bg-amber-700 hover:bg-amber-800">
-              {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Guardar
+            <Button type="submit" disabled={isSaving} className="bg-amber-700 hover:bg-amber-800 text-white min-w-[100px]">
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando
+                </>
+              ) : (
+                'Guardar'
+              )}
             </Button>
           </div>
         </form>
@@ -264,7 +324,6 @@ export function ReglaDescuentoFormModal({ regla, isSaving, onClose, onSave }: Pr
     </div>
   );
 }
-
 
 function Field({
   label,
@@ -276,10 +335,10 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
+    <div className="flex flex-col w-full">
       <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
       {children}
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+      {error && <p className="text-xs text-red-500 mt-1 font-medium">{error}</p>}
     </div>
   );
 }

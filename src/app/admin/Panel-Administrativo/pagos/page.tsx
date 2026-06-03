@@ -7,9 +7,10 @@ import PagosTable, { type Pago } from '@/components/admin/pagos/PagosTable';
 import PagoFormModal from '@/components/admin/pagos/PagoFormModal';
 import { PagoDetailModal, PagoVerifyModal } from '@/components/admin/pagos/PagoModals';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
-import StatCard from '@/components/admin/common/StatCard';
+import { PagosStats }   from '@/components/admin/pagos/PagosStats';
+import { PagosToolbar } from '@/components/admin/pagos/PagosToolbar';
 import {
-  DollarSign, CheckCircle2, XCircle, Clock, Search, RefreshCw, Filter,
+  DollarSign, CheckCircle2, Clock, Search, RefreshCw, 
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -94,62 +95,20 @@ export default function PagosPage() {
         />
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Pagos"
-            value={stats.total}
-            icon={DollarSign}
-            color="slate"
-            isActive={estadoFilter === 'todos'}
-            onClick={() => setEstadoFilter('todos')}
-          />
-          <StatCard
-            title="Pendientes"
-            value={stats.pendientes}
-            icon={Clock}
-            color="orange"
-            isActive={estadoFilter === 'pendiente'}
-            onClick={() => setEstadoFilter('pendiente')}
-          />
-          <StatCard
-            title="Verificados"
-            value={stats.verificados}
-            icon={CheckCircle2}
-            color="emerald"
-            isActive={estadoFilter === 'verificado'}
-            onClick={() => setEstadoFilter('verificado')}
-          />
-          <StatCard
-            title="Monto Verificado"
-            value={`S/ ${stats.montoTotal.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
-            icon={DollarSign}
-            color="blue"
-            disabled
-          />
-        </div>
+        <PagosStats
+          stats={stats}
+          estadoFilter={estadoFilter}
+          onFilterChange={setEstadoFilter}
+        />
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Buscar por N.° pedido, RUC o razón social..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white border-gray-200 rounded-xl h-11"
-            />
-          </div>
-          <Button
-            variant="outline"
-            onClick={loadPagos}
-            disabled={loading}
-            className="rounded-xl h-11 px-4 border-gray-200 hover:bg-gray-50"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </Button>
-        </div>
-
+        <PagosToolbar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          loading={loading}
+          onRefresh={loadPagos}
+        />
+        
         {/* Table */}
         <PagosTable
           data={filteredPagos}

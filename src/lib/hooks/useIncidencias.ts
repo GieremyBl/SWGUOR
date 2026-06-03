@@ -1,31 +1,56 @@
+'use client';
+
 import { useState, useCallback } from 'react';
 import { CrearIncidencia, Incidencia } from '@/lib/schemas/incidencias';
 
+// Interfaz estricta para el mapeo seguro de filtros en la URL de incidencias
+export type FiltrosIncidencia = Record<string, string | number | boolean>;
+
+// Interfaz para el payload de resolución de incidencias en taller o almacén
+export interface ResolverIncidenciaInput {
+  resolucion:       string;
+  montoResolucion?: number;
+}
+
 export function useIncidencias() {
   const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]         = useState<boolean>(false);
+  const [error, setError]             = useState<string | null>(null);
 
-  const obtenerIncidencias = useCallback(async (filtros?: any) => {
+  // FETCH: Obtener lista de incidencias aplicando filtros seguros
+  const obtenerIncidencias = useCallback(async (filtros?: FiltrosIncidencia) => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams(filtros || {});
+      const queryObj: Record<string, string> = {};
+      if (filtros) {
+        Object.entries(filtros).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            queryObj[key] = String(value);
+          }
+        });
+      }
+
+      const params = new URLSearchParams(queryObj);
       const response = await fetch(`/api/incidencias?${params}`);
       if (!response.ok) throw new Error('Error al obtener incidencias');
 
       const data: Incidencia[] = await response.json();
+      
       setIncidencias(data);
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
       throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // POST: Registrar una nueva incidencia (mermas, daños de maquinaria, retrasos)
   const crearIncidencia = useCallback(async (datos: CrearIncidencia) => {
+    setError(null);
     try {
       const response = await fetch('/api/incidencias', {
         method: 'POST',
@@ -38,30 +63,37 @@ export function useIncidencias() {
       setIncidencias(prev => [...prev, nuevaIncidencia]);
       return nuevaIncidencia;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
       throw err;
     }
   }, []);
 
-  const resolverIncidencia = useCallback(async (incidenciaId: string, resolucion: string, montoResolucion?: number) => {
+  // PUT: Asentar la solución o cierre del reporte de incidencia
+  const resolverIncidencia = useCallback(async (incidenciaId: string | number, datos: ResolverIncidenciaInput) => {
+    setError(null);
     try {
       const response = await fetch(`/api/incidencias/${incidenciaId}/resolver`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resolucion, montoResolucion }),
+        body: JSON.stringify(datos),
       });
       if (!response.ok) throw new Error('Error al resolver incidencia');
 
       const incidenciaActualizada: Incidencia = await response.json();
-      setIncidencias(prev => prev.map(i => i.id === Number(incidenciaId) ? incidenciaActualizada : i));
+      // FIX: Comparación agnóstica de IDs usando strings para soportar numéricos o UUIDs de base de datos
+      setIncidencias(prev => prev.map(i => String(i.id) === String(incidenciaId) ? incidenciaActualizada : i));
       return incidenciaActualizada;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
       throw err;
     }
   }, []);
 
-  const asignarIncidencia = useCallback(async (incidenciaId: string, asignadoA: string) => {
+  // PUT: Delegar la incidencia a un supervisor o rol encargado en particular
+  const asignarIncidencia = useCallback(async (incidenciaId: string | number, asignadoA: string) => {
+    setError(null);
     try {
       const response = await fetch(`/api/incidencias/${incidenciaId}/asignar`, {
         method: 'PUT',
@@ -71,10 +103,12 @@ export function useIncidencias() {
       if (!response.ok) throw new Error('Error al asignar incidencia');
 
       const incidenciaActualizada: Incidencia = await response.json();
-      setIncidencias(prev => prev.map(i => i.id === Number(incidenciaId) ? incidenciaActualizada : i));
+      // FIX: Comparación agnóstica de IDs usando strings
+      setIncidencias(prev => prev.map(i => String(i.id) === String(incidenciaId) ? incidenciaActualizada : i));
       return incidenciaActualizada;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
       throw err;
     }
   }, []);

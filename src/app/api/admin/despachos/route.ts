@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { NextResponse } from 'next/server';
+import { notificarTransicionEstadoPedido } from '@/lib/helpers/crear-notificacion.helper';
 
 const ESTADOS_VALIDOS = ['pendiente', 'en_ruta', 'entregado', 'preparando', 'incidencia'] as const;
 
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
         pedido_id:         pedidoId,
         direccion_entrega: body.direccion_entrega.trim(),
         fecha_despacho:    body.fecha_despacho ? new Date(body.fecha_despacho) : new Date(),
-        estado:            body.estado ?? 'pendiente',
+        estado:            body.estado ?? 'preparando',
       },
       include: {
         pedidos: { include: { clientes: { select: { razon_social: true } } } },
@@ -122,16 +123,22 @@ export async function PATCH(req: Request) {
       }
     }
 
-    const despacho = await prisma.$transaction(async (tx) => {
+    const estadoNormalizado = estado ? estado.toLowerCase().trim() : null;
+
+    const resultado = await prisma.$transaction(async (tx) => {
       const existing = await tx.despachos.findUnique({
         where: { id: BigInt(id) },
-        include: { pedidos: { include: { clientes: { select: { razon_social: true } } } } },
+        include: {
+          pedidos: {
+            select: { id: true, estado: true, cliente_id: true },
+          },
+        },
       });
 
       if (!existing) throw new Error('Despacho no encontrado');
 
       const data: Record<string, unknown> = {};
-      if (estado) data.estado = estado.toLowerCase().trim();
+      if (estadoNormalizado) data.estado = estadoNormalizado;
       if (data.estado === 'entregado') {
         data.fecha_entrega = fecha_entrega ? new Date(fecha_entrega) : new Date();
       }
@@ -144,6 +151,8 @@ export async function PATCH(req: Request) {
         },
       });
 
+      const estadoAnteriorPedido = existing.pedidos?.estado ?? null;
+
       if (data.estado === 'entregado' && existing.pedidos) {
         await tx.pedidos.update({
           where: { id: existing.pedido_id },
@@ -151,8 +160,27 @@ export async function PATCH(req: Request) {
         });
       }
 
-      return updated;
+      return {
+        updated,
+        pedidoId: existing.pedido_id,
+        clienteId: existing.pedidos?.cliente_id ?? null,
+        estadoAnteriorPedido,
+      };
     });
+
+    if (
+      estadoNormalizado === 'entregado' &&
+      resultado.clienteId
+    ) {
+      await notificarTransicionEstadoPedido({
+        clienteId: resultado.clienteId,
+        pedidoId: resultado.pedidoId,
+        estadoAnterior: resultado.estadoAnteriorPedido ?? 'listo_para_despacho',
+        estadoNuevo: 'entregado',
+      });
+    }
+
+    const despacho = resultado.updated;
 
     return NextResponse.json(serializeBigInt({
       ...despacho,

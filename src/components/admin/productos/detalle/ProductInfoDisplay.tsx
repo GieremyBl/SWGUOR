@@ -1,10 +1,35 @@
 "use client";
 
+import Image from "next/image"; // Solución a la advertencia de ESLint
 import { Package, TrendingUp, Box, BarChart2, Palette, Ruler, Clock, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const SUPABASE_STORAGE =
   "https://fkpvmgfsopjhvorckoat.supabase.co/storage/v1/object/public/productos/";
+
+// ── Interfaces Estrictas ──
+
+export interface ProductDisplayData {
+  id: string | number;
+  nombre: string;
+  sku: string;
+  precio: string | number;
+  estado: "activo" | "inactivo";
+  imagen: string | null;
+  stock: number;
+  moq?: number | null;
+  destacado?: boolean | null;
+  colores_disponibles?: string[] | null;
+  tallas_disponibles?: string[] | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  descripcion?: string | null;
+}
+
+interface Props {
+  producto: ProductDisplayData;
+  categoria: string;
+}
 
 function resolveImageUrl(imagen: string | null): string | null {
   if (!imagen) return null;
@@ -15,7 +40,7 @@ function resolveImageUrl(imagen: string | null): string | null {
   return fileName ? `${SUPABASE_STORAGE}${fileName}` : null;
 }
 
-function fmt(date: string) {
+function fmt(date: string): string {
   return new Date(date).toLocaleDateString("es-PE", {
     day: "2-digit",
     month: "short",
@@ -34,18 +59,14 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-interface Props {
-  producto: any;
-  categoria: string;
-}
-
 export default function ProductInfoDisplay({ producto, categoria }: Props) {
   const imageUrl = resolveImageUrl(producto.imagen);
+  const definedMoq = producto.moq ?? 400;
 
-  const stockLevel =
+  const stockLevel: "empty" | "low" | "ok" =
     producto.stock === 0
       ? "empty"
-      : producto.stock < (producto.moq ?? 400) * 0.2
+      : producto.stock < definedMoq * 0.2
       ? "low"
       : "ok";
 
@@ -56,13 +77,18 @@ export default function ProductInfoDisplay({ producto, categoria }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-8">
 
         {/* Imagen */}
-        <div className="rounded-2xl border border-guor-peach/50 bg-guor-cream/60 overflow-hidden flex items-center justify-center aspect-square">
+        <div className="rounded-2xl border border-guor-peach/50 bg-guor-cream/60 overflow-hidden flex items-center justify-center aspect-square relative">
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={producto.nombre}
-              className="w-full h-full object-contain"
-            />
+            <div className="relative w-full h-full">
+              <Image
+                src={imageUrl}
+                alt={producto.nombre}
+                fill
+                sizes="220px"
+                className="object-contain"
+                unoptimized // Útil para evitar errores si el dominio de Supabase no está configurado en next.config.js
+              />
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-guor-gold/40">
               <Package size={44} strokeWidth={1} />
@@ -126,21 +152,25 @@ export default function ProductInfoDisplay({ producto, categoria }: Props) {
                     {producto.stock}
                   </span>
                 ),
+                accent: false,
               },
               {
                 icon: BarChart2,
                 label: "MOQ",
-                value: producto.moq ?? 400,
+                value: definedMoq,
+                accent: false,
               },
               {
                 icon: Palette,
                 label: "Colores",
                 value: (producto.colores_disponibles ?? []).length || "—",
+                accent: false,
               },
               {
                 icon: Ruler,
                 label: "Tallas",
                 value: (producto.tallas_disponibles ?? []).length || "—",
+                accent: false,
               },
             ].map(({ icon: Icon, label, value, accent }) => (
               <div
@@ -190,7 +220,7 @@ export default function ProductInfoDisplay({ producto, categoria }: Props) {
         <Field label="Categoría" value={categoria} />
         <Field label="Precio" value={`S/ ${Number(producto.precio).toFixed(2)}`} />
         <Field label="Stock" value={producto.stock} />
-        <Field label="MOQ" value={producto.moq ?? 400} />
+        <Field label="MOQ" value={definedMoq} />
         <Field
           label="Creado"
           value={

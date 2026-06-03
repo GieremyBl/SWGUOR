@@ -1,18 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Great_Vibes } from "next/font/google";
+import { DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({
+// Carga optimizada de la fuente para el cuerpo de texto
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: '--font-inter',
+  weight: ["400", "500", "600", "700", "900"],
+  variable: '--font-dm-sans',
 });
 
-const greatVibes = Great_Vibes({
-  weight: '400',
-  subsets: ['latin'],
-  variable: '--font-great-vibes',
+// Carga optimizada de la fuente para los títulos elegantes (Serif)
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["700", "900"],
+  style: ["normal", "italic"],
+  variable: '--font-playfair',
 });
 
 export const metadata: Metadata = {
@@ -21,7 +25,7 @@ export const metadata: Metadata = {
     template: "%s | GUOR"
   },
   description: "Plataforma inteligente de gestión textil y suministros para socios estratégicos de Modas y Estilos GUOR.",
-  keywords: ["B2B", "Textil", "ERP", "IA", "Gestión de Pedidos", "Perú"],
+  keywords: ["B2B", "Textil", "ERP", "Gestión de Pedidos", "Perú"],
   authors: [{ name: "Modas y Estilos GUOR" }],
 };
 
@@ -37,12 +41,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" suppressHydrationWarning className={greatVibes.variable}>
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={cn(dmSans.variable, playfairDisplay.variable)}
+    >
       <body
         className={cn(
-          "min-h-screen font-sans antialiased",
-          inter.variable,
-          inter.className
+          "min-h-screen font-sans antialiased"
         )}
         style={{ backgroundColor: "#0f0d0b", color: "#fdf9f3" }}
         suppressHydrationWarning

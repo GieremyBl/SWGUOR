@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import type { PersonalRow } from '@/lib/services/personal-interno.service';
-import type { Cargo } from '@prisma/client';
+import { type Cargo } from '@prisma/client';
 
 const CARGOS: { value: Cargo; label: string }[] = [
   { value: 'gerente', label: 'Gerente' },
@@ -29,7 +29,7 @@ interface UsuarioOption {
 
 interface FormState {
   nombre_completo: string;
-  cargo: string;
+  cargo: Cargo | '';
   dni: string;
   telefono: string;
   fecha_ingreso: string;
@@ -48,36 +48,60 @@ export default function PersonalFormModal({ personal, onClose, onSuccess }: Prop
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [usuarios, setUsuarios] = useState<UsuarioOption[]>([]);
-  const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  
+  // Solución al Error eslint: Nace en true si vamos a crear, evitando el setState síncrono inicial
+  const [loadingUsuarios, setLoadingUsuarios] = useState(!personal);
+
+  const initialFecha = () => {
+    if (!personal?.fecha_ingreso) return '';
+    try {
+      const d = new Date(personal.fecha_ingreso);
+      return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+    } catch {
+      return '';
+    }
+  };
 
   const [form, setForm] = useState<FormState>({
     nombre_completo: personal?.nombre_completo ?? '',
-    cargo: personal?.cargo ?? '',
-    dni: personal?.dni ?? '',
-    telefono: personal?.telefono ?? '',
-    fecha_ingreso: personal?.fecha_ingreso
-      ? new Date(personal.fecha_ingreso).toISOString().split('T')[0]
-      : '',
+    cargo: (personal?.cargo as Cargo) ?? '',
+    dni: personal?.dni ? String(personal.dni) : '',
+    telefono: personal?.telefono ? String(personal.telefono) : '',
+    fecha_ingreso: initialFecha(),
     usuario_id: '',
   });
 
   // Carga usuarios disponibles solo en modo creación
   useEffect(() => {
     if (personal) return;
-    setLoadingUsuarios(true);
+    let isMounted = true;
+    
     fetch('/api/admin/usuarios')
       .then((r) => r.json())
-      .then(({ data }) => setUsuarios(data ?? []))
+      .then(({ data }) => {
+        if (isMounted) setUsuarios(data ?? []);
+      })
       .catch(() => toast.error('No se pudieron cargar los usuarios'))
-      .finally(() => setLoadingUsuarios(false));
+      .finally(() => {
+        if (isMounted) setLoadingUsuarios(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [personal]);
 
   const handleChange = (field: keyof FormState, value: string) => {
     let v = value;
     if (field === 'nombre_completo') v = value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
     if (field === 'dni' || field === 'telefono') v = value.replace(/\D/g, '');
+    
     setForm((prev) => ({ ...prev, [field]: v }));
-    setErrors((prev) => { const c = { ...prev }; delete c[field]; return c; });
+    setErrors((prev) => { 
+      const c = { ...prev }; 
+      delete c[field]; 
+      return c; 
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,14 +157,17 @@ export default function PersonalFormModal({ personal, onClose, onSuccess }: Prop
 
       onSuccess();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message ?? 'Error inesperado');
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        toast.error(err.message);
+      } else {
+        toast.error('Error inesperado');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Usuario seleccionado — para mostrar su rol como referencia
   const usuarioSeleccionado = usuarios.find((u) => u.id === form.usuario_id) ?? null;
 
   return (
@@ -164,7 +191,7 @@ export default function PersonalFormModal({ personal, onClose, onSuccess }: Prop
                 : 'Registra un nuevo talento vinculando su usuario de acceso'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
@@ -220,8 +247,9 @@ export default function PersonalFormModal({ personal, onClose, onSuccess }: Prop
                 <select
                   value={form.cargo}
                   onChange={(e) => handleChange('cargo', e.target.value)}
-                  className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${errors.cargo ? 'border-red-400' : 'border-gray-200'
-                    }`}
+                  className={`w-full h-10 px-3 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                    errors.cargo ? 'border-red-400' : 'border-gray-200'
+                  }`}
                 >
                   <option value="">Seleccionar...</option>
                   {CARGOS.map((c) => (
@@ -260,8 +288,9 @@ export default function PersonalFormModal({ personal, onClose, onSuccess }: Prop
                   value={form.usuario_id}
                   onChange={(e) => handleChange('usuario_id', e.target.value)}
                   disabled={loadingUsuarios}
-                  className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 ${errors.usuario_id ? 'border-red-400' : 'border-gray-200'
-                    }`}
+                  className={`w-full h-10 px-3 text-sm border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 ${
+                    errors.usuario_id ? 'border-red-400' : 'border-gray-200'
+                  }`}
                 >
                   <option value="">
                     {loadingUsuarios ? 'Cargando usuarios...' : 'Seleccionar usuario...'}
@@ -317,10 +346,16 @@ export default function PersonalFormModal({ personal, onClose, onSuccess }: Prop
               className="flex-1 h-11 bg-teal-600 hover:bg-teal-700 text-white"
               disabled={loading}
             >
-              {loading
-                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Guardando...</>
-                : personal ? 'Actualizar Perfil' : 'Generar Perfil'
-              }
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Guardando...
+                </>
+              ) : personal ? (
+                'Actualizar Perfil'
+              ) : (
+                'Generar Perfil'
+              )}
             </Button>
           </div>
         </form>

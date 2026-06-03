@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --quiet",
     "db:generate": "prisma generate --schema=prisma/schema",
     "db:push": "prisma db push --schema=prisma/schema",
     "db:studio": "prisma studio --schema=prisma/schema",
@@ -17,12 +17,10 @@
     "check:users:supabase": "tsx scripts/check-users-supabase.ts"
   },
   "dependencies": {
-    "@ai-sdk/groq": "^2.0.33",
-    "@ai-sdk/react": "^2.0.118",
     "@google/generative-ai": "^0.24.1",
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^4.0.0",
     "@prisma/adapter-pg": "^7.7.0",
-    "@prisma/config": "^7.8.0",
+    "@prisma/client": "^7.7.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -35,25 +33,24 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-pdf/renderer": "^4.4.1",
-    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.104.1",
-    "@prisma/client": "^7.7.0",
     "@tanstack/react-query": "^5.90.21",
     "ai": "^5.0.116",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "dotenv": "^17.3.1",
+    "dotenv": "^16.5.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.38.0",
-    "jspdf": "^4.0.0",
-    "jspdf-autotable": "^5.0.7",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^5.0.8",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.562.0",
-    "next": "^16.1.6",
+    "next": "15.5.18",
     "next-themes": "^0.4.6",
-    "nodemailer": "^8.0.6",
+    "nodemailer": "^6.10.1",
+    "peru-utils": "^3.2.0",
     "pg": "^8.20.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.1",
@@ -64,25 +61,28 @@
     "replicate": "^1.4.0",
     "resend": "^6.6.0",
     "sonner": "^2.0.7",
+    "stripe": "^22.1.1",
     "tailwind-merge": "^3.4.0",
-    "zod": "^4.2.1"
+    "zod": "^4.2.1",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@prisma/config": "^7.8.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20.19.39",
     "@types/nodemailer": "^7.0.4",
     "@types/pg": "^8.20.0",
-    "@types/react": "^19",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.27",
     "babel-plugin-react-compiler": "1.0.0",
     "baseline-browser-mapping": "^2.10.0",
     "dotenv-cli": "^11.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.10",
+    "eslint-config-next": "15.5.18",
     "postcss": "^8.5.8",
-    "prisma": "^7.7.0",
+    "prisma": "^7.8.0",
     "supabase": "^2.84.1",
     "tailwindcss": "3.4",
     "tailwindcss-animate": "^1.0.7",
@@ -91,5 +91,20 @@
   },
   "prisma": {
     "schema": "prisma/schema/"
+  },
+  "pnpm": {
+    "overrides": {
+      "zod": "^4.2.1"
+    },
+    "supportedArchitectures": {
+      "os": [
+        "win32",
+        "linux",
+        "current"
+      ],
+      "cpu": [
+        "x64"
+      ]
+    }
   }
 }

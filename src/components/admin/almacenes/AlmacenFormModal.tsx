@@ -6,39 +6,45 @@ import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { crearAlmacenSchema, type CrearAlmacen as AlmacenInput } from '@/lib/schemas/almacenes';
+import { crearAlmacenSchema } from '@/lib/schemas/almacenes';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import type { Almacen } from '@/components/admin/almacenes/AlmacenesTable';
 
 interface Props {
-  almacen?:  any | null;
-  onClose:  () => void;
-  onSuccess:   () => void;
+  almacen?: Almacen | null;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
+
 const EMPTY = {
-  nombre:           '',
-  descripcion:      '',
-  direccion:        '',
-  capacidad_total:  undefined as number | undefined,
+  nombre: '',
+  descripcion: '',
+  direccion: '',
+  telefono: '',
+  email: '',
+  capacidad_total: undefined as number | undefined,
   unidad_capacidad: 'unidades',
-  estado:           'activo',
+  estado: 'activo',
 };
 
 export default function AlmacenFormModal({ almacen, onClose, onSuccess }: Props) {
-  const [form, setForm]     = useState(EMPTY);
+  const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (almacen) {
       setForm({
-        nombre:           almacen.nombre           ?? '',
-        descripcion:      almacen.descripcion       ?? '',
-        direccion:        almacen.direccion         ?? '',
-        capacidad_total:  almacen.capacidad_total ? Number(almacen.capacidad_total) : undefined,
-        unidad_capacidad: almacen.unidad_capacidad  ?? 'unidades',
-        estado:           almacen.estado            ?? 'activo',
+        nombre: almacen.nombre ?? '',
+        descripcion: almacen.descripcion ?? '',
+        direccion: almacen.direccion ?? '',
+        telefono: almacen.telefono ?? '',
+        email: almacen.email ?? '',
+        capacidad_total: almacen.capacidad_total ? Number(almacen.capacidad_total) : undefined,
+        unidad_capacidad: almacen.unidad_capacidad ?? 'unidades',
+        estado: almacen.estado ?? 'activo',
       });
     } else {
       setForm(EMPTY);
@@ -56,7 +62,7 @@ export default function AlmacenFormModal({ almacen, onClose, onSuccess }: Props)
     try {
       const validated = crearAlmacenSchema.parse(form);
       setIsSaving(true);
-      
+
       const method = almacen ? 'PUT' : 'POST';
       const url = almacen
         ? `/api/admin/almacenes/${almacen.id}`
@@ -130,8 +136,45 @@ export default function AlmacenFormModal({ almacen, onClose, onSuccess }: Props)
             <Input
               value={form.direccion}
               onChange={e => handleChange('direccion', e.target.value)}
-              placeholder="Dirección exacta del local"
+              placeholder="Ej: Av. Grau 123, Gamarra, La Victoria"
+              maxLength={255}
+              className={errors.direccion ? 'border-red-400' : ''}
             />
+            <p className={`text-[10px] mt-1 ${errors.direccion ? 'text-red-500' : 'text-gray-400'}`}>
+              {errors.direccion ?? `${(form.direccion ?? '').length}/255 caracteres`}
+            </p>
+          </div>
+
+          {/* ── Teléfono + Email ── */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Teléfono</label>
+              <Input
+                value={form.telefono}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 9);
+                  handleChange('telefono', val);
+                }}
+                placeholder="999999999"
+                maxLength={9}
+                inputMode="numeric"
+                className={errors.telefono ? 'border-red-400' : ''}
+              />
+              <p className={`text-[10px] mt-1 ${errors.telefono ? 'text-red-500' : 'text-gray-400'}`}>
+                {errors.telefono ?? `${(form.telefono ?? '').length}/9 dígitos`}
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={e => handleChange('email', e.target.value)}
+                placeholder="Ej: [EMAIL_ADDRESS]"
+                className={errors.email ? 'border-red-400' : ''}
+              />
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

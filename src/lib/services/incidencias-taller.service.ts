@@ -1,10 +1,10 @@
-// lib/services/incidencias-taller.service.ts
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
-import { TipoIncidencia, SeveridadIncidencia } from '@prisma/client';
+import { TipoIncidencia, SeveridadIncidencia, Prisma } from '@prisma/client';
 
 export const IncidenciasTallerService = {
 
+  // ── Listar ──────────────────────────────────────────────────
   async listar(params?: {
     severidad?: string;
     resuelto?: boolean;
@@ -15,11 +15,19 @@ export const IncidenciasTallerService = {
   }) {
     const { severidad, resuelto, confeccion_id, search, page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
-    const where: any = {};
 
-    if (severidad && severidad !== 'todas') where.severidad = severidad;
-    if (resuelto !== undefined) where.resuelto = resuelto;
-    if (confeccion_id) where.confeccion_id = BigInt(confeccion_id);
+    // FIX: Tipado estricto con el contrato WhereInput nativo de Prisma
+    const where: Prisma.incidencias_tallerWhereInput = {};
+
+    if (severidad && severidad !== 'todas') {
+      where.severidad = severidad as SeveridadIncidencia;
+    }
+    if (resuelto !== undefined) {
+      where.resuelto = resuelto;
+    }
+    if (confeccion_id) {
+      where.confeccion_id = BigInt(confeccion_id);
+    }
 
     if (search) {
       where.OR = [
@@ -37,7 +45,8 @@ export const IncidenciasTallerService = {
         include: {
           confecciones: {
             select: {
-              id: true, prenda: true,
+              id: true,
+              prenda: true,
               talleres: { select: { id: true, nombre: true } },
             },
           },
@@ -56,6 +65,7 @@ export const IncidenciasTallerService = {
     };
   },
 
+  // ── Obtener por ID ──────────────────────────────────────────
   async obtenerPorId(id: string) {
     const incidencia = await prisma.incidencias_taller.findUnique({
       where: { id: BigInt(id) },
@@ -70,6 +80,7 @@ export const IncidenciasTallerService = {
     return incidencia ? serializeBigInt(incidencia) : null;
   },
 
+  // ── Crear ───────────────────────────────────────────────────
   async crear(data: {
     confeccion_id: string;
     tipo: TipoIncidencia;
@@ -111,7 +122,7 @@ export const IncidenciasTallerService = {
     return serializeBigInt(incidencia);
   },
 
-  // Solo el representante puede resolver — registra solución y cierra
+  // ── Resolver ────────────────────────────────────────────────
   async resolver(id: string, data: {
     solucion: string;
     impacto_horas?: number;
@@ -131,6 +142,7 @@ export const IncidenciasTallerService = {
     return serializeBigInt(incidencia);
   },
 
+  // ── Asignar ─────────────────────────────────────────────────
   async asignar(id: string, asignado_a: string) {
     const incidencia = await prisma.incidencias_taller.update({
       where: { id: BigInt(id) },

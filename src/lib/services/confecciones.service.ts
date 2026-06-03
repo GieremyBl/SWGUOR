@@ -1,7 +1,6 @@
-// lib/services/confecciones.service.ts
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
-import { EstadoConfeccion } from '@prisma/client';
+import { EstadoConfeccion, Prisma } from '@prisma/client';
 
 export const ConfeccionesService = {
 
@@ -16,19 +15,31 @@ export const ConfeccionesService = {
   }) {
     const { estado, taller_id, orden_produccion_id, prioridad, search, page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
-    const where: any = {};
+    
+    // FIX: Reemplazado 'where: any' por el tipo exacto de Prisma
+    const where: Prisma.confeccionesWhereInput = {};
 
-    if (estado && estado !== 'todos') where.estado = estado;
-    if (taller_id && taller_id !== 'todos') where.taller_id = BigInt(taller_id);
-    if (orden_produccion_id) where.orden_produccion_id = BigInt(orden_produccion_id);
-    if (prioridad && prioridad !== 'todas') where.prioridad = prioridad;
+    if (estado && estado !== 'todos') {
+      where.estado = estado as EstadoConfeccion;
+    }
+    if (taller_id && taller_id !== 'todos') {
+      where.taller_id = BigInt(taller_id);
+    }
+    if (orden_produccion_id) {
+      where.orden_produccion_id = BigInt(orden_produccion_id);
+    }
+    if (prioridad && prioridad !== 'todas') {
+      where.prioridad = prioridad;
+    }
 
     if (search) {
       where.OR = [
         { prenda: { contains: search, mode: 'insensitive' } },
         { talleres: { nombre: { contains: search, mode: 'insensitive' } } },
       ];
-      if (!isNaN(Number(search))) where.OR.push({ id: BigInt(search) });
+      if (!isNaN(Number(search))) {
+        where.OR.push({ id: BigInt(search) });
+      }
     }
 
     const [total, confecciones] = await Promise.all([
@@ -114,7 +125,6 @@ export const ConfeccionesService = {
   },
 
   // Actualiza el estado y registra el seguimiento en una sola transacción
-  // registrarSeguimiento() queda eliminado — esta función lo reemplaza
   async actualizarEstado(id: string, data: {
     estado: string;
     notas?: string;
@@ -128,13 +138,18 @@ export const ConfeccionesService = {
 
       if (!actual) throw new Error('Confección no encontrada');
 
-      const extra: any = {};
-      if (data.estado === 'completada') extra.fecha_fin = new Date();
-      if (data.estado === 'en_proceso') extra.fecha_inicio = new Date();
+      // FIX: Reemplazado 'extra: any' asignando los campos de forma segura y estricta en el data input
+      const fechaInicio = data.estado === 'en_proceso' ? new Date() : undefined;
+      const fechaFin = data.estado === 'completada' ? new Date() : undefined;
 
       const confeccion = await tx.confecciones.update({
         where: { id: BigInt(id) },
-        data: { estado: data.estado as EstadoConfeccion, ...extra, updated_at: new Date() },
+        data: { 
+          estado: data.estado as EstadoConfeccion, 
+          ...(fechaInicio && { fecha_inicio: fechaInicio }),
+          ...(fechaFin && { fecha_fin: fechaFin }),
+          updated_at: new Date() 
+        },
       });
 
       await tx.seguimiento_confeccion.create({

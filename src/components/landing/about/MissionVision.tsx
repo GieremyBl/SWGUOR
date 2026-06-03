@@ -3,31 +3,27 @@
 import { useEffect, useRef, useState } from "react";
 import { Target, Eye } from "lucide-react";
 
-function useScrollReveal(threshold = 0.15) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+const MissionVision = () => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [sectionVisible, setSectionVisible] = useState(false);
+
   useEffect(() => {
-    const el = ref.current;
+    const el = sectionRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
-      { threshold }
+      ([e]) => { if (e.isIntersecting) { setSectionVisible(true); obs.disconnect(); } },
+      { threshold: 0.15 },
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
-  return { ref, visible };
-}
-
-const MissionVision = () => {
-  const section = useScrollReveal();
+  }, []);
 
   return (
     <section style={{ background: "#0a0806", padding: "6rem 2rem" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
         <div
-          ref={section.ref}
+          ref={sectionRef}
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}
           className="mv-grid"
         >
@@ -38,8 +34,8 @@ const MissionVision = () => {
               borderRadius: "32px", padding: "3.5rem",
               background: "rgba(255,255,255,0.02)",
               border: "1px solid rgba(196,163,90,0.15)",
-              opacity: section.visible ? 1 : 0,
-              transform: section.visible ? "translateY(0)" : "translateY(40px)",
+              opacity: sectionVisible ? 1 : 0,
+              transform: sectionVisible ? "translateY(0)" : "translateY(40px)",
               transition: "all 0.8s ease",
               cursor: "default",
             }}
@@ -96,8 +92,8 @@ const MissionVision = () => {
               borderRadius: "32px", padding: "3.5rem",
               background: "linear-gradient(135deg, rgba(196,163,90,0.08) 0%, rgba(196,163,90,0.02) 100%)",
               border: "1px solid rgba(196,163,90,0.25)",
-              opacity: section.visible ? 1 : 0,
-              transform: section.visible ? "translateY(0)" : "translateY(40px)",
+              opacity: sectionVisible ? 1 : 0,
+              transform: sectionVisible ? "translateY(0)" : "translateY(40px)",
               transition: "all 0.8s ease 0.15s",
               cursor: "default",
             }}

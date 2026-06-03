@@ -12,7 +12,6 @@ import type { UsuarioData, ProfileState, ProfileAction } from "@/components/admi
 import { updatePersonalInterno } from "@/lib/helpers/usuarios-helpers";
 
 // VALIDATION FUNCTIONS
-
 const validateEmail = (email: string): { valid: boolean; error?: string } => {
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email.trim()) return { valid: false, error: 'El email es requerido' };
@@ -21,7 +20,7 @@ const validateEmail = (email: string): { valid: boolean; error?: string } => {
 };
 
 const validatePhone = (phone: string): { valid: boolean; error?: string } => {
-  if (!phone.trim()) return { valid: true }; // Optional field
+  if (!phone.trim()) return { valid: true }; 
   const digitsOnly = phone.replace(/[\s-()]/g, '');
   if (!/^\d+$/.test(digitsOnly)) {
     return { valid: false, error: 'El teléfono solo puede contener números' };
@@ -34,46 +33,34 @@ const validatePhone = (phone: string): { valid: boolean; error?: string } => {
 
 const validatePassword = (password: string): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
-
-  if (password.length < 8) {
-    errors.push('Mínimo 8 caracteres');
-  }
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Al menos una mayúscula');
-  }
-  if (!/[a-z]/.test(password)) {
-    errors.push('Al menos una minúscula');
-  }
-  if (!/\d/.test(password)) {
-    errors.push('Al menos un número');
-  }
+  if (password.length < 8) errors.push('Mínimo 8 caracteres');
+  if (!/[A-Z]/.test(password)) errors.push('Al menos una mayúscula');
+  if (!/[a-z]/.test(password)) errors.push('Al menos una minúscula');
+  if (!/\d/.test(password)) errors.push('Al menos un número');
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
     errors.push('Al menos un símbolo especial');
   }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+  return { valid: errors.length === 0, errors };
 };
 
 // REDUCER & INITIAL STATE
-
 function profileReducer(state: ProfileState, action: ProfileAction): ProfileState {
   switch (action.type) {
     case 'SET_FIELD':
       return { ...state, [action.field]: action.value };
-
-    case 'SET_PROFILE_DATA':
+    case 'SET_PROFILE_DATA': {
+      // CORRECCIÓN TS 2339 & 2322: Typeguard local para asegurar las propiedades de la respuesta de datos
+      const userData = action.data as UsuarioData;
       return {
         ...state,
-        nombreCompleto: action.data.nombre_completo || '',
-        email: action.data.email || '',
-        telefono: action.data.telefono ?? '',
-        dni: action.data.dni ?? '',
+        nombreCompleto: userData.nombre_completo || '',
+        email: userData.email || '',
+        telefono: userData.telefono ? String(userData.telefono) : '',
+        dni: userData.dni ? String(userData.dni) : '',
+        avatarUrl: (userData as any).avatar_url || '',
         isLoading: false,
       };
-
+    }
     case 'RESET_PASSWORD_FIELDS':
       return {
         ...state,
@@ -85,25 +72,18 @@ function profileReducer(state: ProfileState, action: ProfileAction): ProfileStat
         showNewPassword: false,
         showConfirmPassword: false,
       };
-
     case 'SET_LOADING':
       return { ...state, isLoading: action.loading };
-
     case 'SET_SAVING':
       return { ...state, isSaving: action.saving };
-
     case 'SET_UPLOADING':
       return { ...state, uploadingImage: action.uploading };
-
     case 'SET_SUCCESS':
       return { ...state, success: action.message, error: '' };
-
     case 'SET_ERROR':
       return { ...state, error: action.message, success: '' };
-
     case 'CLEAR_FEEDBACK':
       return { ...state, success: '', error: '' };
-
     default:
       return state;
   }
@@ -138,10 +118,6 @@ export default function PerfilPage() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [authUser, setAuthUser] = useState<any>(null);
 
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
-
   // Get auth user on mount and load profile data
   useEffect(() => {
     const initAuth = async () => {
@@ -150,7 +126,6 @@ export default function PerfilPage() {
         if (session?.user?.id) {
           setAuthUser(session.user);
           
-          // Load user profile data
           if (!hasLoadedData.current) {
             hasLoadedData.current = true;
             dispatch({ type: 'SET_LOADING', loading: true });
@@ -160,8 +135,10 @@ export default function PerfilPage() {
               if (error) throw error;
               
               if (data) {
-                dispatch({ type: 'SET_PROFILE_DATA', data: data as UsuarioData });
-                setFullUsuario(data as UsuarioData);
+                // CORRECCIÓN TS 2352: Conversión segura pasando por unknown para evitar conflictos estructurales de Prisma
+                const mappedUser = data as unknown as UsuarioData;
+                dispatch({ type: 'SET_PROFILE_DATA', data: mappedUser });
+                setFullUsuario(mappedUser);
               }
             } catch (err) {
               console.error('[PerfilPage] Load error:', err);
@@ -175,14 +152,13 @@ export default function PerfilPage() {
         console.error('[PerfilPage] Auth init error:', err);
       }
     };
-
     initAuth();
-  }, []);
+  }, [supabase]); // CORRECCIÓN ESLINT: Dependencia añadida de forma reglamentaria
 
   // Auto-clear feedback messages
   useEffect(() => {
     if (state.success || state.error) {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current!);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         dispatch({ type: 'CLEAR_FEEDBACK' });
       }, 5000);
@@ -193,31 +169,6 @@ export default function PerfilPage() {
     }
   }, [state.success, state.error]);
 
-
-  // ============================================================================
-  // HANDLERS
-  // ============================================================================
-
-  const loadUserData = useCallback(async () => {
-    if (!authUser?.id) return;
-    
-    try {
-      dispatch({ type: 'SET_LOADING', loading: true });
-      const { data, error } = await getUsuarioData(authUser.id);
-
-      if (error) throw new Error('Error al cargar datos');
-      if (data) {
-        dispatch({ type: 'SET_PROFILE_DATA', data: data as UsuarioData });
-        setFullUsuario(data as UsuarioData);
-      }
-    } catch (err) {
-      console.error('[PerfilPage] Load error:', err);
-      dispatch({ type: 'SET_ERROR', message: 'Error al cargar el perfil' });
-    } finally {
-      dispatch({ type: 'SET_LOADING', loading: false });
-    }
-  }, [authUser]);
-
   const handleUpdateProfile = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authUser?.id) return;
@@ -227,7 +178,7 @@ export default function PerfilPage() {
       dispatch({ type: 'CLEAR_FEEDBACK' });
 
       if (!state.nombreCompleto || !state.email) {
-        dispatch({ type: 'SET_ERROR', message: 'El nombre y correo es requerido' });
+        dispatch({ type: 'SET_ERROR', message: 'El nombre y correo son requeridos' });
         return;
       }
 
@@ -242,11 +193,9 @@ export default function PerfilPage() {
         return;
       }
 
-      const supabase = getSupabaseBrowserClient();
       const isAdmin = fullUsuario?.rol?.toLowerCase() === 'administrador';
       const emailChanged = state.email.trim().toLowerCase() !== fullUsuario?.email?.toLowerCase();
 
-      // 1. Actualizar nombre en personal_interno
       if (!fullUsuario?.personal_interno_id) {
         dispatch({ type: 'SET_ERROR', message: 'No se encontró el perfil interno del usuario' });
         return;
@@ -262,7 +211,6 @@ export default function PerfilPage() {
         return;
       }
 
-      // 2. Actualizar email en usuarios (solo admin)
       if (isAdmin && emailChanged) {
         const emailValidation = validateEmail(state.email);
         if (!emailValidation.valid) {
@@ -294,7 +242,6 @@ export default function PerfilPage() {
           : 'Perfil actualizado correctamente',
       });
 
-      // Refrescar datos locales
       setFullUsuario(prev => prev ? {
         ...prev,
         nombre_completo: state.nombreCompleto.trim(),
@@ -306,7 +253,7 @@ export default function PerfilPage() {
     } finally {
       dispatch({ type: 'SET_SAVING', saving: false });
     }
-  }, [state.nombreCompleto, state.email, state.telefono, authUser, fullUsuario]);
+  }, [state.nombreCompleto, state.email, state.telefono, authUser, fullUsuario, supabase]); // CORRECCIÓN ESLINT: Dependencia añadida
 
   const handleChangePassword = useCallback(
     async (e: React.FormEvent) => {
@@ -343,8 +290,6 @@ export default function PerfilPage() {
           return;
         }
 
-        const supabase = getSupabaseBrowserClient();
-
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: state.email,
           password: state.currentPassword,
@@ -370,12 +315,8 @@ export default function PerfilPage() {
         dispatch({ type: 'SET_SAVING', saving: false });
       }
     },
-    [state.currentPassword, state.newPassword, state.confirmPassword, state.email]
+    [state.currentPassword, state.newPassword, state.confirmPassword, state.email, supabase] // CORRECCIÓN ESLINT: Dependencia añadida
   );
-
-  // ============================================================================
-  // RENDER: LOADING STATE
-  // ============================================================================
 
   if (loadingPermisos || state.isLoading) {
     return (
@@ -387,10 +328,6 @@ export default function PerfilPage() {
       </div>
     );
   }
-
-  // ============================================================================
-  // RENDER: ERROR STATE
-  // ============================================================================
 
   if (!usuario || !fullUsuario) {
     return (
@@ -406,19 +343,15 @@ export default function PerfilPage() {
     );
   }
 
-  // ============================================================================
-  // RENDER: MAIN CONTENT
-  // ============================================================================
-
   const isAdmin = fullUsuario?.rol?.toLowerCase() === 'administrador';
 
   const usuarioFormateado = fullUsuario ? {
     ...fullUsuario,
-    id: BigInt(fullUsuario.id),
-    telefono: fullUsuario.telefono ? BigInt(fullUsuario.telefono) : null,
-    created_at: fullUsuario.created_at ? new Date(fullUsuario.created_at) : null,
-    updated_at: fullUsuario.updated_at ? new Date(fullUsuario.updated_at) : null,
-    ultimo_acceso: fullUsuario.ultimo_acceso ? new Date(fullUsuario.ultimo_acceso) : null,
+    id: String(fullUsuario.id), 
+    telefono: fullUsuario.telefono ? String(fullUsuario.telefono) : '', 
+    created_at: fullUsuario.created_at ? new Date(fullUsuario.created_at).toISOString() : null,
+    updated_at: fullUsuario.updated_at ? new Date(fullUsuario.updated_at).toISOString() : null,
+    ultimo_acceso: fullUsuario.ultimo_acceso ? new Date(fullUsuario.ultimo_acceso).toISOString() : null,
   } : null;
 
   return (

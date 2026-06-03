@@ -3,8 +3,9 @@ import { PedidosService } from '@/lib/services/pedidos.service';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
 import { auditoriaService } from '@/lib/services/auditoria.service';
+import type { RolUsuario } from '@/lib/constants/roles';
 
-const PEDIDOS_ROLES: any = ['administrador', 'gerente', 'recepcionista', 'disenador', 'cortador', 'representante_taller'];
+const PEDIDOS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'recepcionista', 'disenador', 'cortador', 'representante_taller'];
 
 // GET /api/admin/pedidos/[id]
 export async function GET(
@@ -47,10 +48,10 @@ export async function PUT(
 
     const { estado, prioridad, notas_pedido, notas_cliente } = body;
     const data = {
-      ...(estado !== undefined && { estado }),
-      ...(prioridad !== undefined && { prioridad }),
-      ...(notas_pedido !== undefined && { notas_pedido }),
-      ...(notas_cliente !== undefined && { notas_cliente }),
+      ...(estado && { estado }),
+      ...(prioridad  && { prioridad }),
+      ...(notas_pedido  && { notas_pedido }),
+      ...(notas_cliente  && { notas_cliente }),
     };
 
     if (Object.keys(data).length === 0) {

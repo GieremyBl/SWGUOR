@@ -23,12 +23,12 @@ export const usuarioSchema = z.object({
 });
 
 export const personalInternoSchema = z.object({
-  dni:            z.number().min(8, "DNI inválido"),
+  dni:             z.string().regex(/^\d{8}$/, "El DNI debe tener exactamente 8 dígitos"),
   nombre_completo: z.string().min(3, "Nombre requerido"),
-  cargo:          z.enum(CARGO_PERSONAL),
-  telefono:       z.number().optional(),
-  fecha_ingreso:  z.string().optional(),
-  estado:         z.boolean().default(true),
+  cargo:           z.enum(CARGO_PERSONAL),
+  telefono:        z.string().regex(/^\d+$/, "Teléfono inválido").optional(),
+  fecha_ingreso:   z.string().optional(),
+  estado:          z.boolean().default(true),
 });
 
 export const usuarioCompletoSchema = usuarioSchema.merge(
@@ -57,7 +57,7 @@ export const ESTADO_USUARIO_LABELS: Record<typeof ESTADO_USUARIO[number], string
   suspendido: "Suspendido",
 };
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success:  boolean;
   data?:    T;
   error?:   string;

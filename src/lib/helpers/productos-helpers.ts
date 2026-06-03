@@ -9,13 +9,13 @@ export async function fetchProductos(params?: {
   color?:       string;
   talla?:       string;
   sortOrder?:   'asc' | 'desc' | 'none';
-}): Promise<{ productos: any[]; categorias: any[] }> {
+}): Promise<{ productos: Record<string, unknown>[]; categorias: Record<string, unknown>[] }> {
   const query = new URLSearchParams();
-  if (params?.categoriaId)                        query.set('categoria_id', params.categoriaId);
-  if (params?.estado)                             query.set('estado',       params.estado);
-  if (params?.busqueda)                           query.set('busqueda',     params.busqueda);
-  if (params?.color)                              query.set('color',        params.color);
-  if (params?.talla)                              query.set('talla',        params.talla);
+  if (params?.categoriaId)                               query.set('categoria_id', params.categoriaId);
+  if (params?.estado)                                    query.set('estado',       params.estado);
+  if (params?.busqueda)                                  query.set('busqueda',     params.busqueda);
+  if (params?.color)                                     query.set('color',        params.color);
+  if (params?.talla)                                     query.set('talla',        params.talla);
   if (params?.sortOrder && params.sortOrder !== 'none') query.set('sort', params.sortOrder);
 
   const res = await fetch(`${API}?${query.toString()}`, { cache: 'no-store' });
@@ -23,14 +23,14 @@ export async function fetchProductos(params?: {
   return res.json();
 }
 
-export async function fetchProductoById(id: string): Promise<any> {
+export async function fetchProductoById(id: string): Promise<Record<string, unknown>> {
   const res = await fetch(`${API}/${id}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Producto no encontrado');
   const result = await res.json();
   return result.data ?? result;
 }
 
-export async function createProducto(data: any): Promise<ApiResponse> {
+export async function createProducto(data: Record<string, unknown>): Promise<ApiResponse> {
   const res = await fetch(API, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },

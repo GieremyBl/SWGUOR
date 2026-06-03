@@ -11,7 +11,7 @@ interface Props {
   onFilterChange?: (f: "activo" | "inactivo" | null) => void;
 }
 
-export default function StatsUsuarios({ usuarios, loading, statusFilter = null, onFilterChange }: Props) {
+export default function StatsUsuarios({ usuarios, statusFilter = null, onFilterChange }: Props) {
   const total     = usuarios.length;
   const activos   = usuarios.filter((u) => u.estado === "activo").length;
   const inactivos = usuarios.filter((u) => u.estado !== "activo").length;

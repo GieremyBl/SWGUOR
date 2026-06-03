@@ -33,6 +33,7 @@ export default function PersonalPage() {
   const [detalleTarget, setDetalleTarget] = useState<PersonalRow | null>(null);
   const [isSuspending, setIsSuspending] = useState(false);
   const selectedPersonal = suspenderTarget;
+
   // ── Fetch ─────────────────────────────────────────────────────
   const fetchPersonal = useCallback(async () => {
     setLoading(true);
@@ -41,8 +42,10 @@ export default function PersonalPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? "Error al cargar personal");
       setPersonal(body.data ?? []);
-    } catch (e: any) {
-      toast.error(e.message ?? "Error inesperado");
+    } catch (e) {
+      // CORRECCIÓN TS 1005: Un solo bloque catch seguro y bien estructurado
+      const error = e instanceof Error ? e : new Error("Error inesperado");
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -50,13 +53,25 @@ export default function PersonalPage() {
 
   useEffect(() => { fetchPersonal(); }, [fetchPersonal]);
 
+  // ── CORRECCIÓN ESTRICTA PARA EXPORTACIÓN ──
   const handleExportExcel = async () => {
     try {
-      await exportPersonalToExcel(filtered, {
+      // CORRECCIÓN TS 2345: Saneamos convirtiendo nulos/indefinidos a "" para cumplir con PersonalBase
+      const datosSaneados = filtered.map((p) => ({
+        ...p,
+        nombre_completo: p.nombre_completo ?? "",
+        dni: p.dni ?? "",
+        telefono: p.telefono ? String(p.telefono) : "",
+        cargo: p.cargo ?? "",
+        estado: p.estado ?? "",
+      }));
+
+      await exportPersonalToExcel(datosSaneados, {
         filename: `Personal_GUOR_${new Date().toISOString().split('T')[0]}`,
       });
-    } catch (e: any) {
-      toast.error(e.message ?? "Error al exportar");
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error("Error al exportar");
+      toast.error(error.message);
     }
   };
 
@@ -82,8 +97,9 @@ export default function PersonalPage() {
       );
       setSuspenderTarget(null);
       fetchPersonal(); // recargar lista
-    } catch (error: any) {
-      toast.error(error.message ?? 'Error al actualizar estado');
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error('Error al actualizar estado');
+      toast.error(err.message);
     } finally {
       setIsSuspending(false);
     }

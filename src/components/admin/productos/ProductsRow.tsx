@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, memo } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { 
   Edit2, Trash2, Package, Tag, Lock, 
-  FileText, CheckCircle2, Eye
+  CheckCircle2, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +18,13 @@ interface ProductoRowProps {
   onArchive: (p: ProductoConRelaciones) => void;
   onEdit: (p: ProductoConRelaciones) => void;
   onStatusChange?: (p: ProductoConRelaciones) => void;
-  canEdit: boolean;
-  canArchive: boolean;
 }
 
-const normalizeId = (id: any) => String(id).replace(/[^0-9]/g, '');
+// Solución al Error TS2345: Tipado ultra-seguro que acepta BigInt, null y undefined, convirtiendo todo primero a String nativo
+const normalizeId = (id: string | number | bigint | null | undefined) => {
+  if (id === null || id === undefined) return '';
+  return String(id).replace(/[^0-9]/g, '');
+};
 
 const ProductoRow = memo(({
   p,
@@ -31,7 +33,6 @@ const ProductoRow = memo(({
   onEdit,
   onStatusChange,
 }: ProductoRowProps) => {
-  const router = useRouter();
   const { can } = usePermissions();
   const canEdit    = can('edit',    'productos');
   const canArchive = can('archive', 'productos');
@@ -45,23 +46,31 @@ const ProductoRow = memo(({
   const hasFicha = !!p.ficha_tecnica_rel;
 
   const categoriaNombre = useMemo(() => {
-    const relacionDirecta = p.categorias || (p as any).categoria;
+    const relacionDirecta = p.categorias || (p as unknown as { categoria: Categoria | null }).categoria;
     if (relacionDirecta?.nombre) return relacionDirecta.nombre;
     if (!p.categoria_id)         return 'Sin categoría';
+    
     const encontrada = categorias.find(
       (c) => normalizeId(c.id) === normalizeId(p.categoria_id)
     );
     return encontrada ? encontrada.nombre : 'Sin categoría';
-  }, [p.categoria_id, p.categorias, categorias]);
+  }, [p, categorias]);
 
   return (
     <tr className="group transition-all duration-200">
       {/* ── Detalle ── */}
       <td className="bg-guor-cream border-y border-l border-guor-peach/50 py-4 px-6 rounded-l-2xl shadow-sm group-hover:shadow-md group-hover:bg-guor-cream/60 transition-all">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 relative bg-guor-cream/60 rounded-xl border border-guor-peach/50 shrink-0 overflow-hidden">
+          <div className="w-14 h-14 relative bg-guor-cream/60 rounded-xl border border-guor-peach/50 shrink-0 overflow-hidden flex items-center justify-center">
             {publicUrl ? (
-              <img src={publicUrl} alt={p.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              <Image 
+                src={publicUrl} 
+                alt={p.nombre} 
+                width={56}
+                height={56}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                unoptimized
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <Package className="w-6 h-6 text-guor-gold/40" />
@@ -98,7 +107,7 @@ const ProductoRow = memo(({
 
       {/* ── Estado ── */}
       <td className="bg-guor-cream border-y border-guor-peach/50 text-center shadow-sm group-hover:bg-guor-cream/60 transition-all">
-        <button onClick={() => onStatusChange?.(p)} className="group/status relative">
+        <button type="button" onClick={() => onStatusChange?.(p)} className="group/status relative">
           <Badge
             className={`rounded-full px-3 py-1 text-[9px] font-black border-2 uppercase transition-all duration-300 ${
               p.estado === 'activo'
@@ -118,13 +127,12 @@ const ProductoRow = memo(({
           <TooltipProvider>
 
             {/* Ver detalle */}
-            <Button
-              variant="outline" size="icon"
-              onClick={() => router.push(`/admin/Panel-Administrativo/productos/${p.id}`)}
-              className="h-9 w-9 rounded-xl border-guor-peach text-guor-gold/70 hover:text-sky-600 hover:bg-sky-50 hover:border-sky-200"
+            <a
+              href={`/admin/Panel-Administrativo/productos/${p.id}`}
+              className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-guor-peach text-guor-gold/70 hover:text-sky-600 hover:bg-sky-50 hover:border-sky-200 transition-colors bg-white"
             >
               <Eye size={16} />
-            </Button>
+            </a>
 
             {canEdit ? (
               <Button

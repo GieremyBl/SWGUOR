@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ShoppingCart, Users, Menu, X,
-  Boxes, Scissors, Building,
+  Boxes, Scissors, Building, Lock,
   Bell, BarChart3, LucideIcon, ChevronDown,
   Settings, Truck, Package, Grid3x3, DollarSign, FileText,
   Building2, ShieldCheck, UserSquare, Briefcase, MessageSquare, History,
@@ -14,10 +14,10 @@ import {
   ShoppingBag,
   Tag,
 } from 'lucide-react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
 import type { usuarios } from '@prisma/client';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import type { RecursoKey } from '@/lib/constants/roles';
+import Image from 'next/image';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -56,11 +56,27 @@ const GESTION_OPERATIVA: NavGroup = {
     },
     {
       title: 'Reportes',
-      href: '/admin/Panel-Administrativo/reportes',
       icon: BarChart3,
-      resource: 'reportes' as RecursoKey,
-      roles: ['gerente', 'administrador'],
+      roles: ['gerente', 'administrador', 'ayudante', 'representante_taller'],
+
+  subItems: [
+
+    {
+      title: 'Talleres Externos',
+      href: '/admin/Panel-Administrativo/reportes/talleres-externos',
+      icon: BarChart3,
+      resource: 'dashboard' as RecursoKey,
     },
+
+    {
+      title: 'Incidencias',
+      href: '/admin/Panel-Administrativo/reportes/incidencias',
+      icon: Bell,
+      resource: 'dashboard' as RecursoKey,
+    },
+
+  ],
+},
     {
       title: 'Catálogo',
       icon: Package,
@@ -77,10 +93,10 @@ const GESTION_OPERATIVA: NavGroup = {
       icon: ShoppingCart,
       roles: ['gerente', 'administrador', 'recepcionista', 'disenador'],
       subItems: [
-        { title: 'Pedidos',       href: '/admin/Panel-Administrativo/pedidos',               icon: ShoppingCart, resource: 'pedidos'              as RecursoKey },
-        { title: 'Cotizaciones',  href: '/admin/Panel-Administrativo/cotizaciones',            icon: FileText,     resource: 'cotizaciones'          as RecursoKey },
-        { title: 'Devoluciones',  href: '/admin/Panel-Administrativo/devoluciones-cliente',   icon: Truck,        resource: 'devoluciones_clientes' as RecursoKey },
-        { title: 'Pagos',         href: '/admin/Panel-Administrativo/pagos',                   icon: DollarSign,   resource: 'pagos'                 as RecursoKey },
+        { title: 'Pedidos', href: '/admin/Panel-Administrativo/pedidos', icon: ShoppingCart, resource: 'pedidos' as RecursoKey },
+        { title: 'Cotizaciones', href: '/admin/Panel-Administrativo/cotizaciones', icon: FileText, resource: 'cotizaciones' as RecursoKey },
+        { title: 'Devoluciones', href: '/admin/Panel-Administrativo/devoluciones-cliente', icon: Truck, resource: 'devoluciones_clientes' as RecursoKey },
+        { title: 'Pagos', href: '/admin/Panel-Administrativo/pagos', icon: DollarSign, resource: 'pagos' as RecursoKey },
       ],
     },
     {
@@ -88,11 +104,11 @@ const GESTION_OPERATIVA: NavGroup = {
       icon: Scissors,
       roles: ['gerente', 'administrador', 'cortador', 'representante_taller', 'disenador'],
       subItems: [
-        { title: 'Órdenes de Producción',  href: '/admin/Panel-Administrativo/ordenes-produccion',  icon: Package,  resource: 'produccion'   as RecursoKey },
-        { title: 'Confecciones',           href: '/admin/Panel-Administrativo/confecciones',         icon: Scissors, resource: 'confecciones' as RecursoKey },
-        { title: 'Talleres',               href: '/admin/Panel-Administrativo/talleres',             icon: Building, resource: 'talleres'     as RecursoKey },
-        { title: 'Incidencias de Taller',  href: '/admin/Panel-Administrativo/incidencias-taller',   icon: Bell,     resource: 'incidencias'  as RecursoKey },
-        { title: 'Incidencias de Cliente', href: '/admin/Panel-Administrativo/incidencias-cliente',  icon: Bell,     resource: 'incidencias'  as RecursoKey },
+        { title: 'Órdenes de Producción', href: '/admin/Panel-Administrativo/ordenes-produccion', icon: Package, resource: 'produccion' as RecursoKey },
+        { title: 'Confecciones', href: '/admin/Panel-Administrativo/confecciones', icon: Scissors, resource: 'confecciones' as RecursoKey },
+        { title: 'Talleres', href: '/admin/Panel-Administrativo/talleres', icon: Building, resource: 'talleres' as RecursoKey },
+        { title: 'Incidencias de Taller', href: '/admin/Panel-Administrativo/incidencias-taller', icon: Bell, resource: 'incidencias' as RecursoKey },
+        { title: 'Incidencias de Cliente', href: '/admin/Panel-Administrativo/incidencias-cliente', icon: Bell, resource: 'incidencias' as RecursoKey },
       ],
     },
   ]
@@ -106,11 +122,11 @@ const GESTION_LOGISTICA: NavGroup = {
       icon: Boxes,
       roles: ['gerente', 'administrador', 'cortador', 'ayudante'],
       subItems: [
-        { title: 'Almacenes',               href: '/admin/Panel-Administrativo/almacenes',               icon: Boxes,     resource: 'almacenes'             as RecursoKey },
-        { title: 'Inventario',              href: '/admin/Panel-Administrativo/inventario',              icon: Boxes,     resource: 'inventario'            as RecursoKey },
-        { title: 'Movimientos',             href: '/admin/Panel-Administrativo/movimientos',             icon: Grid3x3,   resource: 'movimiento_inventario' as RecursoKey },
-        { title: 'Proveedores',             href: '/admin/Panel-Administrativo/proveedores',             icon: Building2, resource: 'proveedores'           as RecursoKey },
-        { title: 'Devoluciones Proveedor',  href: '/admin/Panel-Administrativo/devoluciones-proveedor',  icon: Truck,     resource: 'devoluciones_proveedor' as RecursoKey },
+        { title: 'Almacenes', href: '/admin/Panel-Administrativo/almacenes', icon: Boxes, resource: 'almacenes' as RecursoKey },
+        { title: 'Inventario', href: '/admin/Panel-Administrativo/inventario', icon: Boxes, resource: 'inventario' as RecursoKey },
+        { title: 'Movimientos', href: '/admin/Panel-Administrativo/movimientos', icon: Grid3x3, resource: 'movimiento_inventario' as RecursoKey },
+        { title: 'Reservas de stock', href: '/admin/Panel-Administrativo/inventario/reservas', icon: Lock, resource: 'inventario' as RecursoKey },
+        { title: 'Devoluciones Prov.', href: '/admin/Panel-Administrativo/devoluciones-proveedor', icon: Truck, resource: 'devoluciones_proveedor' as RecursoKey },
       ],
     },
     {
@@ -134,7 +150,7 @@ const GESTION_LOGISTICA: NavGroup = {
           title: 'Proveedores Cotizaciones',
           href: '/admin/Panel-Administrativo/cotizaciones-proveedor',
           icon: FileText,
-          resource: 'proveedores' as RecursoKey,
+          resource: 'cotizaciones_proveedor' as RecursoKey,
         },
       ],
     },
@@ -157,11 +173,11 @@ const GESTION_SISTEMA: NavGroup = {
       icon: Users,
       roles: ['gerente', 'administrador', 'recepcionista'],
       subItems: [
-        { title: 'Usuarios',          href: '/admin/Panel-Administrativo/usuarios',         icon: ShieldCheck,   resource: 'usuarios'         as RecursoKey },
-        { title: 'Personal Interno',  href: '/admin/Panel-Administrativo/personal',          icon: UserSquare,    resource: 'personal'         as RecursoKey },
-        { title: 'Clientes',          href: '/admin/Panel-Administrativo/clientes',          icon: Briefcase,     resource: 'clientes'         as RecursoKey },
-        { title: 'Auditoría',         href: '/admin/Panel-Administrativo/auditoria',         icon: History,       resource: 'usuarios'         as RecursoKey },
-        { title: 'Feedback Cliente',  href: '/admin/Panel-Administrativo/feedback-cliente',  icon: MessageSquare, resource: 'feedback_cliente' as RecursoKey },
+        { title: 'Usuarios', href: '/admin/Panel-Administrativo/usuarios', icon: ShieldCheck, resource: 'usuarios' as RecursoKey },
+        { title: 'Personal Interno', href: '/admin/Panel-Administrativo/personal', icon: UserSquare, resource: 'personal' as RecursoKey },
+        { title: 'Clientes', href: '/admin/Panel-Administrativo/clientes', icon: Briefcase, resource: 'clientes' as RecursoKey },
+        { title: 'Auditoría', href: '/admin/Panel-Administrativo/auditoria', icon: History, resource: 'usuarios' as RecursoKey },
+        { title: 'Feedback Cliente', href: '/admin/Panel-Administrativo/feedback-cliente', icon: MessageSquare, resource: 'feedback_cliente' as RecursoKey },
       ],
     },
     {
@@ -213,7 +229,6 @@ function CollapseTooltip({ label, children }: { label: string; children: React.R
 
 export default function Sidebar({ }: { usuario: usuarios }) {
   const pathname = usePathname();
-  const supabase = getSupabaseBrowserClient();
   const { can } = usePermissions();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -295,7 +310,13 @@ export default function Sidebar({ }: { usuario: usuarios }) {
           isCollapsed ? 'h-20 px-3 justify-center' : 'h-20 px-5 gap-3.5 justify-start',
         )}>
           <div className="w-11 h-11 rounded-full border border-rose-500/30 bg-white flex items-center justify-center shrink-0 overflow-hidden p-0.5 shadow-sm">
-            <img src="/logo.png" alt="GUOR" className="w-full h-full object-cover rounded-full" />
+            <Image
+              src="/logo.png"
+              alt="GUOR"
+              width={44}
+              height={44}
+              className="w-full h-full object-cover rounded-full"
+            />
           </div>
           {!isCollapsed && (
             <div className="flex-1 min-w-0 overflow-hidden text-left">
@@ -326,7 +347,6 @@ export default function Sidebar({ }: { usuario: usuarios }) {
                   const isOpen = openMenus.includes(item.title);
                   const isActive = item.href === pathname || item.subItems?.some(s => s.href === pathname);
 
-                  // ✅ FIX: colores aplicados directamente a cada hijo, sin depender de herencia CSS
                   const itemContent = (
                     <div className={cn(
                       'flex items-center rounded-xl transition-all duration-200 cursor-pointer select-none w-full',

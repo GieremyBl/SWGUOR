@@ -83,6 +83,7 @@ export async function GET(req: Request) {
           where: { estado: 'activo', stock: { gt: 0 } },
           select: {
             id: true,
+            nombre: true,
             color: true,
             talla: true,
             estado: true,
@@ -157,10 +158,10 @@ export async function GET(req: Request) {
         imagen: normalizarImagen(producto.imagen),
         categoria: producto.categorias
           ? {
-              id: producto.categorias.id,
-              nombre: producto.categorias.nombre,
-              imagen: normalizarImagen(producto.categorias.imagen),
-            }
+            id: typeof producto.categorias.id === 'bigint' ? Number(producto.categorias.id) : producto.categorias.id,
+            nombre: producto.categorias.nombre,
+            imagen: normalizarImagen(producto.categorias.imagen),
+          }
           : { id: null, nombre: 'Sin categoría', imagen: null },
         es_nuevo: esNuevo,
         colores_disponibles: coloresDisponibles,
@@ -168,7 +169,8 @@ export async function GET(req: Request) {
         tallas_por_color: tallasPorColor,
         colores_por_talla: coloresPorTalla,
         variantes: variantes.map((v) => ({
-          id: v.id,
+          id: Number(v.id),
+          nombre: v.nombre,
           color: v.color,
           talla: v.talla,
           stock: v.stock,

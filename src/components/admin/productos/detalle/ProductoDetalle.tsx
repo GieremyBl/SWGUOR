@@ -3,30 +3,67 @@
 import { useState } from "react";
 import { ArrowLeft, Package, Layers, Info, Tag, BarChart3 } from "lucide-react";
 import Link from "next/link";
-import { usePermissions } from "@/lib/hooks/usePermissions";
 
 // Componentes de visualización (Solo lectura)
 import ProductInfoDisplay from "@/components/admin/productos/detalle/ProductInfoDisplay";
 import VariantsTable from "@/components/admin/productos/detalle/VariantsTable";
 
-interface ProductoDetalleProps {
-  producto: any;
-  categorias: any[];
+// ── Definición de Interfaces Estrictas ──────────────────────────────────
+
+export interface CategoriaBase {
+  id: number | string;
+  nombre: string;
 }
 
-const TABS = [
+export interface VarianteProductoDetalle {
+  id: number;
+  color: string;
+  talla: string;
+  sku: string;
+  stock: number;
+  stock_actual?: number;
+  textura?: string;
+  estado?: string;
+}
+
+export interface ProductoDetalleData {
+  id: string | number;
+  nombre: string;
+  sku: string;
+  precio: number;
+  estado: "activo" | "inactivo";
+  imagen: string | null;
+  stock: number; // Solución al Error TS2741: Añadido aquí para concordar con ProductDisplayData
+  categoria_id: string | number;
+  categorias?: {
+    nombre: string;
+  } | null;
+  variantes_producto?: VarianteProductoDetalle[];
+  fichas_tecnicas_id?: string | number | null;
+}
+
+interface ProductoDetalleProps {
+  producto: ProductoDetalleData;
+  categorias: CategoriaBase[];
+}
+
+type TabId = "general" | "variantes";
+
+interface TabItem {
+  id: TabId;
+  label: string;
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
+}
+
+const TABS: TabItem[] = [
   { id: "general",   label: "Información General",   icon: Info   },
   { id: "variantes", label: "Variantes y Existencias", icon: Layers },
 ];
 
 export default function ProductoDetalle({ producto, categorias }: ProductoDetalleProps) {
-  const [activeTab, setActiveTab] = useState("general");
-  const { can } = usePermissions();
+  const [activeTab, setActiveTab] = useState<TabId>("general");
 
-  // ── Resolución de categoría (tres niveles de fallback) ──────────────────
-  // 1. Join directo de Supabase → producto.categorias.nombre
-  // 2. Búsqueda en el array prop por categoria_id (snake_case, comparación string)
-  // 3. "Sin categoría"
+  // ── Resolución de categoría ──
   const categoriaNombre =
     producto.categorias?.nombre ??
     categorias.find(
@@ -86,6 +123,7 @@ export default function ProductoDetalle({ producto, categorias }: ProductoDetall
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
+              type="button"
               onClick={() => setActiveTab(id)}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
                 activeTab === id

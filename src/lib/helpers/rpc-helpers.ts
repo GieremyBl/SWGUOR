@@ -4,8 +4,15 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { TipoMovimiento, ReferenciaMovimiento, ReferenciaNotificacion, TipoNotificacion } from "@prisma/client";
+import type { 
+  TipoMovimiento, 
+  ReferenciaMovimiento, 
+  ReferenciaNotificacion, 
+  TipoNotificacion,
+  EstadoConfeccion,
+} from "@prisma/client";
 
+type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
 
 // ============================================================================
 // TIPOS DE PARÁMETROS Y RESPUESTAS PARA RPC
@@ -46,14 +53,10 @@ export interface ActualizarPrecioResult {
   message?: string;
 }
 
-// FIX 1: tipoMovimiento usa el enum completo TipoMovimiento de Prisma.
-//         Antes era "entrada" | "salida" | "ajuste" (subset incompleto).
-// FIX 2: referenciaId es opcional — no todos los movimientos tienen documento origen.
-// FIX 3: se agrega almacenId, necesario para fn_actualizar_almacen_stock.
 export interface InsertarMovimientoParams {
   tipoMovimiento: TipoMovimiento;
   referenciaType: ReferenciaMovimiento;
-  referenciaId?: number;      // opcional: ajustes manuales no tienen referencia
+  referenciaId?: number;
   cantidad: number;
   motivo: string;
   productoId?: number;
@@ -62,6 +65,39 @@ export interface InsertarMovimientoParams {
   almacenId?: number;
   costoUnitario?: number;
   usuarioId?: number;
+}
+
+// FIX: Corregido para emparejar con el modelo exacto de Prisma usando 'bigint' y 'datos_antes/despues'
+export interface AuditoriaConUsuario {
+  id: bigint;
+  tabla: string;
+  registro_id: bigint;
+  accion: string;
+  datos_antes: JsonValue;
+  datos_despues: JsonValue;
+  usuario_id: bigint | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: Date;
+  usuarios?: {
+    id: bigint;
+    email: string;
+  } | null;
+}
+
+// FIX: Cambiados 'number' por 'bigint' para sincronizar con Prisma
+export interface NotificacionResultado {
+  id: bigint;
+  usuario_id: bigint;
+  tipo: TipoNotificacion;
+  titulo: string;
+  mensaje: string;
+  leido: boolean;
+  referencia_tipo: ReferenciaNotificacion;
+  referencia_id: bigint | null;
+  url_destino: string | null;
+  created_at: Date;
+  leido_at: Date | null;
 }
 
 // ============================================================================
@@ -75,7 +111,7 @@ export async function calcularCostoFicha(params: CalcularCostoFichaParams): Prom
     `;
     return result[0]?.calcular_costo_ficha || 0;
   } catch (error) {
-    console.error("Error en calcularCostoFicha:", error);
+    console.error("Error en calcularCostoFicha:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo calcular el costo de la ficha técnica");
   }
 }
@@ -84,7 +120,7 @@ export async function crearReservaStock(
   params: CrearReservaStockParams
 ): Promise<CrearReservaStockResult> {
   try {
-    const result = await prisma.$queryRaw<{ fn_crear_reserva_stock: any }[]>`
+    const result = await prisma.$queryRaw<{ fn_crear_reserva_stock: CrearReservaStockResult }[]>`
       SELECT public.fn_crear_reserva_stock(
         ${params.productoId}::bigint,
         ${params.almacenId}::bigint,
@@ -95,7 +131,7 @@ export async function crearReservaStock(
     `;
     return result[0]?.fn_crear_reserva_stock || { status: "error" };
   } catch (error) {
-    console.error("Error en crearReservaStock:", error);
+    console.error("Error en crearReservaStock:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo crear la reserva de stock");
   }
 }
@@ -104,7 +140,7 @@ export async function actualizarPrecioConHistorico(
   params: ActualizarPrecioParams
 ): Promise<ActualizarPrecioResult> {
   try {
-    const result = await prisma.$queryRaw<{ fn_actualizar_precio_con_historico: any }[]>`
+    const result = await prisma.$queryRaw<{ fn_actualizar_precio_con_historico: ActualizarPrecioResult }[]>`
       SELECT public.fn_actualizar_precio_con_historico(
         ${params.productoId}::bigint,
         ${params.precioNuevo}::numeric,
@@ -116,17 +152,11 @@ export async function actualizarPrecioConHistorico(
     `;
     return result[0]?.fn_actualizar_precio_con_historico || { status: "error" };
   } catch (error) {
-    console.error("Error en actualizarPrecioConHistorico:", error);
+    console.error("Error en actualizarPrecioConHistorico:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo actualizar el precio");
   }
 }
 
-/**
- * Inserta un movimiento de inventario vía RPC.
- * El trigger tr_procesar_movimiento_insumo ya maneja la lógica de stock en insumo.
- * El trigger trg_actualizar_almacen_stock actualiza almacen_stock por almacenId.
- * referenciaId es opcional: NULL si no hay documento de referencia (ej. ajuste manual).
- */
 export async function insertarMovimiento(
   params: InsertarMovimientoParams
 ): Promise<void> {
@@ -146,7 +176,7 @@ export async function insertarMovimiento(
       )
     `;
   } catch (error) {
-    console.error("Error en insertarMovimiento RPC:", error);
+    console.error("Error en insertarMovimiento RPC:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo registrar el movimiento de inventario vía RPC");
   }
 }
@@ -157,7 +187,7 @@ export async function recalcularDescuentoCotizacion(cotizacionId: number): Promi
       SELECT public.fn_recalcular_descuento_cotizacion(${cotizacionId}::bigint)
     `;
   } catch (error) {
-    console.error("Error en recalcularDescuentoCotizacion RPC:", error);
+    console.error("Error en recalcularDescuentoCotizacion RPC:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo recalcular el descuento de la cotización");
   }
 }
@@ -183,7 +213,7 @@ export async function obtenerStockDisponible(
     `;
     return resultado[0] ?? { stock_actual: 0, reservas_activas: 0, disponible: 0 };
   } catch (error) {
-    console.error("Error en obtenerStockDisponible:", error);
+    console.error("Error en obtenerStockDisponible:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo obtener el stock disponible");
   }
 }
@@ -195,28 +225,30 @@ export async function registrarCambioEstadoConfeccion(
   notasCambio?: string
 ): Promise<void> {
   try {
+    // FIX: Se asocian aserciones explícitas al enum EstadoConfeccion importado de Prisma
     await prisma.seguimiento_confeccion.create({
       data: {
         confeccion_id: confeccionId,
-        estado_anterior: estadoAnterior as any,
-        estado_nuevo: estadoNuevo as any,
+        estado_anterior: estadoAnterior as EstadoConfeccion, 
+        estado_nuevo: estadoNuevo as EstadoConfeccion,
         notas: notasCambio,
       },
     });
   } catch (error) {
-    console.error("Error en registrarCambioEstadoConfeccion:", error);
+    console.error("Error en registrarCambioEstadoConfeccion:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo registrar el cambio de estado");
   }
 }
 
-export async function obtenerAuditoriaRegistro(tabla: string, registroId: number): Promise<any[]> {
+export async function obtenerAuditoriaRegistro(tabla: string, registroId: number): Promise<AuditoriaConUsuario[]> {
   try {
-    return await prisma.auditoria.findMany({
+    const data = await prisma.auditoria.findMany({
       where: { tabla, registro_id: registroId },
       orderBy: { created_at: "desc" },
     });
+    return data as unknown as AuditoriaConUsuario[];
   } catch (error) {
-    console.error("Error en obtenerAuditoriaRegistro:", error);
+    console.error("Error en obtenerAuditoriaRegistro:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo obtener el histórico de auditoría");
   }
 }
@@ -229,32 +261,34 @@ export async function crearNotificacion(data: {
   referenciaType: ReferenciaNotificacion; 
   referenciaId?: number;
   urlDestino?: string;
-}): Promise<any> {
+}): Promise<NotificacionResultado> {
   try {
-    return await prisma.notificaciones.create({
+    const response = await prisma.notificaciones.create({
       data: {
         usuario_id: data.usuarioId,
         tipo: data.tipo as TipoNotificacion,
         titulo: data.titulo,
         mensaje: data.mensaje,
-        referencia_tipo: (data.referenciaType ?? 'SISTEMA') as ReferenciaNotificacion,
+        referencia_tipo: data.referenciaType ?? 'SISTEMA',
         url_destino: data.urlDestino,
       },
     });
+    return response as unknown as NotificacionResultado;
   } catch (error) {
-    console.error("Error en crearNotificacion:", error);
+    console.error("Error en crearNotificacion:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo crear la notificación");
   }
 }
 
-export async function obtenerNotificacionesNoLeidas(usuarioId: number): Promise<any[]> {
+export async function obtenerNotificacionesNoLeidas(usuarioId: number): Promise<NotificacionResultado[]> {
   try {
-    return await prisma.notificaciones.findMany({
+    const data = await prisma.notificaciones.findMany({
       where: { usuario_id: usuarioId, leido: false },
       orderBy: { created_at: "desc" },
     });
+    return data as unknown as NotificacionResultado[];
   } catch (error) {
-    console.error("Error en obtenerNotificacionesNoLeidas:", error);
+    console.error("Error en obtenerNotificacionesNoLeidas:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo obtener las notificaciones");
   }
 }
@@ -272,54 +306,55 @@ export async function marcarNotificacionesComoLeidas(
       data: { leido: true, leido_at: new Date() },
     });
   } catch (error) {
-    console.error("Error en marcarNotificacionesComoLeidas:", error);
+    console.error("Error en marcarNotificacionesComoLeidas:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo actualizar las notificaciones");
   }
 }
 
-export async function obtenerHistoricoPrecio(productoId: number): Promise<any[]> {
+export async function obtenerHistoricoPrecio(productoId: number): Promise<Record<string, unknown>[]> {
   try {
-    return await prisma.$queryRaw`
+    return await prisma.$queryRaw<Record<string, unknown>[]>`
       SELECT * FROM public.precio_historico
       WHERE producto_id = ${productoId}::bigint
       ORDER BY created_at DESC
     `;
   } catch (error) {
-    console.error("Error en obtenerHistoricoPrecio:", error);
+    console.error("Error en obtenerHistoricoPrecio:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo obtener el histórico de precios");
   }
 }
 
 export async function validarStockSuficiente(
   productoId: number,
-  cantidad: number
+  skewCantidad: number
 ): Promise<boolean> {
   try {
     const resultado = await prisma.productos.findUnique({
       where: { id: productoId },
       select: { stock: true },
     });
-    return (resultado?.stock || 0) >= cantidad;
+    return (resultado?.stock || 0) >= skewCantidad;
   } catch (error) {
-    console.error("Error en validarStockSuficiente:", error);
+    console.error("Error en validarStockSuficiente:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo validar el stock");
   }
 }
 
-export async function obtenerAuditoriaReciente(limit = 50): Promise<any[]> {
+export async function obtenerAuditoriaReciente(limit = 50): Promise<AuditoriaConUsuario[]> {
   try {
-    return await prisma.auditoria.findMany({
+    const data = await prisma.auditoria.findMany({
       take: limit,
       orderBy: { created_at: "desc" },
       include: { usuarios: { select: { id: true, email: true } } },
     });
+    return data as unknown as AuditoriaConUsuario[];
   } catch (error) {
-    console.error("Error en obtenerAuditoriaReciente:", error);
+    console.error("Error en obtenerAuditoriaReciente:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo obtener el histórico de auditoría");
   }
 }
 
-export default {
+const helpers = {
   calcularCostoFicha,
   crearReservaStock,
   actualizarPrecioConHistorico,
@@ -335,3 +370,5 @@ export default {
   obtenerAuditoriaReciente,
   recalcularDescuentoCotizacion,
 };
+
+export default helpers;

@@ -15,33 +15,110 @@ import {
 export const INVENTARIO_KEY = "inventario";
 export const MOVIMIENTOS_KEY = "movimientos_inventario";
 
+// ── Interfaces del Dominio de Inventario Textil ───────────────────────────────
+
+export interface Insumo {
+  id:              string;
+  nombre:          string;
+  tipo:            string; // Ej: 'MATERIA_PRIMA', 'CONFECCIONADO'
+  categoria?:      string; // Ej: 'TELAS', 'BOTONES', 'CIERRES'
+  stock_actual:    number;
+  stock_minimo?:   number;
+  costo_unitario?: number;
+  precio_unitario?: number;
+  [key: string]:   unknown;
+}
+
+export interface Proveedor {
+  id:             string;
+  razon_social:   string;
+  ruc?:           string;
+  [key: string]:  unknown;
+}
+
+export interface MovimientoInventario {
+  id:              string;
+  insumo_id?:      string;
+  cantidad:        number;
+  operacion:       "sumar" | "restar" | "absoluto";
+  motivo?:         string;
+  costo_unitario?: number;
+  precio_unitario?: number;
+  createdAt:       string;
+  [key: string]:   unknown;
+}
+
+// Interfaces estrictas para las respuestas compuestas de tus helpers de la API
+export interface InsumosQueryResponse {
+  insumos: Insumo[];
+  proveedores: Proveedor[];
+}
+
+export interface MovimientosQueryResponse {
+  movimientos: MovimientoInventario[];
+}
+
+export interface ApiResponse<T = unknown> {
+  success:  boolean;
+  error?:   string | null;
+  message?: string | null;
+  data?:    T;
+}
+
+// Parámetros de filtros de entrada
+export interface UseInventarioParams {
+  tipo?:              string;
+  categoria?:         string;
+  busqueda?:          string;
+  stockBajo?:         boolean;
+  sortOrder?:         "asc" | "desc" | "none";
+  limiteMovimientos?: number;
+}
+
+export interface AjustarStockInput {
+  id:               string;
+  cantidad:         number;
+  operacion:        "sumar" | "restar" | "absoluto";
+  costo_unitario?:  number;
+  precio_unitario?: number;
+  motivo?:          string;
+}
+
+export interface UseMovimientosParams {
+  insumoId?: string;
+  desde?:    string;
+  hasta?:    string;
+  limite?:   number;
+}
+
 // ── LISTA DE INSUMOS ──────────────────────────────────────────────────────────
 
-export function useInventario(params?: {
-  tipo?:      string;
-  categoria?: string;
-  busqueda?:  string;
-  stockBajo?: boolean;
-  sortOrder?: "asc" | "desc" | "none";
-  limiteMovimientos?: number;
-}) {
+export function useInventario(params?: UseInventarioParams) {
   const queryClient = useQueryClient();
   const { tipo, categoria, busqueda, stockBajo, sortOrder, limiteMovimientos } = params ?? {};
 
-  const query = useQuery({
+  // useQuery fuertemente tipado para insumos y proveedores concurrentes
+  const query = useQuery<InsumosQueryResponse, Error>({
     queryKey: [INVENTARIO_KEY, { tipo, categoria, busqueda, stockBajo, sortOrder }],
-    queryFn:  () => fetchInsumos({ tipo, categoria, busqueda, stockBajo, sortOrder }),
+    queryFn:  async () => {
+      const res = await fetchInsumos({ tipo, categoria, busqueda, stockBajo, sortOrder });
+      return res as unknown as InsumosQueryResponse;
+    },
     refetchOnWindowFocus: false,
   });
 
-  const movimientosQuery = useQuery({
+  // useQuery fuertemente tipado para el lote corto de movimientos
+  const movimientosQuery = useQuery<MovimientosQueryResponse, Error>({
     queryKey: [MOVIMIENTOS_KEY, { limite: limiteMovimientos }],
-    queryFn:  () => fetchMovimientos({ limite: limiteMovimientos }),
+    queryFn:  async () => {
+      const res = await fetchMovimientos({ limite: limiteMovimientos });
+      return res as unknown as MovimientosQueryResponse;
+    },
     refetchOnWindowFocus: false,
   });
 
   // ── Crear ────────────────────────────────────────────────────────────────────
-  const createMutation = useMutation({
+  const createMutation = useMutation<ApiResponse, Error, Record<string, unknown>>({
     mutationFn: createInsumo,
     onSuccess: (res) => {
       if (!res.success) { toast.error(res.error ?? "Error al crear"); return; }
@@ -52,8 +129,8 @@ export function useInventario(params?: {
   });
 
   // ── Actualizar ───────────────────────────────────────────────────────────────
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateInsumo(id, data),
+  const updateMutation = useMutation<ApiResponse, Error, { id: string; data: Record<string, unknown> }>({
+    mutationFn: ({ id, data }) => updateInsumo(id, data),
     onSuccess: (res) => {
       if (!res.success) { toast.error(res.error ?? "Error al actualizar"); return; }
       toast.success("Insumo actualizado");
@@ -63,9 +140,7 @@ export function useInventario(params?: {
   });
 
   // ── Ajustar Stock ────────────────────────────────────────────────────────────
-  // Firma: ajustarStock(id, cantidad, operacion) → Promise<boolean>
-  // Coincide exactamente con EditInsumoDialog
-  const ajustarStockMutation = useMutation({
+  const ajustarStockMutation = useMutation<ApiResponse, Error, AjustarStockInput>({
     mutationFn: ({
       id,
       cantidad,
@@ -73,13 +148,6 @@ export function useInventario(params?: {
       costo_unitario,
       precio_unitario,
       motivo,
-    }: {
-      id: string;
-      cantidad: number;
-      operacion: "sumar" | "restar" | "absoluto";
-      costo_unitario?: number;
-      precio_unitario?: number;
-      motivo?: string;
     }) =>
       ajustarStock(id, {
         operacion,
@@ -98,7 +166,7 @@ export function useInventario(params?: {
   });
 
   // ── Eliminar ─────────────────────────────────────────────────────────────────
-  const deleteMutation = useMutation({
+  const deleteMutation = useMutation<ApiResponse, Error, string>({
     mutationFn: deleteInsumo,
     onSuccess: (res) => {
       if (!res.success) { toast.error(res.error ?? "Error al eliminar"); return; }
@@ -109,31 +177,26 @@ export function useInventario(params?: {
   });
 
   return {
-    insumos:     (query.data)?.insumos     ?? [],
-    proveedores: (query.data)?.proveedores ?? [],
-    movimientos: (movimientosQuery.data)?.movimientos ?? [],
+    insumos:     query.data?.insumos     ?? [],
+    proveedores: query.data?.proveedores ?? [],
+    movimientos: movimientosQuery.data?.movimientos ?? [],
     isLoading:   query.isLoading,
     refetch:     () => {
       query.refetch();
       movimientosQuery.refetch();
     },
 
-    create: (data: any) =>
+    // Retornos booleanos asíncronos limpios y tipados para flujos interactivos de la UI
+    create: (data: Record<string, unknown>): Promise<boolean> =>
       createMutation.mutateAsync(data).then(r => r.success),
 
-    update: (id: string, data: any) =>
+    update: (id: string, data: Record<string, unknown>): Promise<boolean> =>
       updateMutation.mutateAsync({ id, data }).then(r => r.success),
 
-    ajustarStock: (params: { 
-      id: string; 
-      cantidad: number; 
-      operacion: "sumar" | "restar" | "absoluto"; 
-      costo_unitario?: number; 
-      precio_unitario?: number; 
-      motivo?: string; 
-    }) => ajustarStockMutation.mutateAsync(params).then(r => r.success),
+    ajustarStock: (params: AjustarStockInput): Promise<boolean> => 
+      ajustarStockMutation.mutateAsync(params).then(r => r.success),
 
-    remove: (id: string) =>
+    remove: (id: string): Promise<boolean> =>
       deleteMutation.mutateAsync(id).then(r => r.success),
 
     isCreating:       createMutation.isPending,
@@ -154,9 +217,12 @@ export function useInventario(params?: {
 // ── INSUMO INDIVIDUAL ─────────────────────────────────────────────────────────
 
 export function useInsumo(id: string) {
-  return useQuery({
+  return useQuery<Insumo, Error>({
     queryKey: [INVENTARIO_KEY, id],
-    queryFn:  () => fetchInsumoById(id),
+    queryFn:  async () => {
+      const res = await fetchInsumoById(id);
+      return res as unknown as Insumo;
+    },
     enabled:  !!id,
     refetchOnWindowFocus: false,
   });
@@ -164,17 +230,15 @@ export function useInsumo(id: string) {
 
 // ── HISTORIAL DE MOVIMIENTOS ──────────────────────────────────────────────────
 
-export function useMovimientos(params?: {
-  insumoId?: string;
-  desde?:    string;
-  hasta?:    string;
-  limite?:   number;
-}) {
+export function useMovimientos(params?: UseMovimientosParams) {
   const { insumoId, desde, hasta, limite } = params ?? {};
 
-  return useQuery({
+  return useQuery<MovimientosQueryResponse, Error>({
     queryKey: [MOVIMIENTOS_KEY, { insumoId, desde, hasta, limite }],
-    queryFn:  () => fetchMovimientos({ insumoId, desde, hasta, limite }),
+    queryFn:  async () => {
+      const res = await fetchMovimientos({ insumoId, desde, hasta, limite });
+      return res as unknown as MovimientosQueryResponse;
+    },
     refetchOnWindowFocus: false,
   });
 }

@@ -5,11 +5,13 @@ import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Testimonio {
-  id: number;
-  puntuacion: number;
-  comentario: string;
-  created_at: string;
-  clientes: { nombre_comercial: string } | null;
+  id:          number;
+  puntuacion:  number;
+  comentario:  string;
+  created_at:  string;
+  clientes: { 
+    nombre_comercial: string; 
+  } | null;
 }
 
 function StarRow({ puntuacion }: { puntuacion: number }) {
@@ -26,14 +28,9 @@ function StarRow({ puntuacion }: { puntuacion: number }) {
   );
 }
 
-function TestimonioCard({ item, active }: { item: Testimonio; active: boolean }) {
+function TestimonioCard({ item }: { item: Testimonio; active: boolean }) {
   return (
-    <div
-      className={cn(
-        'flex-shrink-0 w-full transition-all duration-500',
-        active ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none',
-      )}
-    >
+    <div className="flex-shrink-0 w-full transition-all duration-500">
       <div className="bg-white rounded-2xl shadow-md border border-[#e8d5a8]/20 p-7 md:p-9 mx-auto max-w-2xl relative">
         {/* Comilla decorativa */}
         <Quote
@@ -44,8 +41,9 @@ function TestimonioCard({ item, active }: { item: Testimonio; active: boolean })
         <div className="space-y-4">
           <StarRow puntuacion={item.puntuacion} />
 
+          {/* FIX (react/no-unescaped-entities): Evaluamos las comillas como strings de JS */}
           <p className="text-[#1a1410]/80 text-base md:text-lg leading-relaxed italic">
-            "{item.comentario}"
+            {"\""}{item.comentario}{"\""}
           </p>
 
           <div className="flex items-center gap-3 pt-2 border-t border-[#e8d5a8]/20">
@@ -61,7 +59,8 @@ function TestimonioCard({ item, active }: { item: Testimonio; active: boolean })
               </p>
               <p className="text-xs text-[#8a6d3b]/50">
                 {new Date(item.created_at).toLocaleDateString('es-PE', {
-                  month: 'long', year: 'numeric',
+                  month: 'long', 
+                  year: 'numeric',
                 })}
               </p>
             </div>
@@ -73,34 +72,62 @@ function TestimonioCard({ item, active }: { item: Testimonio; active: boolean })
 }
 
 export function TestimoniosCarrusel() {
-  const [items, setItems] = useState<Testimonio[]>([]);
-  const [current, setCurrent] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [paused, setPaused] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [items, setItems]     = useState<Testimonio[]>([]);
+  const [current, setCurrent] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [paused, setPaused]   = useState<boolean>(false);
+  const intervalRef           = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // FETCH: Carga asíncrona de testimonios aprobados para el portal comercial
   useEffect(() => {
+    let isMounted = true;
     fetch('/api/landing/testimonios')
-      .then((r) => r.json())
-      .then((data) => { setItems(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.json() as Promise<Testimonio[]>;
+      })
+      .then((data) => { 
+        if (isMounted) {
+          setItems(data); 
+          setLoading(false); 
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
   }, []);
 
   const next = useCallback(() => {
-    setCurrent((c) => (c + 1) % (items.length || 1));
+    setItems((prevItems) => {
+      if (prevItems.length === 0) return prevItems;
+      setCurrent((c) => (c + 1) % prevItems.length);
+      return prevItems;
+    });
   }, []);
 
   const prev = useCallback(() => {
-    setCurrent((c) => (c - 1 + (items.length || 1)) % (items.length || 1));
+    setItems((prevItems) => {
+      if (prevItems.length === 0) return prevItems;
+      setCurrent((c) => (c - 1 + prevItems.length) % prevItems.length);
+      return prevItems;
+    });
   }, []);
 
-  // Auto-play cada 5 segundos
+  // Auto-play seguro controlado por estados de interrupción (hover del cursor)
   useEffect(() => {
     if (items.length <= 1 || paused) return;
+
     intervalRef.current = setInterval(() => {
       setCurrent((c) => (c + 1) % items.length);
     }, 5000);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+
+    return () => { 
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current); 
+      }
+    };
   }, [items.length, paused]);
 
   if (loading) {
@@ -128,34 +155,34 @@ export function TestimoniosCarrusel() {
           <div className="w-12 h-0.5 bg-[#e8d5a8] mx-auto mt-3" />
         </div>
 
-        {/* Carrusel */}
+        {/* Contenedor del Carrusel */}
         <div
           className="relative"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          {/* Cards (stack, solo una visible) */}
-          <div className="relative overflow-hidden">
+          {/* Ventana de visualización (Viewport) */}
+          <div className="relative overflow-hidden w-full py-4">
             <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${current * 100}%)` }}
             >
               {items.map((item, idx) => (
-                <div key={item.id} className="flex-shrink-0 w-full px-2">
+                <div key={item.id} className="flex-shrink-0 w-full px-4">
                   <TestimonioCard item={item} active={idx === current} />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Controles */}
+          {/* Botones de Navegación Lateral */}
           {items.length > 1 && (
             <>
               <button
                 onClick={prev}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 md:-translate-x-6
-                           w-10 h-10 rounded-full bg-white border border-[#e8d5a8]/40 shadow
-                           flex items-center justify-center text-[#8a6d3b]
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6
+                           w-10 h-10 rounded-full bg-white border border-[#e8d5a8]/40 shadow-sm
+                           flex items-center justify-center text-[#8a6d3b] z-10
                            hover:bg-[#e8d5a8]/10 transition-colors"
                 aria-label="Anterior"
               >
@@ -163,9 +190,9 @@ export function TestimoniosCarrusel() {
               </button>
               <button
                 onClick={next}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 md:translate-x-6
-                           w-10 h-10 rounded-full bg-white border border-[#e8d5a8]/40 shadow
-                           flex items-center justify-center text-[#8a6d3b]
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6
+                           w-10 h-10 rounded-full bg-white border border-[#e8d5a8]/40 shadow-sm
+                           flex items-center justify-center text-[#8a6d3b] z-10
                            hover:bg-[#e8d5a8]/10 transition-colors"
                 aria-label="Siguiente"
               >
@@ -174,7 +201,7 @@ export function TestimoniosCarrusel() {
             </>
           )}
 
-          {/* Dots */}
+          {/* Paginación por puntos inferior (Dots) */}
           {items.length > 1 && (
             <div className="flex justify-center gap-2 mt-8">
               {items.map((_, idx) => (

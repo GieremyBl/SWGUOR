@@ -15,8 +15,20 @@ export async function GET() {
 
   try {
     const reservas = await prisma.reservas_stock.findMany({
-      orderBy: { id: 'desc' },
-      include: { pedidos: true },
+      where: { estado: 'activa' },
+      orderBy: { expira_en: 'asc' },
+      include: {
+        pedidos: { select: { id: true, estado: true } },
+        cotizaciones: { select: { id: true, numero: true, estado: true } },
+        variantes_producto: {
+          select: {
+            color: true,
+            talla: true,
+            sku: true,
+            productos: { select: { nombre: true, sku: true } },
+          },
+        },
+      },
     });
     return NextResponse.json(serializeBigInt(reservas));
   } catch (error: any) {
