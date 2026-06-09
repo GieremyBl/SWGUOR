@@ -34,7 +34,7 @@ export async function GET(req: Request, { params }: RouteParams) {
     const asDownload = searchParams.get('download') === '1';
     const fileName = `orden-compra-${id}.pdf`;
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

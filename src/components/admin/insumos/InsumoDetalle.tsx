@@ -3,11 +3,11 @@
 import Link from 'next/link';
 import { ArrowLeft, Package, Building2, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TIPOS_INSUMO, CATEGORIAS_INSUMO } from '@/lib/constants/insumos';
+import { TIPOS_INSUMO } from '@/lib/constants/insumos';
 import { UNIDADES_MEDIDA, ESTADOS_ORDEN_COMPRA, ESTADOS_PAGO_ORDEN_COMPRA } from '@/lib/constants/estados';
 import { formatNumeroOc } from '@/lib/helpers/ordenes-compra-helpers';
 import type { InsumoDetalleRow } from '@/lib/helpers/insumos-helpers';
-import type { CategoriaInsumo, EstadoOrdenCompra, EstadoPagoOrdenCompra, TipoInsumo, UnidadMedida } from '@prisma/client';
+import type { EstadoOrdenCompra, EstadoPagoOrdenCompra, TipoInsumo, UnidadMedida } from '@prisma/client';
 
 interface Props {
   insumo: InsumoDetalleRow;
@@ -33,7 +33,7 @@ export function InsumoDetalle({ insumo }: Props) {
           <div>
             <h1 className="text-2xl font-bold text-guor-ink">{insumo.nombre}</h1>
             <p className="text-sm text-guor-soft mt-1">
-              {TIPOS_INSUMO[insumo.tipo as TipoInsumo]?.label} · {CATEGORIAS_INSUMO[insumo.categoria_insumo as CategoriaInsumo]?.label}
+              {TIPOS_INSUMO[insumo.tipo as TipoInsumo]?.label} · {insumo.categoria_insumo?.nombre ?? '—'}
             </p>
           </div>
         </div>

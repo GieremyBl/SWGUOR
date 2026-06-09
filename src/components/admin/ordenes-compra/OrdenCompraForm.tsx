@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Save, ArrowLeft, Plus } from 'lucide-react';
@@ -55,12 +55,12 @@ const formSchema = z.object({
   items: z.array(itemFormSchema).min(1, 'Agregue al menos un ítem'),
 });
 
-type FormValues = z.infer<typeof formSchema>; 
+type FormValues = z.infer<typeof formSchema>;
 
 interface Props {
-  cotizacionId?: string | null; 
-  proveedorIdPreselect?: string | null; 
-  modoCotizacion?: boolean; 
+  cotizacionId?: string | null;
+  proveedorIdPreselect?: string | null;
+  modoCotizacion?: boolean;
 }
 
 interface ItemCatalogo {
@@ -75,12 +75,12 @@ interface ProveedorCatalogo {
 }
 
 export function OrdenCompraForm({
-  cotizacionId, 
-  proveedorIdPreselect, 
-  modoCotizacion = false, 
+  cotizacionId,
+  proveedorIdPreselect,
+  modoCotizacion = false,
 }: Props) {
-  const router = useRouter(); 
-  const { crear, crearDesdeCotizacion, isCreating } = useOrdenesCompra({ enabled: false }); 
+  const router = useRouter();
+  const { crear, crearDesdeCotizacion, isCreating } = useOrdenesCompra({ enabled: false });
 
   const [proveedores, setProveedores] = useState<ProveedorCatalogo[]>([]);
   const [materiales, setMateriales] = useState<ItemCatalogo[]>([]);
@@ -94,11 +94,11 @@ export function OrdenCompraForm({
   } | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema), 
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      proveedor_id: proveedorIdPreselect ?? '', 
-      fecha_prometida: '', 
-      notas: '', 
+      proveedor_id: proveedorIdPreselect ?? '',
+      fecha_prometida: '',
+      notas: '',
       items: [
         {
           tipo: 'insumo',
@@ -113,7 +113,7 @@ export function OrdenCompraForm({
   });
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'items' });
-  
+
   const watchedItems = useWatch({
     control: form.control,
     name: 'items',
@@ -143,12 +143,12 @@ export function OrdenCompraForm({
           })),
         );
       } catch {
-        toast.error('Error al cargar catálogos'); 
+        toast.error('Error al cargar catálogos');
       } finally {
-        setLoadingCatalogos(false); 
+        setLoadingCatalogos(false);
       }
     }
-    load(); 
+    load();
   }, []);
 
   const subtotal = (watchedItems ?? []).reduce(
@@ -218,13 +218,13 @@ export function OrdenCompraForm({
 
   const onSubmit = async (data: FormValues) => {
     try {
-      if (modoCotizacion && cotizacionId) { 
+      if (modoCotizacion && cotizacionId) {
         const res = await crearDesdeCotizacion({
-          cotizacion_proveedor_id: Number(cotizacionId), 
-          fecha_prometida: data.fecha_prometida ? new Date(data.fecha_prometida) : null, 
-          notas: data.notas || null, 
+          cotizacion_proveedor_id: Number(cotizacionId),
+          fecha_prometida: data.fecha_prometida ? new Date(data.fecha_prometida) : null,
+          notas: data.notas || null,
         });
-        if (!res.success) throw new Error(res.error || 'Error al generar orden'); 
+        if (!res.success) throw new Error(res.error || 'Error al generar orden');
         router.push(
           `/admin/Panel-Administrativo/ordenes-compra/${(res.data as { id: number }).id}`,
         );
@@ -232,26 +232,26 @@ export function OrdenCompraForm({
       }
 
       const items = data.items.map((item) => ({
-        material_id: item.tipo === 'material' ? Number(item.ref_id) : null, 
-        insumo_id: item.tipo === 'insumo' ? Number(item.ref_id) : null, 
-        cantidad_pedida: item.cantidad_pedida, 
-        precio_unitario: item.precio_unitario, 
-        notas: item.notas || null, 
+        material_id: item.tipo === 'material' ? Number(item.ref_id) : null,
+        insumo_id: item.tipo === 'insumo' ? Number(item.ref_id) : null,
+        cantidad_pedida: item.cantidad_pedida,
+        precio_unitario: item.precio_unitario,
+        notas: item.notas || null,
       }));
 
       const res = await crear({
-        proveedor_id: Number(data.proveedor_id), 
-        cotizacion_proveedor_id: cotizacionId ? Number(cotizacionId) : null, 
-        fecha_prometida: data.fecha_prometida ? new Date(data.fecha_prometida) : null, 
-        notas: data.notas || null, 
-        items, 
+        proveedor_id: Number(data.proveedor_id),
+        cotizacion_proveedor_id: cotizacionId ? Number(cotizacionId) : null,
+        fecha_prometida: data.fecha_prometida ? new Date(data.fecha_prometida) : null,
+        notas: data.notas || null,
+        items,
       });
-      if (!res.success) throw new Error(res.error || 'Error al crear orden'); 
+      if (!res.success) throw new Error(res.error || 'Error al crear orden');
       router.push(
-        `/admin/Panel-Administrativo/ordenes-compra/${(res.data as { id: number }).id}`, 
+        `/admin/Panel-Administrativo/ordenes-compra/${(res.data as { id: number }).id}`,
       );
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Error al guardar'); 
+      toast.error(e instanceof Error ? e.message : 'Error al guardar');
     }
   };
 
@@ -280,14 +280,14 @@ export function OrdenCompraForm({
             size="sm"
             onClick={() => router.back()}
           >
-            <ArrowLeft className="w-4 h-4 mr-1" /> Volver 
+            <ArrowLeft className="w-4 h-4 mr-1" /> Volver
           </Button>
         </div>
 
         {modoCotizacion && cotizacionId && (
           <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-sm text-blue-800">
             Generando orden desde cotización <strong>#{cotizacionId}</strong>. Los ítems se
-            copiarán automáticamente al confirmar. 
+            copiarán automáticamente al confirmar.
           </div>
         )}
 
@@ -298,7 +298,7 @@ export function OrdenCompraForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-              control={form.control} 
+              control={form.control}
               name="proveedor_id"
               render={({ field }) => (
                 <FormItem className="min-w-0">
@@ -364,13 +364,13 @@ export function OrdenCompraForm({
             control={form.control}
             name="notas"
             render={({ field }) => (
-              <FormItem> 
-                <FormLabel>Notas</FormLabel> 
+              <FormItem>
+                <FormLabel>Notas</FormLabel>
                 <FormControl>
-                  <Textarea rows={3} placeholder="Observaciones..." {...field} /> 
+                  <Textarea rows={3} placeholder="Observaciones..." {...field} />
                 </FormControl>
                 <FormMessage />
-              </FormItem> 
+              </FormItem>
             )}
           />
         </div>
@@ -406,7 +406,7 @@ export function OrdenCompraForm({
               <OrdenCompraItemRow
                 key={field.id}
                 index={index}
-                control={form.control}
+                control={form.control as Control<any>}
                 materiales={materiales}
                 insumos={insumos}
                 watchedItem={watchedItems?.[index]}
@@ -434,15 +434,15 @@ export function OrdenCompraForm({
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => router.back()}>
-            Cancelar 
+            Cancelar
           </Button>
-          <Button type="submit" disabled={isCreating} className="bg-rose-600 hover:bg-rose-700"> 
+          <Button type="submit" disabled={isCreating} className="bg-rose-600 hover:bg-rose-700">
             {isCreating ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" /> 
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
             ) : (
-              <Save className="w-4 h-4 mr-2" /> 
+              <Save className="w-4 h-4 mr-2" />
             )}
-            {modoCotizacion ? 'Generar orden de compra' : 'Crear orden de compra'} 
+            {modoCotizacion ? 'Generar orden de compra' : 'Crear orden de compra'}
           </Button>
         </div>
       </form>

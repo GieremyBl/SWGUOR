@@ -18,19 +18,26 @@ export function useNotifications(userId?: number) {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
+  const [unauthorized, setUnauthorized] = useState(false);
 
   const fetchRef = useRef<() => Promise<void>>(async () => { });
 
   const fetchNotifications = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || unauthorized) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/notificaciones?usuario_id=${userId}`);
+
+      if (res.status === 401) {
+        setUnauthorized(true);
+        return;
+      }
       if (!res.ok) return;
 
       const response: NotificacionesApiResponse = await res.json();
+      const raw = Array.isArray(response?.data) ? response.data : [];
 
-      const normalized: Notificacion[] = response.data.map((n) => ({
+      const normalized: Notificacion[] = raw.map((n) => ({
         ...n,
         id: Number(n.id),
         leido_at: n.leido_at ? new Date(n.leido_at) : null,
@@ -43,25 +50,26 @@ export function useNotifications(userId?: number) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, unauthorized]);
 
-  // Mantener ref actualizada
   useEffect(() => {
     fetchRef.current = fetchNotifications;
   }, [fetchNotifications]);
 
-  // Solo fetch inicial — el realtime se encarga del resto
   useEffect(() => {
-    if (!userId) return;
-    fetchNotifications();
-  }, [fetchNotifications, userId]);
+    setUnauthorized(false);
+  }, [userId]);
 
-  // Realtime con nombre de canal diferenciado del portal
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || unauthorized) return;
+    fetchNotifications();
+  }, [fetchNotifications, userId, unauthorized]);
+
+  useEffect(() => {
+    if (!userId || unauthorized) return;
 
     const supabase = getSupabaseBrowserClient();
-    const canalName = `notif_admin_${userId}`;   // ✅ diferente al portal
+    const canalName = `notif_admin_${userId}`;
 
     const existing = supabase.getChannels().find((c) => c.topic === `realtime:${canalName}`);
     if (existing) supabase.removeChannel(existing);
@@ -79,13 +87,12 @@ export function useNotifications(userId?: number) {
         () => { fetchRef.current(); },
       )
       .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR') {
+        if (status === 'CHANNEL_ERROR')
           console.warn(`[useNotifications] Error en canal ${canalName}`);
-        }
       });
 
     return () => { supabase.removeChannel(canal); };
-  }, [userId]);
+  }, [userId, unauthorized]);
 
   const markAsRead = useCallback(async (id: number) => {
     try {

@@ -4,17 +4,61 @@ const API = '/api/admin/insumos';
 
 export interface ListarInsumosParams {
   tipo?: string;
-  categoria?: string;
+  categoriaId?: number;        // ✅ FK numérica en lugar de string nombre
   busqueda?: string;
   stockBajo?: boolean;
   proveedorId?: string;
   sortOrder?: 'asc' | 'desc' | 'none';
 }
 
+export interface CategoriaInsumoRef {
+  id: number;
+  nombre: string;
+}
+
+export interface InsumoCompraRow {
+  id: string;
+  nombre: string;
+  tipo: string;
+  categoria_insumo: CategoriaInsumoRef | null;  // ✅ objeto con id y nombre
+  unidad_medida: string;
+  stock_actual: number | string;
+  stock_minimo: number | string;
+  stock_maximo?: number | string | null;
+  precio_unitario?: number | string | null;
+  proveedor_id?: string | null;
+  proveedores?: { id: string; razon_social: string } | null;
+  _count?: { ordenes_compra_items: number };
+}
+
+export interface InsumoDetalleRow extends InsumoCompraRow {
+  ubicacion_almacen?: string | null;
+  alerta_bajo_stock?: boolean | null;
+  // ✅ almacenes eliminado — insumo no tiene FK directa a almacenes
+  proveedores?: { id: string; razon_social: string; ruc?: string } | null;
+  ordenes_compra_items?: Array<{
+    id: string;
+    cantidad_pedida: number | string;
+    cantidad_recibida: number | string;
+    precio_unitario: number | string;
+    subtotal?: number | string | null;
+    ordenes_compra: {
+      id: string;
+      estado: string;
+      estado_pago: string;
+      total_orden: number | string;
+      fecha_prometida?: string | null;
+      created_at: string;
+      proveedores?: { id: string; razon_social: string } | null;
+    };
+  }>;
+  _count?: { ordenes_compra_items: number; movimientos_inventario: number };
+}
+
 export async function fetchInsumosCompras(params?: ListarInsumosParams) {
   const query = new URLSearchParams();
   if (params?.tipo) query.set('tipo', params.tipo);
-  if (params?.categoria) query.set('categoria_insumo', params.categoria);
+  if (params?.categoriaId) query.set('categoria_id', String(params.categoriaId)); // ✅ FK
   if (params?.busqueda) query.set('busqueda', params.busqueda);
   if (params?.stockBajo) query.set('bajo_stock', 'true');
   if (params?.proveedorId) query.set('proveedor_id', params.proveedorId);
@@ -52,43 +96,4 @@ export async function updateInsumoCompras(
     body: JSON.stringify(data),
   });
   return res.json();
-}
-
-export interface InsumoCompraRow {
-  id: string;
-  nombre: string;
-  tipo: string;
-  categoria_insumo: string;
-  unidad_medida: string;
-  stock_actual: number | string;
-  stock_minimo: number | string;
-  stock_maximo?: number | string | null;
-  precio_unitario?: number | string | null;
-  proveedor_id?: string | null;
-  proveedores?: { id: string; razon_social: string } | null;
-  _count?: { ordenes_compra_items: number };
-}
-
-export interface InsumoDetalleRow extends InsumoCompraRow {
-  ubicacion_almacen?: string | null;
-  alerta_bajo_stock?: boolean | null;
-  almacenes?: { id: string; nombre: string } | null;
-  proveedores?: { id: string; razon_social: string; ruc?: string } | null;
-  ordenes_compra_items?: Array<{
-    id: string;
-    cantidad_pedida: number | string;
-    cantidad_recibida: number | string;
-    precio_unitario: number | string;
-    subtotal?: number | string | null;
-    ordenes_compra: {
-      id: string;
-      estado: string;
-      estado_pago: string;
-      total_orden: number | string;
-      fecha_prometida?: string | null;
-      created_at: string;
-      proveedores?: { id: string; razon_social: string } | null;
-    };
-  }>;
-  _count?: { ordenes_compra_items: number; movimientos_inventario: number };
 }

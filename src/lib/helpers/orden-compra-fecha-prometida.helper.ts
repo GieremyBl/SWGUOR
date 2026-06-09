@@ -23,7 +23,12 @@ function addCalendarDays(isoDate: string, days: number): string {
 export function resolverFechaPrometidaDesdeExtraccion(
   extracted: CotizacionExtraccionIA,
 ): string | null {
-  const cot = extracted.cotizacion ?? {};
+  const cot = (extracted.cotizacion ?? {}) as {
+    fecha_prometida?: string | null;
+    fecha_entrega?: string | null;
+    plazo_entrega_dias?: number | string | null;
+    fecha_solicitud?: string | null;
+  };
 
   const explicita =
     parseIsoDate(cot.fecha_prometida) ??

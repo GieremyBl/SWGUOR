@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }   // ← Promise en Next.js 15
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await requireServerAuth();
@@ -22,7 +22,7 @@ export async function PATCH(
     const notificacionId = BigInt(id);
 
     const notificacion = await prisma.notificaciones.findUnique({
-      where:  { id: notificacionId },
+      where: { id: notificacionId },
       select: { usuario_id: true },
     });
 
@@ -44,7 +44,7 @@ export async function PATCH(
 
     return NextResponse.json({
       success: true,
-      data:    actualizada,
+      data: actualizada,
       message: 'Notificación marcada como leída',
     });
 
@@ -75,7 +75,7 @@ export async function DELETE(
     const notificacionId = BigInt(id);
 
     const notificacion = await prisma.notificaciones.findUnique({
-      where:  { id: notificacionId },
+      where: { id: notificacionId },
       select: { usuario_id: true },
     });
 

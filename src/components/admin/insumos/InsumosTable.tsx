@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { Eye, Edit2, Package, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { TIPOS_INSUMO, CATEGORIAS_INSUMO } from '@/lib/constants/insumos';
+import { TIPOS_INSUMO } from '@/lib/constants/insumos';
 import { UNIDADES_MEDIDA } from '@/lib/constants/estados';
 import type { InsumoCompraRow } from '@/lib/helpers/insumos-helpers';
-import type { CategoriaInsumo, TipoInsumo, UnidadMedida } from '@prisma/client';
+import type { TipoInsumo, UnidadMedida } from '@prisma/client';
 
 interface Props {
   insumos: InsumoCompraRow[];
@@ -80,7 +80,7 @@ export default function InsumosTable({ insumos, isLoading, onEdit, canEdit }: Pr
                       {TIPOS_INSUMO[insumo.tipo as TipoInsumo]?.label ?? insumo.tipo}
                     </span>
                     <p className="text-[10px] text-gray-400">
-                      {CATEGORIAS_INSUMO[insumo.categoria_insumo as CategoriaInsumo]?.label ?? insumo.categoria_insumo}
+                      {insumo.categoria_insumo?.nombre ?? '—'}
                     </p>
                   </td>
                   <td className={tdClass}>

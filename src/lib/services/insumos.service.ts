@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
-import type { CategoriaInsumo, TipoInsumo } from '@prisma/client';
+import { TipoInsumo } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 export interface ListarInsumosComprasParams {
-  categoria_insumo?: CategoriaInsumo;
+  categoria_id?: number;
   tipo?: TipoInsumo;
   busqueda?: string;
   bajo_stock?: boolean;
@@ -14,7 +14,7 @@ export interface ListarInsumosComprasParams {
 
 function buildWhere(params?: ListarInsumosComprasParams): Prisma.insumoWhereInput {
   return {
-    ...(params?.categoria_insumo && { categoria_insumo: params.categoria_insumo }),
+    ...(params?.categoria_id && { categoria_id: params.categoria_id }),  // ✅ FK int
     ...(params?.tipo && { tipo: params.tipo }),
     ...(params?.proveedor_id && { proveedor_id: BigInt(params.proveedor_id) }),
     ...(params?.busqueda && { nombre: { contains: params.busqueda, mode: 'insensitive' } }),
@@ -46,7 +46,7 @@ export const InsumosService = {
       where: { id: BigInt(id) },
       include: {
         proveedores: { select: { id: true, razon_social: true, ruc: true } },
-        almacenes: { select: { id: true, nombre: true } },
+        categoria_insumo: { select: { id: true, nombre: true } },
         ordenes_compra_items: {
           include: {
             ordenes_compra: {

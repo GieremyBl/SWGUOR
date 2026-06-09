@@ -4,28 +4,27 @@ import { useEffect, useState } from 'react';
 import { PackagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { TIPOS_INSUMO, CATEGORIAS_INSUMO, LISTA_TIPOS_INSUMO, LISTA_CATEGORIAS_INSUMO } from '@/lib/constants/insumos';
+import { TIPOS_INSUMO, LISTA_TIPOS_INSUMO } from '@/lib/constants/insumos';
 import { UNIDADES_MEDIDA } from '@/lib/constants/estados';
 import { fetchProveedores } from '@/lib/helpers/proveedores-helpers';
 import type { InsumoCompraRow } from '@/lib/helpers/insumos-helpers';
-import type { CategoriaInsumo, TipoInsumo, UnidadMedida } from '@prisma/client';
+import type { TipoInsumo, UnidadMedida } from '@prisma/client';
+
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+
+interface CategoriaOption {
+  id: number;
+  nombre: string;
+}
 
 interface Props {
   isOpen: boolean;
@@ -35,78 +34,88 @@ interface Props {
   isSaving?: boolean;
 }
 
-const fieldInputClass =
-  'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 h-11 focus:bg-white';
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const fieldInputClass = 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 h-11 focus:bg-white';
 const fieldLabelClass = 'text-xs font-semibold text-slate-600 uppercase tracking-wide';
-const fieldSelectClass =
-  'w-full h-11 bg-slate-50 border-slate-200 text-slate-900 [&_svg]:text-slate-500';
+const fieldSelectClass = 'w-full h-11 bg-slate-50 border-slate-200 text-slate-900 [&_svg]:text-slate-500';
 const UNIDADES = Object.keys(UNIDADES_MEDIDA) as UnidadMedida[];
+
+const FORM_DEFAULT = {
+  nombre: '',
+  tipo: 'materia_prima' as TipoInsumo,
+  categoria_id: 0,
+  unidad_medida: 'metros' as UnidadMedida,
+  stock_actual: '0',
+  stock_minimo: '10',
+  precio_unitario: '',
+  proveedor_id: '',
+};
+
+// ── Componente ────────────────────────────────────────────────────────────────
 
 export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSaving }: Props) {
   const isEdit = !!insumo;
-  const [proveedores, setProveedores] = useState<{ id: string; razon_social: string }[]>([]);
-  const [form, setForm] = useState({
-    nombre: '',
-    tipo: 'tela' as TipoInsumo,
-    categoria_insumo: 'otro' as CategoriaInsumo,
-    unidad_medida: 'unidades' as UnidadMedida,
-    stock_actual: '0',
-    stock_minimo: '10',
-    precio_unitario: '',
-    proveedor_id: '',
-    ubicacion_almacen: '',
-  });
 
+  const [proveedores, setProveedores] = useState<{ id: string; razon_social: string }[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
+  const [form, setForm] = useState(FORM_DEFAULT);
+
+  // Cargar proveedores
   useEffect(() => {
     if (!isOpen) return;
     fetchProveedores(1, 200, '', 'activo')
-      .then((res) => {
-        const list = Array.isArray(res.data) ? res.data : [];
-        setProveedores(list as { id: string; razon_social: string }[]);
-      })
+      .then((res) => setProveedores(Array.isArray(res.data) ? res.data as { id: string; razon_social: string }[] : []))
       .catch(() => toast.error('Error al cargar proveedores'));
   }, [isOpen]);
 
+  // Cargar categorías desde la DB (tabla categoria_insumo)
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/admin/inventario?resource=categorias')
+      .then(r => r.json())
+      .then(res => setCategorias(res.data?.categorias ?? []))
+      .catch(() => toast.error('Error al cargar categorías'));
+  }, [isOpen]);
+
+  // Poblar form al abrir
   useEffect(() => {
     if (!isOpen) return;
     if (insumo) {
       setForm({
         nombre: insumo.nombre,
         tipo: insumo.tipo as TipoInsumo,
-        categoria_insumo: insumo.categoria_insumo as CategoriaInsumo,
+        categoria_id: typeof insumo.categoria_insumo === 'object' && insumo.categoria_insumo !== null
+          ? (insumo.categoria_insumo as { id: number }).id
+          : 0,
         unidad_medida: insumo.unidad_medida as UnidadMedida,
         stock_actual: String(insumo.stock_actual),
         stock_minimo: String(insumo.stock_minimo),
         precio_unitario: insumo.precio_unitario != null ? String(insumo.precio_unitario) : '',
         proveedor_id: insumo.proveedor_id ? String(insumo.proveedor_id) : '',
-        ubicacion_almacen: '',
+
       });
     } else {
-      setForm({
-        nombre: '',
-        tipo: 'tela',
-        categoria_insumo: 'tela',
-        unidad_medida: 'metros',
-        stock_actual: '0',
-        stock_minimo: '10',
-        precio_unitario: '',
-        proveedor_id: '',
-        ubicacion_almacen: '',
-      });
+      setForm(FORM_DEFAULT);
     }
   }, [isOpen, insumo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!form.categoria_id) {
+      toast.error('Seleccione una categoría');
+      return;
+    }
+
     const payload: Record<string, unknown> = {
       nombre: form.nombre.trim(),
       tipo: form.tipo,
-      categoria_insumo: form.categoria_insumo,
+      categoria_id: form.categoria_id,
       unidad_medida: form.unidad_medida,
       stock_minimo: parseFloat(form.stock_minimo || '0'),
       precio_unitario: form.precio_unitario ? parseFloat(form.precio_unitario) : null,
       proveedor_id: form.proveedor_id || null,
-      ubicacion_almacen: form.ubicacion_almacen.trim() || null,
     };
 
     if (!isEdit) {
@@ -143,6 +152,8 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Nombre */}
             <div className="space-y-2">
               <Label className={fieldLabelClass}>Nombre</Label>
               <Input
@@ -154,10 +165,15 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
               />
             </div>
 
+            {/* Tipo + Categoría */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className={fieldLabelClass}>Tipo</Label>
-                <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as TipoInsumo })} disabled={isSaving}>
+                <Select
+                  value={form.tipo}
+                  onValueChange={(v) => setForm({ ...form, tipo: v as TipoInsumo })}
+                  disabled={isSaving}
+                >
                   <SelectTrigger className={fieldSelectClass}><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-white text-slate-900 border-slate-200">
                     {LISTA_TIPOS_INSUMO.map((k) => (
@@ -168,18 +184,25 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
                 <Label className={fieldLabelClass}>Categoría</Label>
                 <Select
-                  value={form.categoria_insumo}
-                  onValueChange={(v) => setForm({ ...form, categoria_insumo: v as CategoriaInsumo })}
+                  value={form.categoria_id ? String(form.categoria_id) : ''}
+                  onValueChange={(v) => setForm({ ...form, categoria_id: Number(v) })}
                   disabled={isSaving}
                 >
-                  <SelectTrigger className={fieldSelectClass}><SelectValue /></SelectTrigger>
+                  <SelectTrigger className={fieldSelectClass}>
+                    <SelectValue placeholder="Seleccionar..." />
+                  </SelectTrigger>
                   <SelectContent className="bg-white text-slate-900 border-slate-200">
-                    {LISTA_CATEGORIAS_INSUMO.map((k) => (
-                      <SelectItem key={k} value={k} className="text-slate-900 focus:bg-amber-50 focus:text-slate-900">
-                        {CATEGORIAS_INSUMO[k].label}
+                    {categorias.map((c) => (
+                      <SelectItem
+                        key={c.id}
+                        value={String(c.id)}
+                        className="text-slate-900 focus:bg-amber-50 focus:text-slate-900"
+                      >
+                        {c.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -187,6 +210,7 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
               </div>
             </div>
 
+            {/* Unidad + Precio */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className={fieldLabelClass}>Unidad de medida</Label>
@@ -219,15 +243,14 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
               </div>
             </div>
 
+            {/* Stock — solo en creación */}
             {!isEdit && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className={fieldLabelClass}>Stock inicial</Label>
                   <Input
                     className={fieldInputClass}
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="number" step="0.01" min="0"
                     value={form.stock_actual}
                     onChange={(e) => setForm({ ...form, stock_actual: e.target.value })}
                     disabled={isSaving}
@@ -237,9 +260,7 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
                   <Label className={fieldLabelClass}>Stock mínimo</Label>
                   <Input
                     className={fieldInputClass}
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="number" step="0.01" min="0"
                     value={form.stock_minimo}
                     onChange={(e) => setForm({ ...form, stock_minimo: e.target.value })}
                     disabled={isSaving}
@@ -248,14 +269,13 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
               </div>
             )}
 
+            {/* Stock mínimo — solo en edición */}
             {isEdit && (
               <div className="space-y-2">
                 <Label className={fieldLabelClass}>Stock mínimo</Label>
                 <Input
                   className={fieldInputClass}
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="number" step="0.01" min="0"
                   value={form.stock_minimo}
                   onChange={(e) => setForm({ ...form, stock_minimo: e.target.value })}
                   disabled={isSaving}
@@ -263,6 +283,7 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
               </div>
             )}
 
+            {/* Proveedor */}
             <div className="space-y-2">
               <Label className={fieldLabelClass}>Proveedor habitual</Label>
               <Select
@@ -286,10 +307,7 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
 
             <DialogFooter className="pt-4 border-t border-slate-100 gap-2">
               <Button
-                type="button"
-                variant="ghost"
-                onClick={onClose}
-                disabled={isSaving}
+                type="button" variant="ghost" onClick={onClose} disabled={isSaving}
                 className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               >
                 Cancelar

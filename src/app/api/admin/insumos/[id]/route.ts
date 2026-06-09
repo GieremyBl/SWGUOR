@@ -7,8 +7,8 @@ import type { RolUsuario } from '@/lib/constants/roles';
 import { InsumosService } from '@/lib/services/insumos.service';
 import { InventarioService } from '@/lib/services/inventario.service';
 import { auditoriaService } from '@/lib/services/auditoria.service';
-import type { CategoriaInsumo, TipoInsumo, UnidadMedida } from '@prisma/client';
-
+import type { TipoInsumo, UnidadMedida } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 const INSUMOS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'almacenero'];
 
 type Params = { params: Promise<{ id: string }> };
@@ -54,16 +54,16 @@ export async function PATCH(req: Request, { params }: Params) {
 
     const body = await req.json() as Record<string, unknown>;
     const insumo = await InventarioService.actualizar(id, {
-      nombre: typeof body.nombre === 'string' ? body.nombre : undefined,
-      tipo: body.tipo as TipoInsumo | undefined,
-      categoria_insumo: body.categoria_insumo as CategoriaInsumo | undefined,
-      unidad_medida: body.unidad_medida as UnidadMedida | undefined,
-      stock_minimo: typeof body.stock_minimo === 'number' ? body.stock_minimo : undefined,
-      stock_maximo: body.stock_maximo === null ? null : typeof body.stock_maximo === 'number' ? body.stock_maximo : undefined,
-      precio_unitario: body.precio_unitario === null ? null : typeof body.precio_unitario === 'number' ? body.precio_unitario : undefined,
-      proveedor_id: body.proveedor_id === null ? undefined : typeof body.proveedor_id === 'string' ? body.proveedor_id : undefined,
-      ubicacion_almacen: body.ubicacion_almacen === null ? undefined : typeof body.ubicacion_almacen === 'string' ? body.ubicacion_almacen : undefined,
-      alerta_bajo_stock: typeof body.alerta_bajo_stock === 'boolean' ? body.alerta_bajo_stock : undefined,
+      nombre: typeof body.nombre === 'string' ? body.nombre : '',
+      tipo: body.tipo as TipoInsumo,
+      categoria_id: typeof body.categoria_id === 'number' ? body.categoria_id : 0,
+      unidad_medida: body.unidad_medida as UnidadMedida,
+      stock_minimo: typeof body.stock_minimo === 'number' ? body.stock_minimo : 0,
+      stock_maximo: typeof body.stock_maximo === 'number' ? body.stock_maximo : 0,
+      precio_unitario: typeof body.precio_unitario === 'number' ? body.precio_unitario : 0,
+      proveedor_id: typeof body.proveedor_id === 'string' ? body.proveedor_id : "",
+      ubicacion_almacen: typeof body.ubicacion_almacen === 'string' ? body.ubicacion_almacen : undefined,
+      alerta_bajo_stock: typeof body.alerta_bajo_stock === 'boolean' ? body.alerta_bajo_stock : false,
     });
 
     await auditoriaService.registrar({
