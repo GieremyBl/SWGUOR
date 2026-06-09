@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Package, Clock, AlertTriangle, CheckCircle2, MailOpen, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -8,16 +8,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-
-type TipoNotificacion = 
-  | 'stock_bajo'
-  | 'pedido_vencido'
-  | 'pago_pendiente'
-  | 'cotizacion_expirada'
-  | 'orden_produccion'
-  | 'confeccion_completada'
-  | 'devolucion_solicitada'
-  | 'sistema';
+import type { TipoNotificacion } from '@prisma/client';
 
 interface NotificationItem {
   id: string | number | bigint;
@@ -55,7 +46,7 @@ const fetchNotifications = async (): Promise<NotificationResponse> => {
 };
 
 const markAsRead = async (id: string | number): Promise<void> => {
-  const res = await fetch(`/api/admin/notificaciones/${id}`, { 
+  const res = await fetch(`/api/admin/notificaciones/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({})
@@ -70,7 +61,7 @@ export function NotificationDropdown() {
   const { data, isLoading, error } = useQuery<NotificationResponse>({
     queryKey: ['notifications'],
     queryFn: fetchNotifications,
-    refetchInterval: 30000, 
+    refetchInterval: 30000,
   });
 
   const mutation = useMutation({
@@ -84,9 +75,14 @@ export function NotificationDropdown() {
     },
   });
 
-  // SOLUCCIÓN AL RUNTIME ERROR: Acceso 100% seguro durante estados transitorios de carga
   const sinLeer = data?.kpis?.sinLeer ?? 0;
   const notificaciones = data?.data ?? [];
+
+  useEffect(() => {
+    fetch('/api/admin/notificaciones?action=scan')
+      .then(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+      .catch(console.error);
+  }, []);
 
   const getIcon = (tipo: TipoNotificacion, leido: boolean) => {
     const iconClass = cn(
@@ -123,13 +119,13 @@ export function NotificationDropdown() {
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-[380px] p-0 shadow-xl border-stone-200/60 rounded-2xl overflow-hidden z-[110] bg-white">
-        
+
         {/* CABECERA FIJA */}
         <div className="px-5 py-4 border-b border-stone-100 bg-white flex justify-between items-center">
           <h4 className="text-xs font-black uppercase tracking-widest text-stone-950">Notificaciones</h4>
           {sinLeer > 0 && (
             <span className="text-[10px] font-black text-primary bg-rose-50 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
-              <AlertTriangle size={12}/>
+              <AlertTriangle size={12} />
               {sinLeer} {sinLeer === 1 ? 'Pendiente' : 'Pendientes'}
             </span>
           )}
@@ -153,8 +149,8 @@ export function NotificationDropdown() {
             </div>
           ) : (
             notificaciones.map((n) => (
-              <div 
-                key={String(n.id)} 
+              <div
+                key={String(n.id)}
                 className={cn(
                   "p-4 transition-colors flex items-start gap-4 group relative cursor-pointer border-b border-stone-50",
                   n.leido ? 'bg-white' : 'bg-rose-50/[0.25]',
@@ -176,7 +172,7 @@ export function NotificationDropdown() {
                 )}>
                   {getIcon(n.tipo, n.leido)}
                 </div>
-                
+
                 {/* Contenido */}
                 <div className="flex-1 min-w-0 pr-8">
                   <div className="flex items-center justify-between gap-2">
@@ -204,7 +200,7 @@ export function NotificationDropdown() {
 
                 {/* Acción Rápida (Hover) */}
                 {!n.leido && (
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       mutation.mutate(String(n.id));
@@ -219,11 +215,11 @@ export function NotificationDropdown() {
             ))
           )}
         </div>
-        
+
         {/* FOOTER */}
         <div className="p-2 border-t border-stone-100 bg-white">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full text-[10px] font-black text-stone-500 hover:text-primary hover:bg-stone-50 uppercase tracking-widest rounded-xl py-5"
             onClick={() => router.push('/admin/Panel-Administrativo/notificaciones')}
           >

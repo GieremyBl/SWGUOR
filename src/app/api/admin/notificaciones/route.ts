@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
       ? { usuario_id: usuarioBigInt, leido: false }
       : { usuario_id: usuarioBigInt };
 
-    const [total, rows] = await Promise.all([
+    const [total, rows, sinLeer] = await Promise.all([
       prisma.notificaciones.count({ where }),
       prisma.notificaciones.findMany({
         where,
@@ -172,10 +172,26 @@ export async function GET(req: NextRequest) {
         take: limit,
         skip: offset,
       }),
+
+      prisma.notificaciones.count({
+        where: { usuario_id: usuarioBigInt, leido: false },
+      }),
     ]);
 
+    const kpis = {
+      sinLeer,
+      total,
+      urgentes: rows.filter(r => r.tipo === 'pedido_vencido' && !r.leido).length,
+      porTipo: {
+        stock_bajo: rows.filter(r => r.tipo === 'stock_bajo').length,
+        orden_produccion: rows.filter(r => r.tipo === 'orden_produccion').length,
+        pedido_vencido: rows.filter(r => r.tipo === 'pedido_vencido').length,
+        pago_pendiente: rows.filter(r => r.tipo === 'pago_pendiente').length,
+      },
+    };
+
     return NextResponse.json(
-      serializeBigInt({ success: true, data: rows, total, limit, offset })
+      serializeBigInt({ success: true, data: rows, total, limit, offset, kpis })
     );
 
   } catch (error: any) {

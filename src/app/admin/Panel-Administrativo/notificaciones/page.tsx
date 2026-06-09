@@ -4,21 +4,20 @@ import { useState, useEffect } from 'react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { toast } from 'sonner';
 import NotificacionesTable from '@/components/admin/notificaciones/NotificacionesTable';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import type { Notificacion } from '@/lib/schemas/notificaciones';
 
 export default function NotificacionesPage() {
   const { can } = usePermissions();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const loadNotificaciones = async () => {
+  const loadNotificaciones = async (scan = false) => {
     try {
-      const res = await fetch('/api/admin/notificaciones');
+      const url = scan
+        ? '/api/admin/notificaciones?action=scan'
+        : '/api/admin/notificaciones';
+      const res = await fetch(url);
       if (!res.ok) throw new Error('Error al cargar');
-
       const response = await res.json();
       const raw: any[] = Array.isArray(response.data) ? response.data : [];
 
@@ -48,29 +47,11 @@ export default function NotificacionesPage() {
 
   useEffect(() => {
     if (can('view', 'notificaciones')) {
-      loadNotificaciones();
+      loadNotificaciones(true);
     } else {
       setLoading(false);
     }
   }, [can]);
-
-  const handleSave = async (data: unknown) => {
-    try {
-      const res = await fetch('/api/admin/notificaciones', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Error al guardar');
-
-      toast.success('Notificación enviada');
-      setDialogOpen(false);
-      loadNotificaciones();
-    } catch (error) {
-      toast.error('Error al enviar notificación');
-      console.error(error);
-    }
-  };
 
   if (!can('view', 'notificaciones')) {
     return <div className="p-6">Acceso denegado</div>;
@@ -83,12 +64,6 @@ export default function NotificacionesPage() {
           <h1 className="text-2xl font-bold">Notificaciones</h1>
           <p className="text-muted-foreground">Gestiona las notificaciones del sistema</p>
         </div>
-        {can('create', 'notificaciones') && (
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva Notificación
-          </Button>
-        )}
       </div>
 
       {loading ? (
