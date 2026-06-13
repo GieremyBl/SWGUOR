@@ -95,6 +95,12 @@ export async function GET(req: Request) {
         id: Number(p.id),
         codigo: `ORD-${String(p.id).padStart(4, '0')}`,
         estado: p.estado ?? 'pendiente',
+         total: Number(p.total),
+        moneda: p.moneda ?? 'PEN',
+        estado_pago: (
+          Number(p.saldo_pendiente) <= 0 && Number(p.monto_pagado) > 0
+            ? 'verificado' : 'pendiente'
+        ),
         cliente:
           p.clientes?.nombre_comercial ??
           p.clientes?.razon_social ??

@@ -2,19 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import {
-  ShoppingBag,
-  ArrowUpRight,
-  PackageSearch,
-  RefreshCw,
-  Plus,
-  FileText,
-} from 'lucide-react';
+import { PackageSearch, Plus } from 'lucide-react';
 
 import { usePortal } from '@/lib/hooks/usePortal';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
-import { EstadoBadge } from '@/components/portal/EstadoBadge';
-import { formatCurrency } from '@/lib/helpers/format-helpers';
 import { useRouter } from 'next/navigation';
 
 
@@ -27,15 +17,10 @@ import { PedidosError } from '@/components/portal/pedidos/PedidosError';
 import { PedidoAvisoPago } from '@/components/portal/pedidos/PedidoAvisoPago';
 import { PedidoModalDetalle, PedidoConDetalles } from '@/components/portal/pedidos/PedidoModalDetalle';
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-import {
-  Pedido,
-  PedidoFilaDB,
-  EstadoPago,
-  EstadoPedido,
-  CotizacionHistorial,
-} from '@/components/portal/pedidos/types';
+
 
 // ─── Página principal ─────────────────────────────────────────────────────────
+import { Pedido, EstadoPedido } from '@/components/portal/pedidos/types';
 
 export default function MisPedidosPage() {
   const { cliente, loading: authLoading } = usePortal() as {
@@ -44,20 +29,15 @@ export default function MisPedidosPage() {
   };
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [cotizaciones, setCotizaciones] = useState<CotizacionHistorial[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modales
+
   const [pedidoDetalle, setPedidoDetalle] = useState<PedidoConDetalles | null>(null);
   const router = useRouter();
-  // ─── Cotizaciones recientes (máx 3) ───────────────────────────────────────
-  const cotizacionesRecientes = useMemo(
-    () => cotizaciones.slice(0, 3),
-    [cotizaciones],
-  );
+  
 
-  // ─── KPIs calculados ──────────────────────────────────────────────────────
+ 
   const kpis = useMemo(() => ({
     total: pedidos.length,
     activos: pedidos.filter(p => p.estado === 'pendiente' || p.estado === 'en_produccion').length,
@@ -65,57 +45,30 @@ export default function MisPedidosPage() {
     entregados: pedidos.filter(p => p.estado === 'entregado').length,
   }), [pedidos]);
 
-  // ─── Fetch de datos ───────────────────────────────────────────────────────
+  
   const fetchPedidos = useCallback(async () => {
     if (!cliente?.id) return;
     setLoading(true);
     setError(null);
 
     try {
-      const supabase = getSupabaseBrowserClient();
+            // ✅ API route — no más browser client
+      const res = await fetch('/api/portal/pedidos/seguimiento?todos=1').then(r => r.json());
 
-      const [pedidosResult, cotizacionesResult] = await Promise.all([
-        supabase
-          .from('pedidos')
-          .select('id, total, estado, created_at, total_unidades, moneda, saldo_pendiente, monto_pagado')
-          .eq('cliente_id', cliente.id as unknown as number)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('cotizaciones')
-          .select('id, numero, total, estado, created_at, costo_envio')
-          .eq('cliente_id', cliente.id as unknown as number)
-          .order('created_at', { ascending: false })
-          .limit(10),
-      ]);
+      if (!res.success) throw new Error(res.error ?? 'Error al cargar pedidos');
 
-      if (pedidosResult.error) throw pedidosResult.error;
-      if (cotizacionesResult.error) throw cotizacionesResult.error;
-
-      // Supabase infiere tipos desde el schema generado; usamos `unknown` como
-      // paso intermedio para evitar TS2352 cuando los tipos no solapan del todo.
-      const filas = (pedidosResult.data as unknown as PedidoFilaDB[] | null) ?? [];
-
-      const pedidosFormateados: Pedido[] = filas.map((p) => {
-        const estadoPago: EstadoPago =
-          Number(p.saldo_pendiente) <= 0 && Number(p.monto_pagado) > 0
-            ? 'verificado'
-            : 'pendiente';
-
-        return {
-          id: p.id,
-          total: Number(p.total),
-          estado: ((p.estado ?? 'pendiente') as EstadoPedido),
-          estado_pago: estadoPago,
-          created_at: p.created_at ?? new Date().toISOString(),
-          total_unidades: p.total_unidades || 0,
-          moneda: p.moneda || 'PEN',
-        };
-      });
+      const pedidosFormateados: Pedido[] = (res.data ?? []).map((p: any) => ({
+        id: p.id,
+        total: p.total,
+        estado: (p.estado ?? 'pendiente') as EstadoPedido,
+        estado_pago: p.estado_pago ?? 'pendiente',
+        created_at: p.created_at,
+        total_unidades: p.total_unidades ?? 0,
+        moneda: p.moneda ?? 'PEN',
+      }));
 
       setPedidos(pedidosFormateados);
-      setCotizaciones(
-        (cotizacionesResult.data as unknown as CotizacionHistorial[]) ?? [],
-      );
+      
     } catch (err: unknown) {
       console.error('Error al recopilar el historial:', err);
       setError('No se pudieron cargar los pedidos. Intenta nuevamente.');
@@ -132,12 +85,11 @@ export default function MisPedidosPage() {
 
   /** Abre el modal de detalle con la información del pedido */
   const handleVerDetalle = useCallback((pedido: Pedido) => {
-    // PedidoConDetalles extiende Pedido; los campos opcionales se rellenarán
-    // cuando se implemente la carga de ítems detallados desde Supabase.
+    
     setPedidoDetalle(pedido as PedidoConDetalles);
   }, []);
 
-  /** Desde la tarjeta: abre directamente el modal de pago */
+  
   const handlePagarDesdeCard = useCallback((pedido: Pedido) => {
     const params = new URLSearchParams({
       total: String(Number(pedido.total ?? 0)),

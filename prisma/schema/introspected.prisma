@@ -1435,11 +1435,7 @@ model ordenes_produccion {
   taller_id                BigInt
   ficha_id                 BigInt
   estado                   EstadoOrdenProduccion      @default(borrador)
-<<<<<<< HEAD
-  etapa                    EtapaProduccion
-=======
   etapa                    EtapaProduccion            
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
   cantidad_solicitada      Int                        @default(0)
   fecha_entrega            DateTime?                  @db.Date
   notas                    String?

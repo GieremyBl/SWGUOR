@@ -67,18 +67,6 @@ importers:
         version: 4.5.1(react@19.2.1)
       '@supabase/ssr':
         specifier: ^0.8.0
-<<<<<<< HEAD
-        version: 0.8.0(@supabase/supabase-js@2.107.0)
-      '@supabase/supabase-js':
-        specifier: ^2.104.1
-        version: 2.107.0
-      '@tanstack/react-query':
-        specifier: ^5.90.21
-        version: 5.101.0(react@19.2.1)
-      ai:
-        specifier: ^5.0.116
-        version: 5.0.195(zod@4.4.3)
-=======
         version: 0.8.0(@supabase/supabase-js@2.106.2)
       '@supabase/supabase-js':
         specifier: ^2.104.1
@@ -89,7 +77,6 @@ importers:
       ai:
         specifier: ^5.0.116
         version: 5.0.193(zod@4.4.3)
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -173,11 +160,7 @@ importers:
         version: 4.4.3
       zustand:
         specifier: ^5.0.14
-<<<<<<< HEAD
-        version: 5.0.14(@types/react@19.2.16)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
-=======
         version: 5.0.14(@types/react@19.2.15)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.5
@@ -226,11 +209,7 @@ importers:
         version: 7.8.0(@types/react-dom@19.2.3(@types/react@19.2.16))(@types/react@19.2.16)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3)
       supabase:
         specifier: ^2.84.1
-<<<<<<< HEAD
-        version: 2.105.0
-=======
         version: 2.102.0
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       tailwindcss:
         specifier: '3.4'
         version: 3.4.19(tsx@4.22.4)
@@ -246,15 +225,12 @@ importers:
 
 packages:
 
-<<<<<<< HEAD
-=======
   '@ai-sdk/gateway@2.0.94':
     resolution: {integrity: sha512-sH4QfvKYODzwSby8Q10QfryICqI0aDAnGxJKPULkS8sNnQ3MM2s88+7cMwDpdK9kA5FYgExS/IERDpF1Hp3QoQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
   '@ai-sdk/gateway@2.0.96':
     resolution: {integrity: sha512-2Ue0jetdlGQNv8zzYkZHgQQUfoeBp+Vu97L5UAF+HHJ/EggvY2lvO19Mq0G4YEPvc2Xt77QdDz5gGySxDSMpMQ==}
     engines: {node: '>=18'}
@@ -1746,54 +1722,6 @@ packages:
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
-<<<<<<< HEAD
-  '@supabase/auth-js@2.107.0':
-    resolution: {integrity: sha512-XA7x+WIeIvuC3GTZ2ey67QcBbGw4n+o5B7M+dMm9KT1lL3wX1B52DfEWW00WuPt/LnniJLLIn1WIm9YPtuxzKQ==}
-    engines: {node: '>=20.0.0'}
-
-  '@supabase/cli-darwin-arm64@2.105.0':
-    resolution: {integrity: sha512-ptlLrggNCq7dndvY7ce0MIvCZRnAYXeyKC0H7c4DqQmCbOPZgSwD5a4E3RPrZS6TLeJPG7XhpuJarAU5PTf/9w==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@supabase/cli-darwin-x64@2.105.0':
-    resolution: {integrity: sha512-kJDYyy3UkXd4hDzo+duOzUk8yDqLEit8d/clBCiXNQFSJf96QCnG2iyrzT4dCDUk8UB3+g9xL1mH2EEuPHj7oA==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@supabase/cli-linux-arm64-musl@2.105.0':
-    resolution: {integrity: sha512-45vxbXRwe/JUAjyvQ8oKO2o44IK3GunlVqeIWGzcDgaeMg5XO4x0i9+NGPvOvvhyMB4bgJ3cMxh/ovl1AM0GZA==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@supabase/cli-linux-arm64@2.105.0':
-    resolution: {integrity: sha512-cdHgfIFElYkAjrp0aJPlQPTqQ9doSxB4qRswlGNsSYaLlK5Ns78rXsB7G71RRnyrzb41C183osRhVENWVrnK/w==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@supabase/cli-linux-x64-musl@2.105.0':
-    resolution: {integrity: sha512-VnHn1NPn9Ov81BXFOx6FpHxbBT5e3ObaUxO7DR+LDGjh2wfMUj4E6Y863w+r0HJk0hi0mRH7u0U0dOrbBp4E+w==}
-    cpu: [x64]
-    os: [linux]
-
-  '@supabase/cli-linux-x64@2.105.0':
-    resolution: {integrity: sha512-rj1iU0h4EJaanx72eJtipiXczAY3gug9qxo62MYUZg2X1aaegFtyMS83fmjC7YlduW2Cu+zvgWoyTlA6R5Ndzg==}
-    cpu: [x64]
-    os: [linux]
-
-  '@supabase/cli-windows-arm64@2.105.0':
-    resolution: {integrity: sha512-b5xQ5dVkARZTBiSwLpPbwffRHvVDcO3ZvAtzz54J44KQdLD0TSrgoXZJBrI4Y3ggmG70EiITKPL8+rT6ptjXsQ==}
-    cpu: [arm64]
-    os: [win32]
-
-  '@supabase/cli-windows-x64@2.105.0':
-    resolution: {integrity: sha512-QmfqDQJ58ba/9+vzM8HJQsa/rY6OdtaaaAmPKwCMd8JUQ7758p8sydYe1vXTb4CCPdvk9qW2d/Dh54ucH4SPwg==}
-    cpu: [x64]
-    os: [win32]
-
-  '@supabase/functions-js@2.107.0':
-    resolution: {integrity: sha512-iMtRUmEj1KOgQd/a3MR4hnBlPnZc62DW8+z8aPpnzbxWkexEZUVL2fSgvvp15gqFg1V55e2yMGqgK+yhSQxp5w==}
-=======
   '@supabase/auth-js@2.106.2':
     resolution: {integrity: sha512-VcAjUErkHkhC5Jaf+g/G1qbkQrFh8edaCdHa7pxJmHUjkWKjT7UnYCtPA89XV0N0GIYRkEqJZw5V62CtOxTmBQ==}
     engines: {node: '>=20.0.0'}
@@ -1840,27 +1768,17 @@ packages:
 
   '@supabase/functions-js@2.106.2':
     resolution: {integrity: sha512-oRnr0QrL8H+zTO1YyQ1QjiHZU/957jvubbxSJTUm2XLAgzoGGV9Tahfyd+uvLsBLRVmXLtpU3oyCjdQIvkGMOA==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     engines: {node: '>=20.0.0'}
 
   '@supabase/phoenix@0.4.2':
     resolution: {integrity: sha512-YSAGnmDAfuleFCVt3CeurQZAhxRfXWeZIIkwp7NhYzQ1UwW6ePSnzsFAiUm/mbCkfoCf70QQHKW/K6RKh52a4A==}
 
-<<<<<<< HEAD
-  '@supabase/postgrest-js@2.107.0':
-    resolution: {integrity: sha512-7ARs47/tyIjX7T0Ive20d4NY8zQYXsP5/P07jJWxffSIM2gpnSnGRnL/Fe15GPbdjsW2sTYeckHcyaoKbM6yWQ==}
-    engines: {node: '>=20.0.0'}
-
-  '@supabase/realtime-js@2.107.0':
-    resolution: {integrity: sha512-cF2KYdR3JIn9YlWGeluY9S0G+otqTdL6hB8GzpatlEIY6fZudCcyFo6Dc3+X9tjeb+x9XcIyNAk9qhNAknjH1A==}
-=======
   '@supabase/postgrest-js@2.106.2':
     resolution: {integrity: sha512-tDOzyPgp9pIRMR2x6C9+uDSJrnXSzxLtt3d7nC+Lrsy3jnJDHYfdQC/xcRyhJE/TOBJ0heSqRKR3UmejDjZxsw==}
     engines: {node: '>=20.0.0'}
 
   '@supabase/realtime-js@2.106.2':
     resolution: {integrity: sha512-LdRGT7DNhyZkPjubUv5bSdAZ0jSEX8wTHvx7htj7+K59TOZRvz4TuQK7tL2RWxyIZVeFMRluL04SzWS61rKnUA==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     engines: {node: '>=20.0.0'}
 
   '@supabase/ssr@0.8.0':
@@ -1868,21 +1786,12 @@ packages:
     peerDependencies:
       '@supabase/supabase-js': ^2.76.1
 
-<<<<<<< HEAD
-  '@supabase/storage-js@2.107.0':
-    resolution: {integrity: sha512-/X8OOVwKBn8aVKuHAGOz2yLA0d2OauqhVuy4mNtN+o7wttHOgx1/j+pqOzlsjmhOHrYykF6AJNZhs3gKZzcMUw==}
-    engines: {node: '>=20.0.0'}
-
-  '@supabase/supabase-js@2.107.0':
-    resolution: {integrity: sha512-ChKzdlWVweMUUhr0U79JhMmgm1haS/C5JquaiCDr70JaGARRtjjoY9rkIheXWybXxTSNzRiQs3Sk8IAg1HS3ZA==}
-=======
   '@supabase/storage-js@2.106.2':
     resolution: {integrity: sha512-xgKCSYuev1YarV+iVqr+zlfgSyremnJtn8T0NCT8L4XmMv1CLtESc0Q6kNp8+mKWdX/8ND0nzm7OMKx08kwNAw==}
     engines: {node: '>=20.0.0'}
 
   '@supabase/supabase-js@2.106.2':
     resolution: {integrity: sha512-2/RZ/1fmJx/MRSEDG2Xk8+J4JVk5clM9V0uSI6kUTrcS32KA89DtqI5RUOC9r6mzY3WBC9qexLjssIHjbLyVJA==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     engines: {node: '>=20.0.0'}
 
   '@swc/helpers@0.5.15':
@@ -1891,19 +1800,11 @@ packages:
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
-<<<<<<< HEAD
-  '@tanstack/query-core@5.101.0':
-    resolution: {integrity: sha512-cQetA74EB+seWySv1TTKr828TnP0u39m6LykwDXIo84SNortpDkp30TMEjkqtYCNP9c40uT/iwl6MLiufEt0Ow==}
-
-  '@tanstack/react-query@5.101.0':
-    resolution: {integrity: sha512-rLlJXSpkqfizLWgkR5+eLeIk0MvTx/meEIR7LRjxic+qxiQP8zVjq7BqQkiCMNLQBlLfuOLqqr6KO5GtrDlmSg==}
-=======
   '@tanstack/query-core@5.100.14':
     resolution: {integrity: sha512-5X41dGpxgeaHISCRW2oYwcSycZeULZzAunaudXT9ov1KOTj9xwt0CH6hbwqP1/z74ZWF7rYFnDpyYH07XFcZew==}
 
   '@tanstack/react-query@5.100.14':
     resolution: {integrity: sha512-oOr6aRdSFEwWhzxEkD/9ZcItM3+LjBSkeVmadWKwUssAHTsqd/7bOjWrX4AbvEkoEhgAxzN0Xk6H/aYzXiYBAw==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     peerDependencies:
       react: ^18 || ^19
 
@@ -2174,15 +2075,12 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-<<<<<<< HEAD
-=======
   ai@5.0.193:
     resolution: {integrity: sha512-qyVpDNcjRearWaJYMVmrxAITtW+Y8OSnPZFjNssEbCCaYQMY14UaBY+S9nA3zPay3865v2YnN+KVKhG0dmtALw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
   ai@5.0.195:
     resolution: {integrity: sha512-tWoeMhKZ2Gtx4SrcZM1PnhdlledqdrWgtdsJbPS+LEC2O3C0ZaPGjgxHcew+hhc0E5Vu5fpaGB0sLx3qU/ajgA==}
     engines: {node: '>=18'}
@@ -2656,13 +2554,8 @@ packages:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
     engines: {node: '>=0.10.0'}
 
-<<<<<<< HEAD
-  dompurify@3.4.8:
-    resolution: {integrity: sha512-yb1cEmaOum7wFvOCSQxyfgVlv5D47Rc30iZWoMpbDIWTnJ6grDDQyu2KFJzB2k7u0pMuJcQ1zphH//fFnw2tjQ==}
-=======
   dompurify@3.4.7:
     resolution: {integrity: sha512-2jBxDJY4RR06tQNy4w5FlFH7kfxsQZlufd0sbv+chfHCxeJwrFw2baUDsSwvBISD4K4RDbd0PTfy3uNXsR6siA==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
 
   dotenv-cli@11.0.0:
     resolution: {integrity: sha512-r5pA8idbk7GFWuHEU7trSTflWcdBpQEK+Aw17UrSHjS6CReuhrrPcyC3zcQBPQvhArRHnBo/h6eLH1fkCvNlww==}
@@ -2690,13 +2583,8 @@ packages:
   effect@3.20.0:
     resolution: {integrity: sha512-qMLfDJscrNG8p/aw+IkT9W7fgj50Z4wG5bLBy0Txsxz8iUHjDIkOgO3SV0WZfnQbNG2VJYb0b+rDLMrhM4+Krw==}
 
-<<<<<<< HEAD
-  electron-to-chromium@1.5.367:
-    resolution: {integrity: sha512-4Mk/mrynCNQ+atY40D3UpmhLWB6AHMbYMlIrPhHcMF6x0L7O0b052FCAsxw1LlaR++UFuNg3D/A6XCuGDa0guQ==}
-=======
   electron-to-chromium@1.5.364:
     resolution: {integrity: sha512-G/dYE3+AYhyHwzTwg8UbnXf7zqMERYh7l2jJ3QujhFsH8agSYwtnGAR2aZ7f0AakIKJXd5En/Hre4igIUrdlYw==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
 
   emoji-regex-xs@1.0.0:
     resolution: {integrity: sha512-LRlerrMYoIDrT6jgpeZ2YYl/L8EulRTt5hQcYjy5AInh7HWXKimpqx68aknBFpGL2+/IcogTcaydJEgaTmOpDg==}
@@ -4290,13 +4178,8 @@ packages:
     engines: {node: '>=16 || 14 >=14.17'}
     hasBin: true
 
-<<<<<<< HEAD
-  supabase@2.105.0:
-    resolution: {integrity: sha512-UB2aFLYAVujTQsZ9l+aCbDfLNaZApZucByRNP/1j0L1pXXzFhSgEyZSrvHSUO5LIvOb09AGHWishL/usVTuHTg==}
-=======
   supabase@2.102.0:
     resolution: {integrity: sha512-PMoWgoQOb1/mZ3Y+e/HIIvWmEfui20cWELXYURrb6s66Swvo1jnkBmRvtCtSA8lan+aHtkgVQAyekocugle2eg==}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     hasBin: true
 
   supports-color@7.2.0:
@@ -4583,8 +4466,6 @@ packages:
 
 snapshots:
 
-<<<<<<< HEAD
-=======
   '@ai-sdk/gateway@2.0.94(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.3
@@ -4592,7 +4473,6 @@ snapshots:
       '@vercel/oidc': 3.1.0
       zod: 4.4.3
 
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
   '@ai-sdk/gateway@2.0.96(zod@4.4.3)':
     dependencies:
       '@ai-sdk/provider': 2.0.3
@@ -6122,37 +6002,6 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-<<<<<<< HEAD
-  '@supabase/auth-js@2.107.0':
-    dependencies:
-      tslib: 2.8.1
-
-  '@supabase/cli-darwin-arm64@2.105.0':
-    optional: true
-
-  '@supabase/cli-darwin-x64@2.105.0':
-    optional: true
-
-  '@supabase/cli-linux-arm64-musl@2.105.0':
-    optional: true
-
-  '@supabase/cli-linux-arm64@2.105.0':
-    optional: true
-
-  '@supabase/cli-linux-x64-musl@2.105.0':
-    optional: true
-
-  '@supabase/cli-linux-x64@2.105.0':
-    optional: true
-
-  '@supabase/cli-windows-arm64@2.105.0':
-    optional: true
-
-  '@supabase/cli-windows-x64@2.105.0':
-    optional: true
-
-  '@supabase/functions-js@2.107.0':
-=======
   '@supabase/auth-js@2.106.2':
     dependencies:
       tslib: 2.8.1
@@ -6182,57 +6031,30 @@ snapshots:
     optional: true
 
   '@supabase/functions-js@2.106.2':
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     dependencies:
       tslib: 2.8.1
 
   '@supabase/phoenix@0.4.2': {}
 
-<<<<<<< HEAD
-  '@supabase/postgrest-js@2.107.0':
-    dependencies:
-      tslib: 2.8.1
-
-  '@supabase/realtime-js@2.107.0':
-=======
   '@supabase/postgrest-js@2.106.2':
     dependencies:
       tslib: 2.8.1
 
   '@supabase/realtime-js@2.106.2':
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     dependencies:
       '@supabase/phoenix': 0.4.2
       tslib: 2.8.1
 
-<<<<<<< HEAD
-  '@supabase/ssr@0.8.0(@supabase/supabase-js@2.107.0)':
-    dependencies:
-      '@supabase/supabase-js': 2.107.0
-      cookie: 1.1.1
-
-  '@supabase/storage-js@2.107.0':
-=======
   '@supabase/ssr@0.8.0(@supabase/supabase-js@2.106.2)':
     dependencies:
       '@supabase/supabase-js': 2.106.2
       cookie: 1.1.1
 
   '@supabase/storage-js@2.106.2':
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     dependencies:
       iceberg-js: 0.8.1
       tslib: 2.8.1
 
-<<<<<<< HEAD
-  '@supabase/supabase-js@2.107.0':
-    dependencies:
-      '@supabase/auth-js': 2.107.0
-      '@supabase/functions-js': 2.107.0
-      '@supabase/postgrest-js': 2.107.0
-      '@supabase/realtime-js': 2.107.0
-      '@supabase/storage-js': 2.107.0
-=======
   '@supabase/supabase-js@2.106.2':
     dependencies:
       '@supabase/auth-js': 2.106.2
@@ -6240,7 +6062,6 @@ snapshots:
       '@supabase/postgrest-js': 2.106.2
       '@supabase/realtime-js': 2.106.2
       '@supabase/storage-js': 2.106.2
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
 
   '@swc/helpers@0.5.15':
     dependencies:
@@ -6250,19 +6071,11 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-<<<<<<< HEAD
-  '@tanstack/query-core@5.101.0': {}
-
-  '@tanstack/react-query@5.101.0(react@19.2.1)':
-    dependencies:
-      '@tanstack/query-core': 5.101.0
-=======
   '@tanstack/query-core@5.100.14': {}
 
   '@tanstack/react-query@5.100.14(react@19.2.1)':
     dependencies:
       '@tanstack/query-core': 5.100.14
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       react: 19.2.1
 
   '@tybys/wasm-util@0.10.2':
@@ -6516,10 +6329,6 @@ snapshots:
 
   acorn@8.16.0: {}
 
-<<<<<<< HEAD
-  ai@5.0.195(zod@4.4.3):
-    dependencies:
-=======
   ai@5.0.193(zod@4.4.3):
     dependencies:
       '@ai-sdk/gateway': 2.0.94(zod@4.4.3)
@@ -6530,7 +6339,6 @@ snapshots:
 
   ai@5.0.195(zod@4.4.3):
     dependencies:
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       '@ai-sdk/gateway': 2.0.96(zod@4.4.3)
       '@ai-sdk/provider': 2.0.3
       '@ai-sdk/provider-utils': 3.0.25(zod@4.4.3)
@@ -6769,13 +6577,8 @@ snapshots:
     dependencies:
       baseline-browser-mapping: 2.10.33
       caniuse-lite: 1.0.30001793
-<<<<<<< HEAD
-      electron-to-chromium: 1.5.367
-      node-releases: 2.0.47
-=======
       electron-to-chromium: 1.5.364
       node-releases: 2.0.46
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
 
   buffer-crc32@0.2.13: {}
@@ -7051,11 +6854,7 @@ snapshots:
     dependencies:
       esutils: 2.0.3
 
-<<<<<<< HEAD
-  dompurify@3.4.8:
-=======
   dompurify@3.4.7:
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
     optionalDependencies:
       '@types/trusted-types': 2.0.7
     optional: true
@@ -7090,11 +6889,7 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
 
-<<<<<<< HEAD
-  electron-to-chromium@1.5.367: {}
-=======
   electron-to-chromium@1.5.364: {}
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
 
   emoji-regex-xs@1.0.0: {}
 
@@ -7947,11 +7742,7 @@ snapshots:
     optionalDependencies:
       canvg: 3.0.11
       core-js: 3.49.0
-<<<<<<< HEAD
-      dompurify: 3.4.8
-=======
       dompurify: 3.4.7
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       html2canvas: 1.4.1
 
   jsx-ast-utils@3.3.5:
@@ -8940,18 +8731,6 @@ snapshots:
       tinyglobby: 0.2.17
       ts-interface-checker: 0.1.13
 
-<<<<<<< HEAD
-  supabase@2.105.0:
-    optionalDependencies:
-      '@supabase/cli-darwin-arm64': 2.105.0
-      '@supabase/cli-darwin-x64': 2.105.0
-      '@supabase/cli-linux-arm64': 2.105.0
-      '@supabase/cli-linux-arm64-musl': 2.105.0
-      '@supabase/cli-linux-x64': 2.105.0
-      '@supabase/cli-linux-x64-musl': 2.105.0
-      '@supabase/cli-windows-arm64': 2.105.0
-      '@supabase/cli-windows-x64': 2.105.0
-=======
   supabase@2.102.0:
     optionalDependencies:
       '@supabase/cli-darwin-arm64': 2.102.0
@@ -8962,7 +8741,6 @@ snapshots:
       '@supabase/cli-linux-x64-musl': 2.102.0
       '@supabase/cli-windows-arm64': 2.102.0
       '@supabase/cli-windows-x64': 2.102.0
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
 
   supports-color@7.2.0:
     dependencies:
@@ -9326,15 +9104,9 @@ snapshots:
 
   zod@4.4.3: {}
 
-<<<<<<< HEAD
-  zustand@5.0.14(@types/react@19.2.16)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1)):
-    optionalDependencies:
-      '@types/react': 19.2.16
-=======
   zustand@5.0.14(@types/react@19.2.15)(immer@11.1.8)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1)):
     optionalDependencies:
       '@types/react': 19.2.15
->>>>>>> 7428ab848a7310e784d082f607ccb0c6274e9d99
       immer: 11.1.8
       react: 19.2.1
       use-sync-external-store: 1.6.0(react@19.2.1)

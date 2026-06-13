@@ -195,6 +195,9 @@ export async function POST(req: Request) {
               producto_id: BigInt(item.producto_id),
               variante_id: BigInt(item.variante_id),
               cantidad: Number(item.cantidad),
+              especificaciones: {                              // ← agregar
+                precio_unitario: Number(item.precio_unitario ?? 0),
+              },
             })),
           },
         },
