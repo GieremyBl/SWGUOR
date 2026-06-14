@@ -3,10 +3,28 @@ import jsPDF from "jspdf";
 import autoTable, { UserOptions } from "jspdf-autotable";
 import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import { ProductoStockResumen } from '@/lib/hooks/useStockResumen';
-
+import type { PedidoConDetalles } from '@/components/portal/pedidos/PedidoModalDetalle';
 // =====================================================
 // INTERFACES Y TIPOS
 // =====================================================
+interface PedidoPDFExportData {
+  pedido: PedidoConDetalles;
+  items: {
+    id: number;
+    cantidad: number;
+    especificaciones: Record<string, unknown> | null;
+    productos: {
+      sku: string;
+      nombre: string;
+    } | null;
+    variantes_producto: {
+      talla: string;
+      color: string;
+    } | null;
+  }[];
+}
+
+  
 
 interface jsPDFWithAutoTable extends jsPDF {
   lastAutoTable?: {
@@ -702,6 +720,92 @@ export const exportConfeccionesDetailedPDF = async (data: ConfeccionBase[], conf
   doc.save(`${config.filename}_${new Date().toISOString().split('T')[0]}.pdf`);
 };
 
+
+// =====================================================
+// EXPORTACIÓN A PDF — DETALLESPEDIDOS (@react-pdf/renderer)
+// =====================================================
+export const exportPedidoToPDF = async ({
+  pedido,
+  items,
+}: PedidoPDFExportData) => {
+  const doc = new jsPDF();
+
+  await drawHeaderWithLogo(
+    doc,
+    `Pedido #${pedido.id}`,
+    'Detalle del pedido'
+  );
+
+  let y = 50;
+
+  doc.setFontSize(11);
+
+  doc.text(`Fecha: ${new Date(pedido.created_at).toLocaleDateString('es-PE')}`, 14, y);
+  y += 8;
+
+  doc.text(`Estado: ${pedido.estado}`, 14, y);
+  y += 8;
+
+  doc.text(
+    `Dirección: ${pedido.direccion_envio ?? 'Retiro en almacén'}`,
+    14,
+    y
+  );
+
+  y += 12;
+
+  autoTable(doc, {
+    startY: y,
+    head: [[
+      'SKU',
+      'Producto',
+      'Variante',
+      'Cant.',
+      'P. Unitario'
+    ]],
+    body: items.map((item) => [
+      item.productos?.sku ?? '-',
+      item.productos?.nombre ?? '-',
+      item.variantes_producto
+        ? `${item.variantes_producto.talla} / ${item.variantes_producto.color}`
+        : '-',
+      item.cantidad,
+      item.especificaciones?.precio_unitario
+        ? formatCurrency(
+            Number(item.especificaciones.precio_unitario)
+          )
+        : '-',
+    ]),
+  });
+
+  const finalY =
+    (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? 150;
+
+  const subtotal = pedido.total / 1.18;
+  const igv = pedido.total - subtotal;
+
+  doc.text(
+    `Subtotal: ${formatCurrency(subtotal)}`,
+    140,
+    finalY + 15
+  );
+
+  doc.text(
+    `IGV: ${formatCurrency(igv)}`,
+    140,
+    finalY + 25
+  );
+
+  doc.setFont('helvetica', 'bold');
+
+  doc.text(
+    `TOTAL: ${formatCurrency(pedido.total)}`,
+    140,
+    finalY + 40
+  );
+
+  doc.save(`pedido_${pedido.id}.pdf`);
+};
 // =====================================================
 // EXPORTACIÓN A PDF — COTIZACIONES (@react-pdf/renderer)
 // =====================================================
@@ -955,6 +1059,13 @@ export const exportClientesListToPDF = async (data: ClienteBase[], config?: { fi
     orientation: 'landscape',
   });
 };
+
+// =====================================================
+// PEDIDO INDIVIDUAL — TIPOS Y ESTILOS EN LIMPIO
+// =====================================================
+
+
+
 
 // =====================================================
 // COTIZACIÓN INDIVIDUAL — TIPOS Y ESTILOS EN LIMPIO

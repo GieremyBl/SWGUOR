@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { X, Package, MapPin, FileText, ShoppingBag } from 'lucide-react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { Pedido } from './PedidoCard';
+import { exportPedidoToPDF } from '@/lib/utils/export-utils';
+
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +66,7 @@ export function PedidoModalDetalle({
 }: PedidoModalDetalleProps) {
     const [items, setItems] = useState<PedidoItemDB[]>([]);
     const [loadingItems, setLoadingItems] = useState(false);
-
+   
     // Fetch pedido_items cuando el modal abre con un pedido válido
     useEffect(() => {
         if (!isOpen || !pedido?.id) {
@@ -115,7 +117,16 @@ export function PedidoModalDetalle({
 
     const subtotalNeto = pedido.total / 1.18;
     const igvCalculado = pedido.total - subtotalNeto;
-
+    const handleDescargarPDF = async () => {
+    try {
+      await exportPedidoToPDF({
+        pedido,
+        items,
+      });
+    } catch (error) {
+      console.error('Error generando PDF:', error);
+    }
+  };
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
             <div
@@ -327,7 +338,21 @@ export function PedidoModalDetalle({
                             </div>
                         </div>
                     </div>
+                   
+                    {/* Descarga */} 
+                  {/* Descarga detalle */}
+<div className="flex justify-end">
+  <button
+    type="button"
+    onClick={handleDescargarPDF}
+    className="h-10 px-5 rounded-xl font-black uppercase tracking-widest text-white shadow-md transition-all active:scale-[0.97] hover:opacity-90"
+    style={{ backgroundColor: 'var(--guor-dark)' }}
+  >
+    Descargar PDF
+  </button>
 
+</div>
+                   
                 </div>
 
                 {/* ── Footer ──────────────────────────────────────────────────── */}
