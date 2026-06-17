@@ -14,11 +14,11 @@ export const INSUMOS_KEY = 'insumos_compras';
 
 export function useInsumos(params?: ListarInsumosParams) {
   const queryClient = useQueryClient();
-  const { tipo, categoria, busqueda, stockBajo, proveedorId, sortOrder } = params ?? {};
+  const { tipo, categoriaId, busqueda, stockBajo, proveedorId, sortOrder } = params ?? {};
 
   const query = useQuery({
-    queryKey: [INSUMOS_KEY, { tipo, categoria, busqueda, stockBajo, proveedorId, sortOrder }],
-    queryFn: () => fetchInsumosCompras({ tipo, categoria, busqueda, stockBajo, proveedorId, sortOrder }),
+    queryKey: [INSUMOS_KEY, { tipo, categoriaId, busqueda, stockBajo, proveedorId, sortOrder }],
+    queryFn: () => fetchInsumosCompras({ tipo, categoriaId, busqueda, stockBajo, proveedorId, sortOrder }),
     refetchOnWindowFocus: false,
   });
 

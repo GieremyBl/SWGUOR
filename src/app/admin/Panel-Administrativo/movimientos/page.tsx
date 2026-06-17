@@ -45,7 +45,7 @@ function mapUiFiltersToAction(f: MovimientosFiltersState) {
   };
 }
 
-export function MovimientosInventarioPage() {
+export default function MovimientosInventarioPage() {
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasMovimientosType>(ESTADISTICAS_INICIALES);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,8 +68,8 @@ export function MovimientosInventarioPage() {
       if (statsRes.success && statsRes.data) {
         setEstadisticas({
           totalEntradas: statsRes.data.totalEntradas ?? 0,
-          totalSalidas:  statsRes.data.totalSalidas  ?? 0,
-          totalAjustes:  statsRes.data.totalAjustes  ?? 0,
+          totalSalidas: statsRes.data.totalSalidas ?? 0,
+          totalAjustes: statsRes.data.totalAjustes ?? 0,
           totalMovimientos: statsRes.data.totalMovimientos ?? 0,
           montoTotalEntradas: 0,
           montoTotalSalidas: 0,
