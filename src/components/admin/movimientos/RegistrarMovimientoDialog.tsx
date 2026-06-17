@@ -36,7 +36,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { registrarMovimientoInventario } from '@/app/admin/inventario/movimientos/actions';
-// ─── Tipos de movimiento agrupados ────────────────────────────────────────────
+
 const TIPOS_MOVIMIENTO = [
   {
     grupo: 'Básicos', items: [
@@ -47,7 +47,7 @@ const TIPOS_MOVIMIENTO = [
   },
   {
     grupo: 'Producción', items: [
-      { value: 'consumo_orden_produccion', label: 'Consumo en O/P', icon: FlaskConical, color: 'text-violet-600' },
+      { value: 'consumo_orden_produccion', label: 'Consumo en O/P', icon: FlaskConical, color: 'text-indigo-600' },
       { value: 'consumo_orden_produccion_item', label: 'Consumo O/P (ítem)', icon: FlaskConical, color: 'text-purple-600' },
       { value: 'produccion_entrada', label: 'Entrada de producción', icon: Activity, color: 'text-teal-600' },
     ]
@@ -56,7 +56,7 @@ const TIPOS_MOVIMIENTO = [
     grupo: 'Devoluciones', items: [
       { value: 'devolucion_consumo', label: 'Dev. de consumo', icon: Undo2, color: 'text-cyan-600' },
       { value: 'devolucion_a_proveedor', label: 'Devolución a proveedor', icon: Undo2, color: 'text-amber-600' },
-      { value: 'recepcion_devolucion_proveedor', label: 'Recepción dev. prov.', icon: ShoppingCart, color: 'text-lime-600' },
+      { value: 'recepcion_devolucion_proveedor', label: 'Recepción dev. prov.', icon: ShoppingCart, color: 'text-sky-600' },
       { value: 'devolucion_a_cliente', label: 'Devolución a cliente', icon: Undo2, color: 'text-rose-600' },
       { value: 'recepcion_devolucion_cliente', label: 'Recepción dev. cliente', icon: ArrowDown, color: 'text-pink-600' },
     ]
@@ -67,6 +67,7 @@ const TIPOS_MOVIMIENTO = [
     ]
   },
 ];
+
 const REFERENCIAS = [
   { value: 'ORDEN_COMPRA', label: 'Orden de Compra' },
   { value: 'ORDEN_PRODUCCION', label: 'Orden de Producción' },
@@ -76,23 +77,28 @@ const REFERENCIAS = [
   { value: 'MERMA_INCIDENCIA', label: 'Merma / Incidencia' },
   { value: 'INVENTARIO_INICIAL', label: 'Inventario Inicial' },
 ];
+
 type TipoItem = 'producto' | 'insumo' | 'material';
+
 interface ItemOpcion {
   id: string;
   nombre: string;
   stock?: number;
   unidad?: string;
 }
+
 interface RegistrarMovimientoDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
+
 const TIPO_ITEM_CONFIG = {
   producto: { label: 'Producto', icon: PackageOpen },
   insumo: { label: 'Insumo', icon: Boxes },
   material: { label: 'Material', icon: Factory },
 };
+
 export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: RegistrarMovimientoDialogProps) {
   const [tipoItem, setTipoItem] = useState<TipoItem>('insumo');
   const [items, setItems] = useState<ItemOpcion[]>([]);
@@ -103,7 +109,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
   const [cantidad, setCantidad] = useState('');
   const [motivo, setMotivo] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  // ─── Cargar lista de artículos según tipo ─────────────────────────────────
+
   const cargarItems = useCallback(async (tipo: TipoItem) => {
     setLoadingItems(true);
     setItems([]);
@@ -117,10 +123,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
       const res = await fetch(endpoints[tipo]);
       if (!res.ok) throw new Error('Error al cargar artículos');
       const json = await res.json();
-      // Normalizar respuesta según formato de cada API:
-      // - insumos:   { success, data: { insumos: [...] } }
-      // - materiales: { success, data: [...] } o { success, data: { materiales: [...] } }
-      // - productos:  { success, data: [...] }
+
       const rawData = json?.data;
       const data: any[] =
         Array.isArray(rawData) ? rawData :
@@ -142,9 +145,11 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
       setLoadingItems(false);
     }
   }, []);
+
   useEffect(() => {
     if (open) cargarItems(tipoItem);
   }, [open, tipoItem, cargarItems]);
+
   const resetForm = () => {
     setTipoItem('insumo');
     setItemId('');
@@ -153,10 +158,12 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
     setCantidad('');
     setMotivo('');
   };
+
   const handleClose = () => {
     resetForm();
     onClose();
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemId) return toast.error('Selecciona un artículo');
@@ -189,29 +196,35 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
       setSubmitting(false);
     }
   };
+
   const itemSeleccionado = items.find(i => i.id === itemId);
   const TipoItemIcon = TIPO_ITEM_CONFIG[tipoItem].icon;
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-lg rounded-2xl border-slate-100 shadow-2xl p-0 overflow-hidden">
-        {/* Header con gradiente */}
-        <div className="bg-gradient-to-br from-pink-500 to-rose-600 p-6 pb-5">
+      {/* Contenedor principal con bordes amplios idénticos a image_b3bba4.png */}
+      <DialogContent className="max-w-lg rounded-[22px] border-none shadow-2xl p-0 overflow-hidden bg-white">
+
+        {/* HEADER MINIMALISTA: Fondo blanco, divisor sutil bajo y texto oscuro */}
+        <div className="p-7 pb-5 border-b border-gray-100 bg-white">
           <DialogHeader>
-            <DialogTitle className="text-white text-xl font-black tracking-tight">
+            <DialogTitle className="text-[#0B132B] text-xl font-bold tracking-tight">
               Registrar Movimiento
             </DialogTitle>
-            <DialogDescription className="text-pink-100 text-sm mt-1">
-              Registra una entrada, salida o ajuste de stock manualmente
+            <DialogDescription className="text-slate-400 text-sm mt-0.5 font-normal">
+              Define los cambios y ajustes del flujo de stock manual
             </DialogDescription>
           </DialogHeader>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Tipo de artículo */}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
-              Tipo de Artículo
+
+        <form onSubmit={handleSubmit} className="p-7 pt-5 space-y-4">
+
+          {/* Selector de Tipo de Artículo con estética refinada */}
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-slate-500">
+              Tipo de Artículo *
             </Label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 bg-[#F6F4EF] p-1.5 rounded-xl">
               {(Object.keys(TIPO_ITEM_CONFIG) as TipoItem[]).map((tipo) => {
                 const { label, icon: Icon } = TIPO_ITEM_CONFIG[tipo];
                 const isActive = tipoItem === tipo;
@@ -220,29 +233,30 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                     key={tipo}
                     type="button"
                     onClick={() => setTipoItem(tipo)}
-                    className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2 transition-all text-xs font-bold ${isActive
-                        ? 'border-pink-500 bg-pink-50 text-pink-700'
-                        : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-pink-200 hover:bg-pink-50/50'
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all text-xs font-semibold ${isActive
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200/40'
+                        : 'text-slate-500 hover:text-slate-800'
                       }`}
                   >
-                    <Icon className={`w-5 h-5 ${isActive ? 'text-pink-500' : 'text-slate-400'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-800' : 'text-slate-400'}`} />
                     {label}
                   </button>
                 );
               })}
             </div>
           </div>
-          {/* Selección de artículo */}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
+
+          {/* Selección de artículo con el fondo suave de image_b3bba4.png */}
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-slate-500">
               Artículo
             </Label>
             <Select value={itemId} onValueChange={setItemId} disabled={loadingItems}>
-              <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50">
+              <SelectTrigger className="h-11 rounded-xl border-slate-200/70 bg-[#FBF9F4] text-slate-700 font-medium focus:bg-white transition-colors">
                 {loadingItems ? (
                   <div className="flex items-center gap-2 text-slate-400">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Cargando artículos...</span>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="text-xs">Cargando catálogo...</span>
                   </div>
                 ) : (
                   <SelectValue placeholder={`Seleccionar ${TIPO_ITEM_CONFIG[tipoItem].label.toLowerCase()}...`} />
@@ -253,7 +267,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                   <SelectItem key={item.id} value={item.id} className="rounded-lg">
                     <div className="flex items-center gap-2">
                       <TipoItemIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="font-medium">{item.nombre}</span>
+                      <span className="font-medium text-xs text-slate-700">{item.nombre}</span>
                       {item.stock !== undefined && (
                         <span className="text-[10px] text-slate-400 ml-auto pl-3">
                           Stock: {item.stock} {item.unidad ?? ''}
@@ -263,40 +277,41 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                   </SelectItem>
                 ))}
                 {!loadingItems && items.length === 0 && (
-                  <div className="py-4 text-center text-xs text-slate-400">No hay artículos disponibles</div>
+                  <div className="py-4 text-center text-xs text-slate-400">No hay registros disponibles</div>
                 )}
               </SelectContent>
             </Select>
-            {/* Stock actual del artículo seleccionado */}
+
+            {/* Stock de referencia limpio */}
             {itemSeleccionado?.stock !== undefined && (
-              <p className="text-xs text-slate-500 flex items-center gap-1">
-                <span className="text-slate-400">Stock actual:</span>
-                <span className={`font-bold ${(itemSeleccionado.stock ?? 0) <= 0 ? 'text-red-500' : 'text-emerald-600'
-                  }`}>
+              <p className="text-xs text-slate-400 pl-1">
+                Cantidad disponible actual:{' '}
+                <span className={`font-semibold ${(itemSeleccionado.stock ?? 0) <= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                   {itemSeleccionado.stock} {itemSeleccionado.unidad ?? 'unidades'}
                 </span>
               </p>
             )}
           </div>
+
           {/* Tipo de movimiento */}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-slate-500">
               Tipo de Movimiento
             </Label>
             <Select value={tipoMovimiento} onValueChange={setTipoMovimiento}>
-              <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50">
-                <SelectValue placeholder="Seleccionar tipo..." />
+              <SelectTrigger className="h-11 rounded-xl border-slate-200/70 bg-[#FBF9F4] text-slate-700 font-medium focus:bg-white">
+                <SelectValue placeholder="Seleccionar tipo de operación..." />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {TIPOS_MOVIMIENTO.map((grupo) => (
                   <SelectGroup key={grupo.grupo}>
-                    <SelectLabel className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1">
                       {grupo.grupo}
                     </SelectLabel>
                     {grupo.items.map((item) => {
                       const Icon = item.icon;
                       return (
-                        <SelectItem key={item.value} value={item.value} className="rounded-lg">
+                        <SelectItem key={item.value} value={item.value} className="rounded-lg text-xs">
                           <div className="flex items-center gap-2">
                             <Icon className={`w-3.5 h-3.5 shrink-0 ${item.color}`} />
                             <span>{item.label}</span>
@@ -309,28 +324,30 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
               </SelectContent>
             </Select>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
-            {/* Referencia */}
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
+            {/* Origen / Referencia */}
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-slate-500">
                 Referencia
               </Label>
               <Select value={referenciaTipo} onValueChange={setReferenciaTipo}>
-                <SelectTrigger className="h-11 rounded-xl border-slate-200 bg-slate-50">
+                <SelectTrigger className="h-11 rounded-xl border-slate-200/70 bg-[#FBF9F4] text-slate-700 font-medium focus:bg-white">
                   <SelectValue placeholder="Tipo de ref..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {REFERENCIAS.map((r) => (
-                    <SelectItem key={r.value} value={r.value} className="rounded-lg">
+                    <SelectItem key={r.value} value={r.value} className="rounded-lg text-xs">
                       {r.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            {/* Cantidad */}
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
+
+            {/* Cantidad a ingresar o retirar */}
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-medium text-slate-500">
                 Cantidad
               </Label>
               <Input
@@ -340,42 +357,44 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                 placeholder="0.00"
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value)}
-                className="h-11 rounded-xl border-slate-200 bg-slate-50 font-bold text-right"
+                className="h-11 rounded-xl border-slate-200/70 bg-[#FBF9F4] font-bold text-slate-800 text-right focus:bg-white focus-visible:ring-slate-300"
               />
             </div>
           </div>
-          {/* Motivo */}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-500">
-              Motivo <span className="text-pink-500">*</span>
+
+          {/* Motivo idéntico al Textarea de image_b3bba4.png */}
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-slate-500">
+              Motivo o Justificación *
             </Label>
             <Textarea
-              placeholder="Describe el motivo del movimiento de inventario..."
+              placeholder="¿Qué causa u origen tiene este movimiento?"
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              rows={2}
-              className="rounded-xl border-slate-200 bg-slate-50 resize-none text-sm"
+              rows={3}
+              className="rounded-xl border-slate-200/70 bg-[#FBF9F4] text-slate-700 text-sm p-3 placeholder:text-slate-400 focus:bg-white focus-visible:ring-slate-300 resize-none"
             />
           </div>
-          {/* Acciones */}
-          <div className="flex gap-3 pt-1">
+
+          {/* BOTONES DE ACCIÓN: Estilo exacto de image_b3bba4.png */}
+          <div className="flex gap-3 pt-3">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={handleClose}
               disabled={submitting}
-              className="flex-1 h-11 rounded-xl border-slate-200"
+              className="flex-1 h-12 rounded-xl bg-[#F6F4EF] hover:bg-[#EFECE5] text-slate-700 font-semibold text-sm transition-colors"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={submitting}
-              className="flex-1 h-11 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold shadow-lg active:scale-95 transition-all"
+              className="flex-1 h-12 rounded-xl bg-[#DC143C] hover:bg-[#C11032] text-white font-semibold text-sm shadow-sm transition-colors"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
                   Registrando...
                 </>
               ) : (
