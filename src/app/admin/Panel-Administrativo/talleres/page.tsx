@@ -15,12 +15,19 @@ import { exportToExcel, exportToPDF } from "@/lib/utils/export-utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import TallerFormModal from "@/components/admin/talleres/TallerFormModal";
 import { TallerDetailModal, TallerSuspendModal } from "@/components/admin/talleres/TallerModals";
+import TarifasModal from "@/components/admin/talleres/tarifas/TarifasModal";
 import StatCard from '@/components/admin/common/StatCard';
 
 const TalleresTable      = dynamic(() => import("@/components/admin/talleres/TalleresTable"));
 const TallerSkeleton     = dynamic(() => import("@/components/admin/talleres/TallerSkeleton"));
 
-type DialogMode = "create" | "edit" | "view" | "delete" | null;
+type DialogMode =
+  | "create"
+  | "edit"
+  | "view"
+  | "delete"
+  | "tarifas"
+  | null;
 
 export default function TalleresPage() {
   const { can, isLoading: authLoading } = usePermissions();
@@ -223,12 +230,13 @@ export default function TalleresPage() {
         ) : (
           <div className="space-y-4">
             <TalleresTable
-              data={paginatedData}
-              canEdit={can('edit', 'talleres')}
-              canDelete={can('archive', 'talleres')}
-              onView={(t) => openDialog("view", t)}
-              onEdit={(t) => openDialog("edit", t)}
-              onDelete={(t) => openDialog("delete", t)}
+            data={paginatedData}
+            canEdit={can('edit', 'talleres')}
+            canDelete={can('archive', 'talleres')}
+            onView={(t) => openDialog("view", t)}
+            onEdit={(t) => openDialog("edit", t)}
+            onDelete={(t) => openDialog("delete", t)}
+            onManageTarifas={(t) => openDialog("tarifas", t)}
             />
 
             {/* Paginación */}
@@ -272,6 +280,14 @@ export default function TalleresPage() {
           onSuccess={loadData}
         />
       )}
+
+      {dialogMode === "tarifas" && selectedTaller && (
+        <TarifasModal
+          taller={selectedTaller}
+          onClose={closeDialog}
+        />
+      )}
+
     </div>
   );
 }

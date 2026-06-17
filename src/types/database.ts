@@ -3959,6 +3959,56 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+        }
+        tarifas_talleres: {
+        Row: {
+          id: number
+          taller_id: number
+          tipo_prenda: string
+          proceso: string
+          rango_desde: number
+          rango_hasta: number
+          costo_unitario: number
+          moneda: string
+          estado: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          taller_id: number
+          tipo_prenda: string
+          proceso: string
+          rango_desde: number
+          rango_hasta: number
+          costo_unitario: number
+          moneda?: string
+          estado?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          taller_id?: number
+          tipo_prenda?: string
+          proceso?: string
+          rango_desde?: number
+          rango_hasta?: number
+          costo_unitario?: number
+          moneda?: string
+          estado?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarifas_talleres_taller_id_fkey"
+            columns: ["taller_id"]
+            isOneToOne: false
+            referencedRelation: "talleres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usuarios: {
         Row: {
