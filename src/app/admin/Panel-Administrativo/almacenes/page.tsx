@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ import AlmacenesToolbar from '@/components/admin/almacenes/AlmacenesToolbar';
 import { AlmacenesStats } from '@/components/admin/almacenes/AlmacenesStats';
 
 export default function AlmacenesPage() {
+  const router = useRouter();
   const { can } = usePermissions();
   const [almacenes, setAlmacenes]         = useState<Almacen[]>([]);
   const [loading, setLoading]             = useState(true);
@@ -135,6 +137,7 @@ export default function AlmacenesPage() {
 
         {/* Header con el botón principal "Nuevo Almacén" corregido */}
         <AdminPageHeader
+          
           title="Almacenes"
           description="Gestión integral de centros de distribución y depósitos"
           actionLabel="Nuevo Almacén"
@@ -143,6 +146,14 @@ export default function AlmacenesPage() {
             setShowMovimientoPanel(true); // <--- Corregido: Ahora sí despliega el panel lateral
           }}
         />
+        <div className="flex justify-end">
+          <button
+            onClick={() => router.push('/admin/Panel-Administrativo/reportes/stock')}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700"
+          >
+            Ver Reporte de Stock
+          </button>
+        </div>
 
         <AlmacenesStats
           stats={stats}
