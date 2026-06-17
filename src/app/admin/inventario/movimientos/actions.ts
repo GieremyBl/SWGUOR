@@ -10,7 +10,7 @@ import {
   MovimientosInventarioService,
   type RegistrarParams,
 } from '@/lib/services/movimientos-inventario.service';
-import type { TipoMovimiento } from '@prisma/client';
+import type { TipoMovimiento, ReferenciaMovimiento } from '@prisma/client';
 
 const ROLES: RolUsuario[] = [
   'administrador',
@@ -47,23 +47,45 @@ export async function obtenerMovimientos(
 }
 
 /**
- * Registra un movimiento y actualiza stock en la misma transacción (productos.stock
- * o insumo/materiales vía RPC + triggers).
+ * Interface para normalizar el payload que viene del componente Cliente (Formulario)
+ */
+interface FormularioMovimientoInput {
+  almacen_id: string;
+  tipo_movimiento: string;
+  referencia_tipo: string;
+  cantidad: number;
+  motivo: string;
+  usuario_id?: string;
+  producto_id?: string;
+  insumo_id?: string;
+  material_id?: string;
+}
+
+/**
+ * Registra un movimiento y actualiza stock en la misma transacción.
  */
 export async function registrarMovimientoInventario(
-  params: RegistrarParams,
+  params: FormularioMovimientoInput,
 ): Promise<{ success: true } | { success: false; error: string }> {
   const auth = await requireServerRole(ROLES);
-  if (!auth.success) {
+  if (!auth.success || !auth.user?.id) {
     return { success: false, error: 'Sin permisos para registrar movimientos' };
   }
 
   try {
-    // Si desde el front no se fuerza un usuario_id, "auth.user.id" (el usuario que inició sesión) queda asignado.
-    await MovimientosInventarioService.registrar({
-      ...params,
+    const payloadCompresible: RegistrarParams = {
+      almacen_id: params.almacen_id,
+      tipo_movimiento: params.tipo_movimiento as TipoMovimiento,
+      referencia_tipo: params.referencia_tipo as ReferenciaMovimiento,
+      cantidad: params.cantidad,
+      motivo: params.motivo,
       usuario_id: params.usuario_id ?? auth.user.id,
-    });
+      ...(params.producto_id && { producto_id: params.producto_id }),
+      ...(params.insumo_id && { insumo_id: params.insumo_id }),
+      ...(params.material_id && { material_id: params.material_id }),
+    };
+
+    await MovimientosInventarioService.registrar(payloadCompresible);
     return { success: true };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'No se pudo registrar el movimiento';
