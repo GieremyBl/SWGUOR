@@ -163,16 +163,26 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
       const res = await fetch(endpoints[tipo]);
       if (!res.ok) throw new Error('Error al cargar artículos');
 
-      const json = await res.json() as ApiResponseWrapper | ApiResponseItem[];
+      const json = await res.json();
       let rawData: ApiResponseItem[] = [];
 
+      // 1. Si la respuesta es directamente un array
       if (Array.isArray(json)) {
         rawData = json;
-      } else if (json && json.data) {
+      }
+      // 2. Si la respuesta viene envuelta en { data: ... }
+      else if (json && json.data) {
         if (Array.isArray(json.data)) {
           rawData = json.data;
         } else {
-          rawData = json.data.productos ?? json.data.insumos ?? json.data.materiales ?? [];
+          const keyMap: Record<TipoItem, string> = {
+            producto: 'productos',
+            insumo: 'insumos',
+            material: 'materiales'
+          };
+
+          const claveAcceso = keyMap[tipo];
+          rawData = json.data[claveAcceso] ?? [];
         }
       }
 
