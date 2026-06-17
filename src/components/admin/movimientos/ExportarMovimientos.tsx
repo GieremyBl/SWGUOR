@@ -56,8 +56,10 @@ export function ExportarMovimientos({
               : "Ajuste";
 
         const itemName =
+          mov.productos?.nombre ||
           mov.producto?.nombre ||
           mov.insumo?.nombre ||
+          mov.materiales?.nombre ||
           mov.material?.nombre ||
           "Desconocido";
 
@@ -86,7 +88,10 @@ export function ExportarMovimientos({
             : "-",
           referencia,
           motivo: mov.motivo || "-",
-          usuario: mov.usuario?.nombre || "Sistema",
+          usuario: mov.usuarios?.personal_interno?.[0]?.nombre_completo ||
+            mov.usuarios?.email?.split('@')[0] ||
+            mov.usuario?.nombre ||
+            "Sistema",
         });
       });
 
@@ -154,8 +159,10 @@ export function ExportarMovimientos({
               : "Ajuste";
 
         const itemName =
+          mov.productos?.nombre ||
           mov.producto?.nombre ||
           mov.insumo?.nombre ||
+          mov.materiales?.nombre ||
           mov.material?.nombre ||
           "Desconocido";
 

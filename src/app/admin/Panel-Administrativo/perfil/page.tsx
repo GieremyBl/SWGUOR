@@ -10,6 +10,7 @@ import { ProfileForm } from "@/components/admin/perfil/ProfileForm";
 import { PasswordForm } from "@/components/admin/perfil/PasswordForm";
 import type { UsuarioData, ProfileState, ProfileAction } from "@/components/admin/perfil/types";
 import { updatePersonalInterno } from "@/lib/helpers/usuarios-helpers";
+import AdminPageHeader from "@/components/admin/common/AdminPageHeader";
 
 // VALIDATION FUNCTIONS
 const validateEmail = (email: string): { valid: boolean; error?: string } => {
@@ -360,12 +361,11 @@ export default function PerfilPage() {
         
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-light text-gray-900 tracking-tight mb-2">
-            Mi Perfil
-          </h1>
-          <p className="text-sm text-gray-600">
-            Administra tu información personal y configuración
-          </p>
+          <AdminPageHeader
+            title="Mi Perfil"
+            description="Administra tu información personal y configuración"
+            showAction={false}
+          />
         </div>
 
         {/* Feedback Messages */}

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Plus, FileSpreadsheet, FileText
+  FileSpreadsheet, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -177,46 +177,40 @@ export default function OrdenesCompraPage() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Encabezado Superior con los colores de botón solicitados */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <AdminPageHeader
-            title="Órdenes de Compra"
-            description="Gestión integral de compras, proveedores y control de gastos"
-          />
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={handleExportExcel}
-              disabled={exportingExcel || isLoading}
-              className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-              {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleExportPDF}
-              disabled={exportingPDF || isLoading}
-              className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
-            >
-              <FileText className="w-4 h-4 mr-2 text-red-600" />
-              {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
-            </Button>
-            {canCreate && (
-              <Button
-                className="bg-rose-600 hover:bg-rose-700 shadow-lg font-bold gap-2 h-11 px-6 text-white transition-all active:scale-95 rounded-xl"
-                onClick={() => router.push('/admin/Panel-Administrativo/ordenes-compra/nueva')}
-              >
-                <Plus className="w-5 h-5" /> Nueva orden
-              </Button>
-            )}
-          </div>
+        {/* Header con AdminPageHeader */}
+        <AdminPageHeader
+          title="Órdenes de Compra"
+          description="Gestión integral de compras, proveedores y control de gastos"
+          actionLabel="Nueva orden"
+          onAction={() => router.push('/admin/Panel-Administrativo/ordenes-compra/nueva')}
+        />
+
+        {/* Botones de Exportación */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            disabled={exportingExcel || isLoading}
+            className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+            {exportingExcel ? 'Exportando...' : 'Descargar Excel'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={exportingPDF || isLoading}
+            className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+          >
+            <FileText className="w-4 h-4 mr-2 text-red-600" />
+            {exportingPDF ? 'Exportando...' : 'Descargar PDF'}
+          </Button>
         </div>
 
         {/* Tarjetas Estadísticas */}
         <OrdenesCompraStats stats={stats} />
 
-        {/* Barra de Búsqueda y Filtros de abajo */}
+        {/* Barra de Búsqueda y Filtros */}
         <OrdenesCompraToolbar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}

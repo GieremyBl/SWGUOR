@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, UserPlus, FileSpreadsheet, FileText } from "lucide-react";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import type { usuarios } from "@prisma/client";
 import { exportToExcel, exportToPDF } from "@/lib/utils/export-utils";
+import AdminPageHeader from "@/components/admin/common/AdminPageHeader";
 
 import UsuariosTable from "@/components/admin/usuarios/UsuarioTable";
 import UsuarioFilters, {
@@ -57,7 +58,7 @@ export default function UsuariosPage() {
       // 2. Filtro por barra de búsqueda y selectores
       if (filters.estado && u.estado !== filters.estado) return false;
       if (filters.rol && u.rol !== filters.rol) return false;
-      
+
       const q = filters.q.toLowerCase().trim();
       if (q && !u.email?.toLowerCase().includes(q)) return false;
 
@@ -131,63 +132,49 @@ export default function UsuariosPage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Gestión de Accesos</h1>
-              <p className="text-sm text-slate-500 font-medium mt-1">Control de cuentas de usuario y permisos del sistema</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            {can("export", "usuarios") && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 border-emerald-200 rounded-xl hover:bg-emerald-50 font-bold text-emerald-700 transition-all active:scale-95"
-                  onClick={handleExportExcel}
-                  disabled={loading || exportingExcel || filtered.length === 0}
-                >
-                  <FileSpreadsheet size={18} /> {exportingExcel ? "Excel..." : "Excel"}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 border-red-200 rounded-xl hover:bg-red-50 font-bold text-red-700 transition-all active:scale-95"
-                  onClick={handleExportPDF}
-                  disabled={loading || exportingPDF || filtered.length === 0}
-                >
-                  <FileText size={18} /> {exportingPDF ? "PDF..." : "PDF"}
-                </Button>
-              </div>
-            )}
-            {can("create", "usuarios") && (
-              <Button 
-                onClick={() => setFormTarget(null)}
-                className="h-11 gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-95"
-              >
-                <UserPlus size={18} /> Nuevo Usuario
-              </Button>
-            )}
+        {/* Header */}
+        <AdminPageHeader
+          title="Gestión de Accesos"
+          description="Control de cuentas de usuario y permisos del sistema"
+          actionLabel="Nuevo Usuario"
+          onAction={() => setFormTarget(null)}
+        />
+
+        {/* Botones de Exportación */}
+        {can("export", "usuarios") && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="h-11 gap-2 border-emerald-200 rounded-xl hover:bg-emerald-50 font-bold text-emerald-700 transition-all active:scale-95"
+              onClick={handleExportExcel}
+              disabled={loading || exportingExcel || filtered.length === 0}
+            >
+              <FileSpreadsheet size={18} /> {exportingExcel ? "Excel..." : "Descargar Excel"}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 gap-2 border-red-200 rounded-xl hover:bg-red-50 font-bold text-red-700 transition-all active:scale-95"
+              onClick={handleExportPDF}
+              disabled={loading || exportingPDF || filtered.length === 0}
+            >
+              <FileText size={18} /> {exportingPDF ? "PDF..." : "Descargar PDF"}
+            </Button>
           </div>
-        </div>
+        )}
 
         {/* Stats */}
-        <StatsUsuarios 
-          usuarios={usuarios} 
-          loading={loading} 
+        <StatsUsuarios
+          usuarios={usuarios}
+          loading={loading}
           statusFilter={statusFilter}
           onFilterChange={setStatusFilter}
         />
 
         {/* Filtros */}
-        <UsuarioFilters 
-          filters={filters} 
-          onChange={setFilters} 
+        <UsuarioFilters
+          filters={filters}
+          onChange={setFilters}
           totalCount={filtered.length}
           onRefresh={fetchUsuarios}
           isRefreshing={loading}
@@ -195,8 +182,8 @@ export default function UsuariosPage() {
 
         {/* Tabla */}
         <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden">
-          <UsuariosTable 
-            usuarios={filtered} 
+          <UsuariosTable
+            usuarios={filtered}
             loading={loading}
             onEdit={can("edit", "usuarios") ? setFormTarget : undefined}
             onSuspender={can("archive", "usuarios") ? setSuspenderTarget : undefined}

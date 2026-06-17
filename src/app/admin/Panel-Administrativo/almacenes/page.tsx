@@ -12,17 +12,17 @@ import { AlmacenesStats } from '@/components/admin/almacenes/AlmacenesStats';
 
 export default function AlmacenesPage() {
   const { can } = usePermissions();
-  const [almacenes, setAlmacenes]         = useState<Almacen[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [isEditing, setIsEditing]         = useState(false);
-  const [editingId, setEditingId]         = useState<string | number | null>(null);
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
   const [deleteAlmacen, setDeleteAlmacen] = useState<Almacen | null>(null);
-  const [searchTerm, setSearchTerm]       = useState('');
-  const [statusFilter, setStatusFilter]   = useState('todos');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('todos');
 
   // Panel lateral derecho abierto/cerrado
   const [showMovimientoPanel, setShowMovimientoPanel] = useState(false);
-  
+
   // Estado único del formulario con TODOS los campos de la base de datos
   const [almacenForm, setAlmacenForm] = useState({
     nombre: '',
@@ -56,12 +56,12 @@ export default function AlmacenesPage() {
   }, [can]);
 
   const stats = useMemo(() => {
-    const total    = almacenes.length;
-    const activos  = almacenes.filter(a => a.estado === 'activo').length;
+    const total = almacenes.length;
+    const activos = almacenes.filter(a => a.estado === 'activo').length;
     return {
       total,
       activos,
-      inactivos:      total - activos,
+      inactivos: total - activos,
       capacidadTotal: almacenes.reduce((acc, a) => acc + Number(a.capacidad_total || 0), 0),
     };
   }, [almacenes]);
@@ -138,9 +138,9 @@ export default function AlmacenesPage() {
           title="Almacenes"
           description="Gestión integral de centros de distribución y depósitos"
           actionLabel="Nuevo Almacén"
-          onAction={() => { 
+          onAction={() => {
             resetForm();
-            setShowMovimientoPanel(true); // <--- Corregido: Ahora sí despliega el panel lateral
+            setShowMovimientoPanel(true);
           }}
         />
 
@@ -164,7 +164,7 @@ export default function AlmacenesPage() {
             <AlmacenesTable
               data={filteredAlmacenes}
               isLoading={loading}
-              onEdit={(a) => { 
+              onEdit={(a) => {
                 setAlmacenForm({
                   nombre: a.nombre || '',
                   direccion: a.direccion || '',
@@ -187,7 +187,7 @@ export default function AlmacenesPage() {
               <p className="text-xs text-gray-500 font-medium mb-2">
                 📦 Configura los parámetros iniciales del almacén antes de realizar operaciones físicas.
               </p>
-              <button 
+              <button
                 type="button"
                 onClick={() => {
                   resetForm();
@@ -220,12 +220,12 @@ export default function AlmacenesPage() {
                 {/* NOMBRE DEL ALMACÉN */}
                 <div>
                   <label className="block font-bold text-gray-700 uppercase mb-1">Nombre del Almacén *</label>
-                  <input 
+                  <input
                     type="text"
                     required
                     placeholder="Ej: Almacén Central - Sede Principal GUOR"
                     value={almacenForm.nombre}
-                    onChange={(e) => setAlmacenForm({...almacenForm, nombre: e.target.value})}
+                    onChange={(e) => setAlmacenForm({ ...almacenForm, nombre: e.target.value })}
                     className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium outline-none focus:bg-white"
                   />
                 </div>
@@ -233,11 +233,11 @@ export default function AlmacenesPage() {
                 {/* DIRECCIÓN FÍSICA */}
                 <div>
                   <label className="block font-bold text-gray-700 uppercase mb-1">Dirección Física</label>
-                  <input 
+                  <input
                     type="text"
                     placeholder="Ej: Av. Aviación 2415, San Borja"
                     value={almacenForm.direccion}
-                    onChange={(e) => setAlmacenForm({...almacenForm, direccion: e.target.value})}
+                    onChange={(e) => setAlmacenForm({ ...almacenForm, direccion: e.target.value })}
                     className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium outline-none focus:bg-white"
                   />
                 </div>
@@ -246,21 +246,21 @@ export default function AlmacenesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-gray-700 uppercase mb-1">Teléfono de Contacto</label>
-                    <input 
+                    <input
                       type="text"
                       placeholder="Ej: 01-4758963"
                       value={almacenForm.telefono}
-                      onChange={(e) => setAlmacenForm({...almacenForm, telefono: e.target.value})}
+                      onChange={(e) => setAlmacenForm({ ...almacenForm, telefono: e.target.value })}
                       className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium outline-none focus:bg-white"
                     />
                   </div>
                   <div>
                     <label className="block font-bold text-gray-700 uppercase mb-1">Correo Electrónico (Email)</label>
-                    <input 
+                    <input
                       type="email"
                       placeholder="almacen.central@guor.com"
                       value={almacenForm.email}
-                      onChange={(e) => setAlmacenForm({...almacenForm, email: e.target.value})}
+                      onChange={(e) => setAlmacenForm({ ...almacenForm, email: e.target.value })}
                       className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium outline-none focus:bg-white"
                     />
                   </div>
@@ -270,19 +270,19 @@ export default function AlmacenesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block font-bold text-gray-700 uppercase mb-1">Capacidad Total Máxima</label>
-                    <input 
+                    <input
                       type="number"
                       placeholder="Ej: 1500"
                       value={almacenForm.capacidad_total}
-                      onChange={(e) => setAlmacenForm({...almacenForm, capacidad_total: e.target.value})}
+                      onChange={(e) => setAlmacenForm({ ...almacenForm, capacidad_total: e.target.value })}
                       className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium outline-none focus:bg-white"
                     />
                   </div>
                   <div>
                     <label className="block font-bold text-gray-700 uppercase mb-1">Unidad de Capacidad</label>
-                    <select 
+                    <select
                       value={almacenForm.unidad_capacidad}
-                      onChange={(e) => setAlmacenForm({...almacenForm, unidad_capacidad: e.target.value})}
+                      onChange={(e) => setAlmacenForm({ ...almacenForm, unidad_capacidad: e.target.value })}
                       className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium outline-none cursor-pointer"
                     >
                       <option value="UNIDADES (Unid.)">UNIDADES (Unid.)</option>
@@ -295,12 +295,11 @@ export default function AlmacenesPage() {
                 {/* ESTADO OPERATIVO */}
                 <div>
                   <label className="block font-bold text-gray-700 uppercase mb-1">Estado Operativo</label>
-                  <select 
+                  <select
                     value={almacenForm.estado}
-                    onChange={(e) => setAlmacenForm({...almacenForm, estado: e.target.value})}
-                    className={`w-full p-2 border rounded-md font-bold text-white cursor-pointer outline-none ${
-                      almacenForm.estado === 'activo' ? 'bg-emerald-600' : 'bg-red-600'
-                    }`}
+                    onChange={(e) => setAlmacenForm({ ...almacenForm, estado: e.target.value })}
+                    className={`w-full p-2 border rounded-md font-bold text-white cursor-pointer outline-none ${almacenForm.estado === 'activo' ? 'bg-emerald-600' : 'bg-red-600'
+                      }`}
                   >
                     <option value="activo">🟢 ACTIVO (Disponible)</option>
                     <option value="inactivo">🔴 INACTIVO (No Disponible)</option>
@@ -310,11 +309,11 @@ export default function AlmacenesPage() {
                 {/* DESCRIPCIÓN / NOTAS INTERNAS */}
                 <div>
                   <label className="block font-bold text-gray-700 uppercase mb-1">Descripción / Notas Internas</label>
-                  <textarea 
+                  <textarea
                     rows={3}
                     placeholder="Ej: Depósito principal de insumos textiles y avíos..."
                     value={almacenForm.descripcion}
-                    onChange={(e) => setAlmacenForm({...almacenForm, descripcion: e.target.value})}
+                    onChange={(e) => setAlmacenForm({ ...almacenForm, descripcion: e.target.value })}
                     className="w-full p-2 border rounded-md bg-gray-50 text-gray-800 font-medium focus:bg-white outline-none resize-none font-sans"
                   />
                 </div>

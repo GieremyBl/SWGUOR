@@ -24,39 +24,39 @@ const PAGE_SIZE = 10;
 
 export default function CategoriasPage() {
   const { can, isLoading: authLoading } = usePermissions();
-  const [categorias, setCategorias]     = useState<Categoria[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [searchTerm, setSearchTerm]     = useState('');
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<boolean | null>(null);
-  const [currentPage, setCurrentPage]   = useState(0);
-  const [stats, setStats]               = useState({ total: 0, activas: 0, inactivas: 0 });
-  const [isSaving, setIsSaving]         = useState(false);
-  const [isArchiving, setIsArchiving]   = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [stats, setStats] = useState({ total: 0, activas: 0, inactivas: 0 });
+  const [isSaving, setIsSaving] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
-  const [exportingPDF, setExportingPDF]     = useState(false);
+  const [exportingPDF, setExportingPDF] = useState(false);
 
-  const [formModal, setFormModal]       = useState<{ open: boolean; categoria: Categoria | null }>({ open: false, categoria: null });
+  const [formModal, setFormModal] = useState<{ open: boolean; categoria: Categoria | null }>({ open: false, categoria: null });
   const [archiveModal, setArchiveModal] = useState<{ open: boolean; categoria: Categoria | null }>({ open: false, categoria: null });
 
-  const canView   = can('view',    'categorias');
-  const canCreate = can('create',  'categorias');
-  const canEdit   = can('edit',    'categorias');
+  const canView = can('view', 'categorias');
+  const canCreate = can('create', 'categorias');
+  const canEdit = can('edit', 'categorias');
   const canDelete = can('archive', 'categorias');
-  const canExport = can('export',  'categorias');
+  const canExport = can('export', 'categorias');
 
   const loadCategorias = useCallback(async () => {
     if (!canView) { setLoading(false); return; }
     setLoading(true);
     try {
-      const res  = await fetch('/api/admin/categorias');
+      const res = await fetch('/api/admin/categorias');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       const items = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
       const results: Categoria[] = items.map((c: Categoria) => ({ ...c, id: Number(c.id) }));
       setCategorias(results);
       setStats({
-        total:    results.length,
-        activas:  results.filter(c => c.activo).length,
+        total: results.length,
+        activas: results.filter(c => c.activo).length,
         inactivas: results.filter(c => !c.activo).length,
       });
     } catch (error: unknown) {
@@ -76,13 +76,13 @@ export default function CategoriasPage() {
     return matchSearch && matchStatus;
   }), [categorias, searchTerm, statusFilter]);
 
-  const totalPages   = Math.ceil(filteredCategorias.length / PAGE_SIZE);
+  const totalPages = Math.ceil(filteredCategorias.length / PAGE_SIZE);
   const paginatedData = filteredCategorias.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
   const handleSave = async (data: CategoriaForm) => {
     setIsSaving(true);
     const isEdit = !!formModal.categoria;
-    const url    = isEdit ? `/api/admin/categorias/${formModal.categoria!.id}` : '/api/admin/categorias';
+    const url = isEdit ? `/api/admin/categorias/${formModal.categoria!.id}` : '/api/admin/categorias';
     try {
       const res = await fetch(url, { method: isEdit ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Error al guardar'); }

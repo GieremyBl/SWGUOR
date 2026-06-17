@@ -5,6 +5,7 @@ import { usePermissions } from '@/lib/hooks/usePermissions';
 import { toast } from 'sonner';
 import NotificacionesTable from '@/components/admin/notificaciones/NotificacionesTable';
 import type { Notificacion } from '@/lib/schemas/notificaciones';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 export default function NotificacionesPage() {
   const { can } = usePermissions();
@@ -59,12 +60,11 @@ export default function NotificacionesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Notificaciones</h1>
-          <p className="text-muted-foreground">Gestiona las notificaciones del sistema</p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Notificaciones"
+        description="Gestiona las notificaciones del sistema"
+        showAction={false}
+      />
 
       {loading ? (
         <div className="text-slate-400 text-sm p-4">Cargando...</div>

@@ -9,6 +9,7 @@ import type { EstadoPersonal } from "@prisma/client";
 
 import PersonalTable from "@/components/admin/personal/PersonalTable";
 import type { PersonalRow } from "@/lib/services/personal-interno.service";
+import AdminPageHeader from "@/components/admin/common/AdminPageHeader";
 import PersonalFilters, {
   PersonalFiltrosState,
   EMPTY_PERSONAL_FILTERS,
@@ -179,55 +180,37 @@ export default function PersonalPage() {
     <div className="p-6 space-y-5">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-teal-50 rounded-xl border border-teal-100">
-            <Users className="w-5 h-5 text-teal-600" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tight">Personal Interno</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {loading
-                ? "Cargando…"
-                : `${filtered.length} colaborador${filtered.length !== 1 ? "es" : ""}`}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {can("export", "personal") && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                onClick={handleExportExcel}
-                disabled={loading || exportingExcel || filtered.length === 0}
-              >
-                <FileSpreadsheet className="w-4 h-4" /> {exportingExcel ? "Excel..." : "Excel"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-red-700 border-red-200 hover:bg-red-50"
-                onClick={handleExportPDF}
-                disabled={loading || exportingPDF || filtered.length === 0}
-              >
-                <FileText className="w-4 h-4" /> {exportingPDF ? "PDF..." : "PDF"}
-              </Button>
-            </div>
-          )}
-          {can("create", "personal") && (
+      <AdminPageHeader
+        title="Personal Interno"
+        description={loading ? "Cargando…" : `${filtered.length} colaborador${filtered.length !== 1 ? "es" : ""}`}
+        actionLabel="Nuevo Personal"
+        onAction={() => setFormTarget(null)}
+        showAction={can("create", "personal")}
+        icon={UserPlus}
+      >
+        {can("export", "personal") && (
+          <>
             <Button
+              variant="outline"
               size="sm"
-              onClick={() => setFormTarget(null)}
-              className="gap-2 bg-teal-600 hover:bg-teal-700 text-white shadow-sm shadow-teal-100"
+              className="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50 h-11 rounded-xl"
+              onClick={handleExportExcel}
+              disabled={loading || exportingExcel || filtered.length === 0}
             >
-              <UserPlus className="w-4 h-4" /> Nuevo Personal
+              <FileSpreadsheet className="w-4 h-4" /> {exportingExcel ? "Excel..." : "Excel"}
             </Button>
-          )}
-        </div>
-      </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-red-700 border-red-200 hover:bg-red-50 h-11 rounded-xl"
+              onClick={handleExportPDF}
+              disabled={loading || exportingPDF || filtered.length === 0}
+            >
+              <FileText className="w-4 h-4" /> {exportingPDF ? "PDF..." : "PDF"}
+            </Button>
+          </>
+        )}
+      </AdminPageHeader>
 
       {/* Stats */}
       <StatsPersonal

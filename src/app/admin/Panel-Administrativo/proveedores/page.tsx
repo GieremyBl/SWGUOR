@@ -16,6 +16,7 @@ import { ProveedorDeleteModal, ProveedorDetailModal } from '@/components/admin/p
 import { ProveedorStatCard } from '@/components/admin/proveedores/ProveedorStatCard';
 import type { Proveedor, ProveedorForm, EstadoProveedor } from '@/lib/schemas/proveedor';
 import { exportToExcel, exportToPDF } from '@/lib/utils/export-utils';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 const PAGE_SIZE = 15;
 
@@ -190,49 +191,33 @@ export default function ProveedoresPage() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-rose-50 rounded-xl">
-              <Building2 className="w-6 h-6 text-rose-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Proveedores</h1>
-              <p className="text-gray-500 text-sm">Gestión de abastecimiento y suministros</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={handleExportExcel}
-              disabled={exportingExcel || isLoading}
-              className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-              {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
-            </Button>
+        <AdminPageHeader
+          title="Proveedores"
+          description="Gestión de abastecimiento y suministros"
+          actionLabel="Agregar Proveedor"
+          onAction={handleNew}
+          showAction={canCreate}
+        >
+          <Button
+            variant="outline"
+            onClick={handleExportExcel}
+            disabled={exportingExcel || isLoading}
+            className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+            {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
+          </Button>
 
-            <Button
-              variant="outline"
-              onClick={handleExportPDF}
-              disabled={exportingPDF || isLoading}
-              className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
-            >
-              <FileText className="w-4 h-4 mr-2 text-red-600" />
-              {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
-            </Button>
-
-            {canCreate && (
-              <Button
-                onClick={handleNew}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold gap-2 h-11 px-6 rounded-xl transition-all active:scale-95 shadow-lg"
-              >
-                <Plus className="w-5 h-5" /> Agregar Proveedor
-              </Button>
-            )}
-          </div>
-        </div>
+          <Button
+            variant="outline"
+            onClick={handleExportPDF}
+            disabled={exportingPDF || isLoading}
+            className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+          >
+            <FileText className="w-4 h-4 mr-2 text-red-600" />
+            {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
+          </Button>
+        </AdminPageHeader>
 
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import StatCard from '@/components/admin/common/StatCard';
 import FeedbackClienteTable, { type FeedbackClienteRecord } from '@/components/admin/feedback-cliente/FeedbackClienteTable';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 export default function FeedbackClientePage() {
   const { can } = usePermissions();
@@ -69,23 +70,13 @@ export default function FeedbackClientePage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-          <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-rose-600 rounded-2xl shadow-lg shadow-rose-200">
-                <MessageSquareQuote className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Feedback de Clientes</h1>
-                <p className="text-sm text-slate-500 font-medium mt-1">
-                  Grados de satisfacción por compra, observaciones y recomendación sobre la atención recibida.
-                </p>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 text-sm text-rose-900/80 shadow-sm">
-              Aquí puedes revisar cómo perciben los clientes la calidad del producto, los tiempos de entrega y la atención personal, además de sus comentarios abiertos.
-            </div>
-          </div>
+        <AdminPageHeader
+          title="Feedback de Clientes"
+          description="Grados de satisfacción por compra, observaciones y recomendación sobre la atención recibida."
+          showAction={false}
+        />
+        <div className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 text-sm text-rose-900/80 shadow-sm max-w-2xl">
+          Aquí puedes revisar cómo perciben los clientes la calidad del producto, los tiempos de entrega y la atención personal, además de sus comentarios abiertos.
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">

@@ -3,9 +3,8 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { 
-  FileSpreadsheet, FileText, ChevronLeft, ChevronRight,
-  ShieldAlert, Loader2
-} from "lucide-react";
+  FileSpreadsheet, ChevronLeft, ChevronRight,
+  ShieldAlert} from "lucide-react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { exportToExcel } from "@/lib/utils/export-utils";

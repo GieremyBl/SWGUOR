@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   RefreshCw,
-  Scissors,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -14,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import ConfeccionesTable from '@/components/admin/confecciones/ConfeccionesTable';
 import ConfeccionesStats from '@/components/admin/confecciones/ConfeccionesStats';
 import { ESTADO_CONFECCION, ESTADO_LABELS } from '@/lib/schemas/confecciones';
@@ -116,25 +116,6 @@ export default function ConfeccionesPage() {
     [meta.total, prioridadCounts]
   );
 
-  async function handleEstadoChange(id: number, nuevoEstado: ConfeccionRow_T['estado']) {
-    try {
-      const res = await fetch(`/api/admin/confecciones/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: nuevoEstado }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success(`Estado actualizado a "${ESTADO_LABELS[nuevoEstado]}"`);
-      fetchData();
-    } catch {
-      toast.error('Error al actualizar el estado.');
-    }
-  }
-
-  const handleDelete = async (_id: number) => {
-    fetchData();
-  };
-
   if (authLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -147,21 +128,20 @@ export default function ConfeccionesPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
+      <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-pink-50 rounded-xl">
-              <Scissors className="w-6 h-6 text-pink-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Confecciones</h1>
-              <p className="text-gray-500 text-sm">Gestión de producción con talleres externos</p>
-            </div>
-          </div>
-        </div>
+        {/* Header con AdminPageHeader */}
+        <AdminPageHeader
+          title="Confecciones"
+          description="Gestión de producción con talleres externos"
+          actionLabel="Nueva Confección"
+          onAction={() => {
+            // Aquí puedes agregar lógica para abrir un modal o panel si es necesario
+            // Por ahora solo refrescamos los datos
+            fetchData();
+          }}
+        />
 
         {/* Stats */}
         <ConfeccionesStats

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { usePermissions } from '@/lib/hooks/usePermissions';
 import { ReglasDescuentoPanel } from '@/components/admin/promociones/ReglasDescuentoPanel';
 import { CampanasPanel } from '@/components/admin/promociones/CampanasPanel';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 const TABS = [
   { id: 'reglas', label: 'Reglas de descuento', icon: Percent },
@@ -42,15 +43,11 @@ export default function PromocionesPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Tag className="w-7 h-7 text-amber-700" />
-          Promociones y Ofertas
-        </h1>
-        <p className="text-sm text-slate-500">
-          Reglas de descuento, campañas promocionales y ofertas comerciales
-        </p>
-      </header>
+      <AdminPageHeader
+        title="Promociones y Ofertas"
+        description="Reglas de descuento, campañas promocionales y ofertas comerciales"
+        showAction={false}
+      />
 
       <nav className="flex flex-wrap gap-2 border-b border-slate-200 pb-1">
         {TABS.map(({ id, label, icon: Icon }) => (

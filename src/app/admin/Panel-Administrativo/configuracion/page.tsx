@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Save, Building2, Store, Users, CreditCard, Percent, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 // ============================================================================
 // TYPES
@@ -182,35 +183,15 @@ export default function ConfiguracionPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-3xl font-light text-gray-900 tracking-tight">
-                Configuración
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Gestiona los parámetros del sistema
-              </p>
-            </div>
-            
-            <button
-              onClick={handleSave}
-              disabled={saveState.status === 'saving'}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {saveState.status === 'saving' ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Guardar cambios
-                </>
-              )}
-            </button>
-          </div>
+        <div className="mb-8 space-y-4">
+          <AdminPageHeader
+            title="Configuración"
+            description="Gestiona los parámetros del sistema"
+            actionLabel={saveState.status === 'saving' ? 'Guardando...' : 'Guardar cambios'}
+            onAction={handleSave}
+            showAction={true}
+            icon={saveState.status === 'saving' ? Loader2 : Save}
+          />
 
           {/* Save feedback */}
           {saveState.status !== 'idle' && saveState.status !== 'saving' && (

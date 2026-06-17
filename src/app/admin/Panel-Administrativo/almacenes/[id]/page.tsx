@@ -92,7 +92,7 @@ export default function AlmacenDetallePage() {
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => router.push('/admin/almacenes')}
+                        onClick={() => router.push('/admin/Panel-Administrativo/almacenes')}
                         className="mt-1 rounded-xl h-9 w-9 p-0 hover:bg-white hover:shadow-sm transition-all"
                     >
                         <ArrowLeft className="w-4 h-4 text-slate-500" />

@@ -16,6 +16,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase";
 import TallerFormModal from "@/components/admin/talleres/TallerFormModal";
 import { TallerDetailModal, TallerSuspendModal } from "@/components/admin/talleres/TallerModals";
 import StatCard from '@/components/admin/common/StatCard';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 const TalleresTable      = dynamic(() => import("@/components/admin/talleres/TalleresTable"));
 const TallerSkeleton     = dynamic(() => import("@/components/admin/talleres/TallerSkeleton"));
@@ -141,52 +142,39 @@ export default function TalleresPage() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tighter italic uppercase">
-              Gestión de Talleres
-            </h1>
-            <p className="text-gray-500 text-sm font-medium">Control centralizado de maquila y servicios externos</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {can('export', 'talleres') && (
-              <>
-                {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
-                <Button
-                  variant="outline"
-                  onClick={handleExportExcel}
-                  disabled={exportingExcel || loading}
-                  className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
-                >
-                  <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-                  {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
-                </Button>
-
-                {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
-                <Button
-                  variant="outline"
-                  onClick={handleExportPDF}
-                  disabled={exportingPDF || loading}
-                  className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
-                >
-                  <FileText className="w-4 h-4 mr-2 text-red-600" />
-                  {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
-                </Button>
-              </>
-            )}
-
-            {can('create', 'talleres') && (
+        <AdminPageHeader
+          title="Gestión de Talleres"
+          description="Control centralizado de maquila y servicios externos"
+          actionLabel="Nuevo Taller"
+          onAction={() => openDialog("create")}
+          showAction={can('create', 'talleres')}
+        >
+          {can('export', 'talleres') && (
+            <>
+              {/* BOTÓN EXPORTAR EXCEL CON TU DISEÑO UNIFICADO */}
               <Button
-                onClick={() => openDialog("create")}
-                className="bg-pink-600 hover:bg-pink-700 text-white shadow-lg font-bold gap-2 h-11 px-6 rounded-xl"
+                variant="outline"
+                onClick={handleExportExcel}
+                disabled={exportingExcel || loading}
+                className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
               >
-                <Plus className="w-5 h-5" /> Nuevo Taller
+                <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+                {exportingExcel ? 'Exportando...' : 'Exportar Excel'}
               </Button>
-            )}
-          </div>
-        </div>
+
+              {/* BOTÓN EXPORTAR PDF CON TU DISEÑO UNIFICADO */}
+              <Button
+                variant="outline"
+                onClick={handleExportPDF}
+                disabled={exportingPDF || loading}
+                className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
+              >
+                <FileText className="w-4 h-4 mr-2 text-red-600" />
+                {exportingPDF ? 'Exportando...' : 'Exportar PDF'}
+              </Button>
+            </>
+          )}
+        </AdminPageHeader>
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

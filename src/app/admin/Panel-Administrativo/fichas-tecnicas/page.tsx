@@ -13,6 +13,7 @@ import FichaTecnicasTable      from '@/components/admin/fichas-tecnicas/FichaTec
 import FichasTecnicasFilters   from '@/components/admin/fichas-tecnicas/FichasTecnicasFilters';
 import { FichasTecnicasStats } from '@/components/admin/fichas-tecnicas/FichasTecnicasStats';
 import { toast } from 'sonner';
+import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 
 interface FichaTecnica {
   id:                    string;
@@ -115,31 +116,24 @@ export default function FichasTecnicasPage() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Fichas Técnicas</h1>
-            <p className="text-gray-500 text-sm">Control de fichas técnicas y especificaciones de Modas GUOR</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => toast.info('Exportar PDF próximamente')}
-              className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 transition-all active:scale-95">
-              <FileText className="w-5 h-5" />
-              <span className="hidden sm:inline">Reporte PDF</span>
-            </Button>
-            <Button variant="outline" onClick={() => toast.info('Exportar Excel próximamente')}
-              className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
-              <FileSpreadsheet className="w-5 h-5" />
-              <span className="hidden sm:inline">Exportar Excel</span>
-            </Button>
-            {can('create', 'ficha_tecnica') && (
-              <Button onClick={() => router.push('/admin/Panel-Administrativo/fichas-tecnicas/nueva')}
-                className="bg-pink-600 hover:bg-pink-700 shadow-lg font-bold gap-2 h-11 px-6 text-white transition-all active:scale-95">
-                <Plus className="w-5 h-5" /> Nueva Ficha
-              </Button>
-            )}
-          </div>
-        </div>
+        <AdminPageHeader
+          title="Fichas Técnicas"
+          description="Control de fichas técnicas y especificaciones de Modas GUOR"
+          actionLabel="Nueva Ficha"
+          onAction={() => router.push('/admin/Panel-Administrativo/fichas-tecnicas/nueva')}
+          showAction={can('create', 'ficha_tecnica')}
+        >
+          <Button variant="outline" onClick={() => toast.info('Exportar PDF próximamente')}
+            className="bg-white border-red-200 text-red-700 hover:bg-red-50 font-bold gap-2 h-11 transition-all active:scale-95">
+            <FileText className="w-5 h-5" />
+            <span className="hidden sm:inline">Reporte PDF</span>
+          </Button>
+          <Button variant="outline" onClick={() => toast.info('Exportar Excel próximamente')}
+            className="bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold gap-2 h-11 transition-all active:scale-95">
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </Button>
+        </AdminPageHeader>
 
         <FichasTecnicasStats
           stats={stats}

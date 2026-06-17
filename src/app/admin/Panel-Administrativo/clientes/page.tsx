@@ -17,6 +17,7 @@ import ClienteFormModal from "@/components/admin/clientes/ClienteFormModal";
 import { ClienteSuspendModal } from "@/components/admin/clientes/ClienteModals";
 import type { ClienteListItem } from "@/lib/services/clientes.service";
 import { exportClientesListToExcel, exportClientesListToPDF } from "@/lib/utils/export-utils";
+import AdminPageHeader from "@/components/admin/common/AdminPageHeader";
 
 export default function ClientesPage() {
   const { can } = usePermissions();
@@ -123,56 +124,43 @@ export default function ClientesPage() {
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">Directorio de Clientes</h1>
-              <p className="text-sm text-slate-500 font-medium mt-1">Gestión de cartera empresarial y contactos</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Button
-              variant="outline"
-              onClick={fetchClientes}
-              disabled={loading}
-              className="h-11 w-11 p-0 border-slate-200 rounded-xl hover:bg-white transition-all active:scale-95"
-            >
-              <RefreshCw className={cn("w-4 h-4 text-slate-500", loading && "animate-spin")} />
-            </Button>
-            {can("export", "clientes") && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 border-emerald-200 rounded-xl hover:bg-emerald-50 font-bold text-emerald-700 transition-all active:scale-95"
-                  onClick={handleExportExcel}
-                  disabled={loading || exportingExcel || filtered.length === 0}
-                >
-                  <FileSpreadsheet size={18} /> {exportingExcel ? "Exportando..." : "Excel"}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 border-red-200 rounded-xl hover:bg-red-50 font-bold text-red-700 transition-all active:scale-95"
-                  onClick={handleExportPDF}
-                  disabled={loading || exportingPDF || filtered.length === 0}
-                >
-                  <FileText size={18} /> {exportingPDF ? "Exportando..." : "PDF"}
-                </Button>
-              </div>
-            )}
-            {can("create", "clientes") && (
-              <Button 
-                onClick={() => setFormTarget(null)}
-                className="h-11 gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-100 transition-all active:scale-95"
+        <AdminPageHeader
+          title="Directorio de Clientes"
+          description="Gestión de cartera empresarial y contactos"
+          actionLabel="Nuevo Cliente"
+          onAction={() => setFormTarget(null)}
+          showAction={can("create", "clientes")}
+          icon={UserPlus}
+        >
+          <Button
+            variant="outline"
+            onClick={fetchClientes}
+            disabled={loading}
+            className="h-11 w-11 p-0 border-slate-200 rounded-xl hover:bg-white transition-all active:scale-95"
+          >
+            <RefreshCw className={cn("w-4 h-4 text-slate-500", loading && "animate-spin")} />
+          </Button>
+          {can("export", "clientes") && (
+            <>
+              <Button
+                variant="outline"
+                className="h-11 gap-2 border-emerald-200 rounded-xl hover:bg-emerald-50 font-bold text-emerald-700 transition-all active:scale-95"
+                onClick={handleExportExcel}
+                disabled={loading || exportingExcel || filtered.length === 0}
               >
-                <UserPlus size={18} /> Nuevo Cliente
+                <FileSpreadsheet size={18} /> {exportingExcel ? "Exportando..." : "Excel"}
               </Button>
-            )}
-          </div>
-        </div>
+              <Button
+                variant="outline"
+                className="h-11 gap-2 border-red-200 rounded-xl hover:bg-red-50 font-bold text-red-700 transition-all active:scale-95"
+                onClick={handleExportPDF}
+                disabled={loading || exportingPDF || filtered.length === 0}
+              >
+                <FileText size={18} /> {exportingPDF ? "Exportando..." : "PDF"}
+              </Button>
+            </>
+          )}
+        </AdminPageHeader>
 
         {/* Stats */}
         <StatsClientes 

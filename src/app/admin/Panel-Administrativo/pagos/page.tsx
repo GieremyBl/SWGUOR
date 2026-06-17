@@ -7,13 +7,8 @@ import PagosTable, { type Pago } from '@/components/admin/pagos/PagosTable';
 import PagoFormModal from '@/components/admin/pagos/PagoFormModal';
 import { PagoDetailModal, PagoVerifyModal } from '@/components/admin/pagos/PagoModals';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
-import { PagosStats }   from '@/components/admin/pagos/PagosStats';
+import { PagosStats } from '@/components/admin/pagos/PagosStats';
 import { PagosToolbar } from '@/components/admin/pagos/PagosToolbar';
-import {
-  DollarSign, CheckCircle2, Clock, Search, RefreshCw, 
-} from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 type ModalMode = 'create' | 'view' | 'verify' | null;
 
@@ -108,7 +103,7 @@ export default function PagosPage() {
           loading={loading}
           onRefresh={loadPagos}
         />
-        
+
         {/* Table */}
         <PagosTable
           data={filteredPagos}
