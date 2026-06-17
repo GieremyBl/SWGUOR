@@ -24,8 +24,32 @@ const ROLES: RolUsuario[] = [
   'cliente'
 ];
 
+/**
+ * Convierte de manera recursiva todos los campos BigInt a strings 
+ * para que puedan cruzar la frontera de Server a Cliente de forma segura.
+ */
+function serializarBigInt<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof obj === 'bigint') {
+    return obj.toString() as unknown as T;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(serializarBigInt) as unknown as T;
+  }
+
+  if (typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [key, serializarBigInt(value)])
+    ) as unknown as T;
+  }
+
+  return obj;
+}
+
 export type ObtenerMovimientosResult =
-  | { success: true; data: Awaited<ReturnType<typeof MovimientosInventarioService.listarDesdeFiltros>> }
+  | { success: true; data: any }
   | { success: false; error: string; data: [] };
 
 export async function obtenerMovimientos(
@@ -38,7 +62,10 @@ export async function obtenerMovimientos(
 
   try {
     const data = await MovimientosInventarioService.listarDesdeFiltros(filtros);
-    return { success: true, data };
+
+    const dataSerializada = serializarBigInt(data);
+
+    return { success: true, data: dataSerializada };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Error al cargar movimientos';
     console.error('[obtenerMovimientos]', e);
@@ -85,7 +112,7 @@ export async function registrarMovimientoInventario(
       ...(params.material_id && { material_id: params.material_id }),
     };
 
-    await MovimientosInventarioService.registrar(payloadCompresible);
+    const resultado = await MovimientosInventarioService.registrar(payloadCompresible);
     return { success: true };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'No se pudo registrar el movimiento';
@@ -109,7 +136,8 @@ export async function obtenerEstadisticasMovimientos(
       hasta: mapped.hasta,
       tipo_movimiento: mapped.tipo_movimiento as TipoMovimiento | undefined,
     });
-    return { success: true as const, data };
+
+    return { success: true as const, data: serializarBigInt(data) };
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Error al cargar estadísticas';
     return { success: false as const, error: message, data: null };
