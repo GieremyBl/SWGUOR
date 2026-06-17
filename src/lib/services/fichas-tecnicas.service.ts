@@ -1,10 +1,8 @@
-import { prisma }          from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
-import { EstadoFicha }     from '@prisma/client';
-import type { ReferenciaMovimiento } from '@prisma/client';
+import { EstadoFicha } from '@prisma/client';
 import {
   calcularCostoFicha,
-  insertarMovimiento,
   obtenerAuditoriaRegistro,
 } from '@/lib/helpers/rpc-helpers';
 
@@ -16,17 +14,15 @@ export const FichasTecnicasService = {
         ...(filtros?.estado && { estado: filtros.estado }),
         ...(filtros?.busqueda && {
           OR: [
-            { version:               { contains: filtros.busqueda, mode: 'insensitive' } },
+            { version: { contains: filtros.busqueda, mode: 'insensitive' } },
             { descripcion_detallada: { contains: filtros.busqueda, mode: 'insensitive' } },
-            // la relación correcta en el schema es "productos" (plural)
             { productos: { nombre: { contains: filtros.busqueda, mode: 'insensitive' } } },
-            { productos: { sku:    { contains: filtros.busqueda, mode: 'insensitive' } } },
+            { productos: { sku: { contains: filtros.busqueda, mode: 'insensitive' } } },
           ],
         }),
       },
       include: {
-        // relación correcta: "productos" (plural)
-        productos:    { select: { id: true, nombre: true, sku: true, imagen: true } },
+        productos: { select: { id: true, nombre: true, sku: true, imagen: true } },
         ficha_medidas: { select: { id: true } },
       },
       orderBy: { created_at: 'desc' },
@@ -36,14 +32,14 @@ export const FichasTecnicasService = {
 
   async obtenerPorId(id: string) {
     const ficha = await prisma.fichas_tecnicas.findUnique({
-      where:   { id: BigInt(id) },
+      where: { id: BigInt(id) },
       include: {
-        productos:    { select: { id: true, nombre: true, sku: true, imagen: true } },
+        productos: { select: { id: true, nombre: true, sku: true, imagen: true } },
         ficha_medidas: { orderBy: [{ talla: 'asc' }, { punto_medida: 'asc' }] },
         fichas_tecnicas_detalle: {
           include: {
             materiales: { select: { id: true, nombre: true, tipo: true, composicion: true, color: true, unidad_medida: true, precio_unitario: true } },
-            insumo:     { select: { id: true, nombre: true, tipo: true, unidad_medida: true, precio_unitario: true } },
+            insumo: { select: { id: true, nombre: true, tipo: true, unidad_medida: true, precio_unitario: true } },
           },
           orderBy: { id: 'asc' },
         },
@@ -62,16 +58,16 @@ export const FichasTecnicasService = {
   },
 
   async crear(data: {
-    producto_id:            string | number;
-    version?:               string;
+    producto_id: string | number;
+    version?: string;
     descripcion_detallada?: string;
-    sam_total?:             number;
-    costo_estimado?:        number;
-    ficha_url?:             string;
-    imagen_geometral?:      string;
-    estado?:                EstadoFicha;
-    created_by?:            string | number;
-    permitir_duplicado?:    boolean;
+    sam_total?: number;
+    costo_estimado?: number;
+    ficha_url?: string;
+    imagen_geometral?: string;
+    estado?: EstadoFicha;
+    created_by?: string | number;
+    permitir_duplicado?: boolean;
   }) {
     if (!data.permitir_duplicado) {
       const existe = await prisma.fichas_tecnicas.findFirst({
@@ -80,46 +76,34 @@ export const FichasTecnicasService = {
           estado: { not: 'obsoleta' },
         },
       });
-      if (existe) throw new Error('Ya existe una ficha para este producto');
+      if (existe) throw new Error('Ya existe una ficha activa o borrador para este producto');
     }
 
-    return prisma.$transaction(async (tx) => {
-      const ficha = await tx.fichas_tecnicas.create({
-        data: {
-          id_producto:           BigInt(data.producto_id),
-          version:               data.version               ?? '1.0',
-          descripcion_detallada: data.descripcion_detallada ?? null,
-          sam_total:             data.sam_total             ?? null,
-          costo_estimado:        data.costo_estimado        ?? null,
-          ficha_url:             data.ficha_url             ?? null,
-          imagen_geometral:      data.imagen_geometral      ?? null,
-          estado:                data.estado ?? 'borrador',
-          created_by:            data.created_by
-            ? BigInt(data.created_by)
-            : null,
-        },
-      });
-
-      // En el schema productos → fichas_tecnicas es una relación de lista (fichas_tecnicas[])
-      // El FK real es fichas_tecnicas.id_producto → se actualiza en la ficha, no en el producto.
-      // Si se necesita vincular bidireccionalmente, sólo actualizar id_producto en la ficha:
-      await tx.fichas_tecnicas.update({
-        where: { id: ficha.id },
-        data:  { id_producto: BigInt(data.producto_id) },
-      });
-
-      return serializeBigInt(ficha);
+    const ficha = await prisma.fichas_tecnicas.create({
+      data: {
+        id_producto: BigInt(data.producto_id),
+        version: data.version ?? '1.0',
+        descripcion_detallada: data.descripcion_detallada ?? null,
+        sam_total: data.sam_total ?? null,
+        costo_estimado: data.costo_estimado ?? null,
+        ficha_url: data.ficha_url ?? null,
+        imagen_geometral: data.imagen_geometral ?? null,
+        estado: data.estado ?? 'borrador',
+        created_by: data.created_by ? BigInt(data.created_by) : null,
+      },
     });
+
+    return serializeBigInt(ficha);
   },
 
   async actualizar(id: string, data: Partial<{
-    version:               string;
+    version: string;
     descripcion_detallada: string;
-    sam_total:             number;
-    costo_estimado:        number;
-    ficha_url:             string;
-    imagen_geometral:      string;
-    estado:                EstadoFicha;
+    sam_total: number;
+    costo_estimado: number;
+    ficha_url: string;
+    imagen_geometral: string;
+    estado: EstadoFicha;
   }>) {
     const ficha = await prisma.fichas_tecnicas.update({
       where: { id: BigInt(id) },
@@ -129,10 +113,11 @@ export const FichasTecnicasService = {
   },
 
   async guardarMedidas(ficha_id: string, medidas: {
+    point_medida?: string; // Por si viene mapeado del front viejo
     punto_medida: string;
-    talla:        string;
-    valor_cm?:    number;
-    tolerancia?:  number;
+    talla: string;
+    valor_cm?: number;
+    tolerancia?: number;
   }[]) {
     return prisma.$transaction(async (tx) => {
       await tx.ficha_medidas.deleteMany({ where: { id_ficha: BigInt(ficha_id) } });
@@ -140,18 +125,18 @@ export const FichasTecnicasService = {
       if (medidas.length > 0) {
         await tx.ficha_medidas.createMany({
           data: medidas.map(m => ({
-            id_ficha:     BigInt(ficha_id),
-            punto_medida: m.punto_medida,
-            talla:        m.talla,
-            valor_cm:     m.valor_cm   ?? null,
-            tolerancia:   m.tolerancia ?? null,
+            id_ficha: BigInt(ficha_id),
+            punto_medida: m.punto_medida || (m as any).point_medida,
+            talla: m.talla,
+            valor_cm: m.valor_cm ?? null,
+            tolerancia: m.tolerancia ?? null,
           })),
         });
       }
 
       return serializeBigInt(
         await tx.ficha_medidas.findMany({
-          where:   { id_ficha: BigInt(ficha_id) },
+          where: { id_ficha: BigInt(ficha_id) },
           orderBy: [{ talla: 'asc' }, { punto_medida: 'asc' }],
         })
       );
@@ -180,34 +165,19 @@ export const FichasTecnicasService = {
     }
   },
 
-  async aprobarFicha(fichaId: string, usuarioId: string | number) {
-    const id   = BigInt(fichaId);
-    const usId = typeof usuarioId === 'string' ? BigInt(usuarioId) : usuarioId;
-
-    return prisma.$transaction(async (tx) => {
-      const ficha = await tx.fichas_tecnicas.update({
-        where: { id },
-        data:  { estado: 'aprobada' as EstadoFicha },
-      });
-
-      // tipoMovimiento (camelCase) es la clave correcta en InsertarMovimientoParams
-      await insertarMovimiento({
-        tipoMovimiento: 'ajuste',
-        referenciaType: 'AJUSTE' as ReferenciaMovimiento,
-        referenciaId:   Number(id),
-        cantidad:        0,
-        motivo:          `Ficha técnica aprobada por usuario ${usId}`,
-        usuarioId:       Number(usId),
-      });
-
-      return serializeBigInt(ficha);
+  async aprobarFicha(fichaId: string, _usuarioId: string | number) {
+    const ficha = await prisma.fichas_tecnicas.update({
+      where: { id: BigInt(fichaId) },
+      data: { estado: 'aprobada' as EstadoFicha },
     });
+
+    return serializeBigInt(ficha);
   },
 
   async marcarFichaObsoleta(fichaId: string) {
     const ficha = await prisma.fichas_tecnicas.update({
       where: { id: BigInt(fichaId) },
-      data:  { estado: 'obsoleta' as EstadoFicha },
+      data: { estado: 'obsoleta' as EstadoFicha },
     });
     return serializeBigInt(ficha);
   },

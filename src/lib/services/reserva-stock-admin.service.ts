@@ -15,6 +15,10 @@ export type ReservaStockMonitorRow = {
   estaVencida: boolean;
 };
 
+/**
+ * Lista todas las reservas lógicas activas en el sistema para el monitor del Administrador.
+ * No genera movimientos de kárdex porque el producto no ha salido físicamente del almacén.
+ */
 export async function listarReservasActivasAdmin(): Promise<ReservaStockMonitorRow[]> {
   const ahora = new Date();
 
@@ -61,6 +65,14 @@ export async function listarReservasActivasAdmin(): Promise<ReservaStockMonitorR
   });
 }
 
-export async function liberarReservaStockAdmin(id: bigint) {
-  return reservaStockService.cancelar(id);
+/**
+ * Libera de forma manual una reserva desde el monitor.
+ * @param id Identificador de la reserva (admite string o number desde el cliente para evitar quiebres de tipos)
+ */
+export async function liberarReservaStockAdmin(id: bigint | string | number) {
+  const idBf = BigInt(id);
+  // El service interno 'reservaStockService' se encarga de reponer el stock lógico.
+  // Si en el futuro necesitas que una cancelación por vencimiento genere auditoría en el kárdex,
+  // se inyectaría dentro del método '.cancelar()' de ese servicio, no en este monitor.
+  return reservaStockService.cancelar(idBf);
 }

@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { Prisma } from '@prisma/client';
+// 📦 Única importación transaccional para auditoría e historial del kárdex
+import { MovimientosInventarioService } from './movimientos-inventario.service';
 
 export const OrdenesProduccionService = {
 
@@ -17,7 +19,6 @@ export const OrdenesProduccionService = {
     const { producto_id, taller_id, pedido_id, estado, etapa, search, page = 1, limit = 10 } = params || {};
     const skip = (page - 1) * limit;
 
-    // FIX: Tipado estricto con el contrato WhereInput nativo de Prisma en lugar de 'any'
     const where: Prisma.ordenes_produccionWhereInput = {};
 
     if (producto_id) where.producto_id = BigInt(producto_id);
@@ -33,7 +34,6 @@ export const OrdenesProduccionService = {
 
     if (pedido_id) where.pedido_id = BigInt(pedido_id);
 
-    // Filtrar por etapa del seguimiento más reciente
     if (etapa && etapa !== 'all') {
       where.seguimiento_produccion = {
         some: {
@@ -139,7 +139,6 @@ export const OrdenesProduccionService = {
         },
       });
 
-      // Seguimiento inicial
       await tx.seguimiento_produccion.create({
         data: {
           orden_id: orden.id,
@@ -176,17 +175,33 @@ export const OrdenesProduccionService = {
     observaciones?: string;
     usuario_id?: string;
   }) {
+    const idOrden = BigInt(data.orden_id);
+
     return prisma.$transaction(async (tx) => {
-      // Desactivar etapa anterior
+      // 1. Obtener la información base de la Orden de Producción incluyendo su Ficha Técnica
+      const ordenActual = await tx.ordenes_produccion.findUnique({
+        where: { id: idOrden },
+        include: {
+          fichas_tecnicas: {
+            include: {
+              fichas_tecnicas_detalle: true
+            }
+          }
+        }
+      });
+
+      if (!ordenActual) throw new Error('Orden de producción no encontrada');
+
+      // 2. Desactivar etapa anterior en el historial de seguimiento
       await tx.seguimiento_produccion.updateMany({
-        where: { orden_id: BigInt(data.orden_id), activo: true },
+        where: { orden_id: idOrden, activo: true },
         data: { activo: false, completado_en: new Date() },
       });
 
-      // FIX: Reemplazado 'as any' por la propiedad tipada exacta extraída de los modelos de Prisma
+      // 3. Crear el nuevo registro de seguimiento histórico
       const seg = await tx.seguimiento_produccion.create({
         data: {
-          orden_id: BigInt(data.orden_id),
+          orden_id: idOrden,
           etapa: data.etapa as Prisma.seguimiento_produccionCreateInput['etapa'],
           observaciones: data.observaciones ?? null,
           usuario_id: data.usuario_id ? BigInt(data.usuario_id) : null,
@@ -194,14 +209,57 @@ export const OrdenesProduccionService = {
         },
       });
 
-      // Al completar la orden — solo marca estado
+      // 4. ACTUALIZACIÓN DIRECTA EN LA ORDEN: Sincroniza la columna 'etapa' física del DDL
+      await tx.ordenes_produccion.update({
+        where: { id: idOrden },
+        data: {
+          etapa: data.etapa as Prisma.ordenes_produccionUpdateInput['etapa'],
+          updated_at: new Date(),
+        }
+      });
+
+      // 5. DISPARADOR AUTOMÁTICO A: Consumo de materia prima al pasar a 'confeccion'
+      if (data.etapa === 'confeccion') {
+        const itemsFicha = ordenActual.fichas_tecnicas?.fichas_tecnicas_detalle || [];
+
+        for (const item of itemsFicha) {
+          // Multiplica la cantidad requerida en la ficha por el número de prendas solicitadas
+          const consumoTotal = Number((item as any).cantidad_requerida || 0) * ordenActual.cantidad_solicitada;
+
+          if (consumoTotal > 0) {
+            await MovimientosInventarioService.registrar({
+              cantidad: consumoTotal,
+              tipo_movimiento: 'consumo_orden_produccion',
+              referencia_tipo: 'ORDEN_PRODUCCION',
+              referencia_id: Number(idOrden),
+              motivo: `Consumo automático por avance a confección de la OP #${idOrden}`,
+              usuario_id: data.usuario_id ? String(data.usuario_id) : undefined,
+              // Envía el recurso correcto respetando la restricción de recurso único
+              ...((item as any).insumo_id && { insumo_id: String((item as any).insumo_id) }),
+              ...((item as any).material_id && { material_id: String((item as any).material_id) }),
+            });
+          }
+        }
+      }
+
+      // 6. DISPARADOR AUTOMÁTICO B: Ingreso de Producto Terminado al marcar como 'completada'
       if (data.etapa === 'completada') {
         await tx.ordenes_produccion.update({
-          where: { id: BigInt(data.orden_id) },
+          where: { id: idOrden },
           data: {
             estado: 'completada',
             updated_at: new Date()
           },
+        });
+
+        // Suma de forma automática las prendas listas al stock de productos mediante el pipeline transaccional
+        await MovimientosInventarioService.registrar({
+          producto_id: String(ordenActual.producto_id),
+          cantidad: ordenActual.cantidad_solicitada,
+          tipo_movimiento: 'produccion_entrada',
+          referencia_tipo: 'ORDEN_PRODUCCION',
+          motivo: `Ingreso automático de prendas terminadas desde taller. OP #${idOrden}`,
+          usuario_id: data.usuario_id ? String(data.usuario_id) : undefined,
         });
       }
 

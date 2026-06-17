@@ -34,6 +34,7 @@ import {
   Wrench,
   Activity,
   ShoppingCart,
+  Warehouse, // 🏢 Nuevo ícono para Almacenes
 } from 'lucide-react';
 import { registrarMovimientoInventario } from '@/app/admin/inventario/movimientos/actions';
 
@@ -87,6 +88,11 @@ interface ItemOpcion {
   unidad?: string;
 }
 
+interface AlmacenOpcion {
+  id: string;
+  nombre: string;
+}
+
 interface RegistrarMovimientoDialogProps {
   open: boolean;
   onClose: () => void;
@@ -102,13 +108,32 @@ const TIPO_ITEM_CONFIG = {
 export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: RegistrarMovimientoDialogProps) {
   const [tipoItem, setTipoItem] = useState<TipoItem>('insumo');
   const [items, setItems] = useState<ItemOpcion[]>([]);
+  const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingAlmacenes, setLoadingAlmacenes] = useState(false);
   const [itemId, setItemId] = useState('');
+  const [almacenId, setAlmacenId] = useState('');
   const [tipoMovimiento, setTipoMovimiento] = useState('');
   const [referenciaTipo, setReferenciaTipo] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [motivo, setMotivo] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Carga de almacenes desde tu API de infraestructura
+  const cargarAlmacenes = useCallback(async () => {
+    setLoadingAlmacenes(true);
+    try {
+      const res = await fetch('/api/admin/almacenes');
+      if (!res.ok) throw new Error('Error al cargar almacenes');
+      const json = await res.json();
+      const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+      setAlmacenes(data.map((a: any) => ({ id: String(a.id), nombre: a.nombre })));
+    } catch (error) {
+      console.error("Error cargando almacenes:", error);
+    } finally {
+      setLoadingAlmacenes(false);
+    }
+  }, []);
 
   const cargarItems = useCallback(async (tipo: TipoItem) => {
     setLoadingItems(true);
@@ -116,21 +141,24 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
     setItemId('');
     try {
       const endpoints: Record<TipoItem, string> = {
-        producto: '/api/admin/productos?limit=200',
+        producto: '/api/admin/productos?limite=200',
         insumo: '/api/admin/insumos?limite=200',
         material: '/api/admin/materiales?limite=200',
       };
+
       const res = await fetch(endpoints[tipo]);
       if (!res.ok) throw new Error('Error al cargar artículos');
       const json = await res.json();
-
       const rawData = json?.data;
+
       const data: any[] =
         Array.isArray(rawData) ? rawData :
-          Array.isArray(rawData?.insumos) ? rawData.insumos :
-            Array.isArray(rawData?.materiales) ? rawData.materiales :
-              Array.isArray(json) ? json :
-                [];
+          Array.isArray(rawData?.productos) ? rawData.productos :
+            Array.isArray(rawData?.insumos) ? rawData.insumos :
+              Array.isArray(rawData?.materiales) ? rawData.materiales :
+                Array.isArray(json) ? json :
+                  [];
+
       setItems(
         data.map((item: any) => ({
           id: String(item.id),
@@ -139,7 +167,8 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
           unidad: item.unidad_medida ?? item.unidad ?? undefined,
         }))
       );
-    } catch {
+    } catch (error) {
+      console.error("Error cargando items:", error);
       toast.error('No se pudieron cargar los artículos');
     } finally {
       setLoadingItems(false);
@@ -147,12 +176,16 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
   }, []);
 
   useEffect(() => {
-    if (open) cargarItems(tipoItem);
-  }, [open, tipoItem, cargarItems]);
+    if (open) {
+      cargarItems(tipoItem);
+      cargarAlmacenes();
+    }
+  }, [open, tipoItem, cargarItems, cargarAlmacenes]);
 
   const resetForm = () => {
     setTipoItem('insumo');
     setItemId('');
+    setAlmacenId('');
     setTipoMovimiento('');
     setReferenciaTipo('');
     setCantidad('');
@@ -166,6 +199,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!almacenId) return toast.error('Selecciona un almacén de origen/destino');
     if (!itemId) return toast.error('Selecciona un artículo');
     if (!tipoMovimiento) return toast.error('Selecciona el tipo de movimiento');
     if (!referenciaTipo) return toast.error('Selecciona el tipo de referencia');
@@ -174,6 +208,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
     setSubmitting(true);
     try {
       const params = {
+        almacen_id: almacenId,
         tipo_movimiento: tipoMovimiento as any,
         referencia_tipo: referenciaTipo as any,
         cantidad: Number(cantidad),
@@ -202,10 +237,8 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      {/* Contenedor principal con bordes amplios idénticos a image_b3bba4.png */}
       <DialogContent className="max-w-lg rounded-[22px] border-none shadow-2xl p-0 overflow-hidden bg-white">
 
-        {/* HEADER MINIMALISTA: Fondo blanco, divisor sutil bajo y texto oscuro */}
         <div className="p-7 pb-5 border-b border-gray-100 bg-white">
           <DialogHeader>
             <DialogTitle className="text-[#0B132B] text-xl font-bold tracking-tight">
@@ -217,9 +250,37 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-7 pt-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-7 pt-5 space-y-4 max-h-[80vh] overflow-y-auto">
 
-          {/* Selector de Tipo de Artículo con estética refinada */}
+          {/* Selector Obligatorio de Almacén */}
+          <div className="space-y-1.5">
+            <Label className="text-[13px] font-medium text-slate-500">
+              Ubicación / Almacén *
+            </Label>
+            <Select value={almacenId} onValueChange={setAlmacenId} disabled={loadingAlmacenes}>
+              <SelectTrigger className="h-11 rounded-xl border-slate-200/70 bg-[#FBF9F4] text-slate-700 font-medium focus:bg-white transition-colors">
+                {loadingAlmacenes ? (
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="text-xs">Cargando sedes...</span>
+                  </div>
+                ) : (
+                  <SelectValue placeholder="¿En qué almacén se realiza el movimiento?..." />
+                )}
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {almacenes.map((almacen) => (
+                  <SelectItem key={almacen.id} value={almacen.id} className="rounded-lg text-xs">
+                    <div className="flex items-center gap-2">
+                      <Warehouse className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{almacen.nombre}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-slate-500">
               Tipo de Artículo *
@@ -234,8 +295,8 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                     type="button"
                     onClick={() => setTipoItem(tipo)}
                     className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all text-xs font-semibold ${isActive
-                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200/40'
-                        : 'text-slate-500 hover:text-slate-800'
+                      ? 'bg-white text-slate-900 shadow-sm border border-slate-200/40'
+                      : 'text-slate-500 hover:text-slate-800'
                       }`}
                   >
                     <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-slate-800' : 'text-slate-400'}`} />
@@ -246,7 +307,6 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
             </div>
           </div>
 
-          {/* Selección de artículo con el fondo suave de image_b3bba4.png */}
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-slate-500">
               Artículo
@@ -270,7 +330,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                       <span className="font-medium text-xs text-slate-700">{item.nombre}</span>
                       {item.stock !== undefined && (
                         <span className="text-[10px] text-slate-400 ml-auto pl-3">
-                          Stock: {item.stock} {item.unidad ?? ''}
+                          Global: {item.stock} {item.unidad ?? ''}
                         </span>
                       )}
                     </div>
@@ -282,10 +342,9 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
               </SelectContent>
             </Select>
 
-            {/* Stock de referencia limpio */}
             {itemSeleccionado?.stock !== undefined && (
               <p className="text-xs text-slate-400 pl-1">
-                Cantidad disponible actual:{' '}
+                Cantidad disponible total:{' '}
                 <span className={`font-semibold ${(itemSeleccionado.stock ?? 0) <= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                   {itemSeleccionado.stock} {itemSeleccionado.unidad ?? 'unidades'}
                 </span>
@@ -293,7 +352,6 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
             )}
           </div>
 
-          {/* Tipo de movimiento */}
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-slate-500">
               Tipo de Movimiento
@@ -326,7 +384,6 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            {/* Origen / Referencia */}
             <div className="space-y-1.5">
               <Label className="text-[13px] font-medium text-slate-500">
                 Referencia
@@ -345,7 +402,6 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
               </Select>
             </div>
 
-            {/* Cantidad a ingresar o retirar */}
             <div className="space-y-1.5">
               <Label className="text-[13px] font-medium text-slate-500">
                 Cantidad
@@ -362,7 +418,6 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
             </div>
           </div>
 
-          {/* Motivo idéntico al Textarea de image_b3bba4.png */}
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-slate-500">
               Motivo o Justificación *
@@ -376,7 +431,6 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
             />
           </div>
 
-          {/* BOTONES DE ACCIÓN: Estilo exacto de image_b3bba4.png */}
           <div className="flex gap-3 pt-3">
             <Button
               type="button"

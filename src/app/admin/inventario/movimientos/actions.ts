@@ -12,7 +12,17 @@ import {
 } from '@/lib/services/movimientos-inventario.service';
 import type { TipoMovimiento } from '@prisma/client';
 
-const ROLES: RolUsuario[] = ['administrador', 'gerente', 'almacenero'];
+const ROLES: RolUsuario[] = [
+  'administrador',
+  'gerente',
+  'almacenero',
+  'cortador',
+  'disenador',
+  'recepcionista',
+  'representante_taller',
+  'ayudante',
+  'cliente'
+];
 
 export type ObtenerMovimientosResult =
   | { success: true; data: Awaited<ReturnType<typeof MovimientosInventarioService.listarDesdeFiltros>> }
@@ -45,10 +55,11 @@ export async function registrarMovimientoInventario(
 ): Promise<{ success: true } | { success: false; error: string }> {
   const auth = await requireServerRole(ROLES);
   if (!auth.success) {
-    return { success: false, error: 'Sin permisos' };
+    return { success: false, error: 'Sin permisos para registrar movimientos' };
   }
 
   try {
+    // Si desde el front no se fuerza un usuario_id, "auth.user.id" (el usuario que inició sesión) queda asignado.
     await MovimientosInventarioService.registrar({
       ...params,
       usuario_id: params.usuario_id ?? auth.user.id,

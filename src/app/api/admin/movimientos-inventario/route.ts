@@ -167,7 +167,6 @@ export async function POST(req: Request) {
       cantidad: body.cantidad,
       tipo_movimiento: body.tipo_movimiento,
       referencia_tipo: body.referencia_tipo,
-      referencia_id: body.referencia_id,
       motivo: typeof body.motivo === 'string' ? body.motivo.trim() : body.motivo,
       usuario_id: body.usuario_id ?? auth.user.id, // Usa el del auth si no se proporciona
       almacen_id: body.almacen_id,

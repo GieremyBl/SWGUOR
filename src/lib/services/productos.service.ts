@@ -2,7 +2,7 @@ import { EstadoProducto } from '@prisma/client';
 import type { Categoria } from './categorias.service';
 import type { VarianteProducto } from './variantes.service';
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// ─── Interfaces Reales de la BD ───────────────────────────────────────────────
 export interface FichaTecnica {
   id: number;
   id_producto?: number | null;
@@ -15,25 +15,37 @@ export interface FichaTecnica {
   created_at?: string;
 }
 
+export interface AlmacenStockRef {
+  id: number;
+  almacen_id: number;
+  producto_id: number | null;
+  cantidad: number;
+  updated_at: string;
+}
+
 export interface Producto {
   id: number;
   sku: string;
   nombre: string;
   descripcion?: string | null;
   precio: number;
-  stock: number;
+  stock: number; // ✅ SE QUEDA: Es el stock consolidado real de tu tabla física
   estado: 'activo' | 'inactivo';
   destacado?: boolean;
   imagen?: string | null;
   categoria_id?: number | null;
   moq?: number;
-  reglas_descuento?: unknown;
-  colores_disponibles?: string[];
-  tallas_disponibles?: string[];
-  // Relaciones
+  reglas_descuento?: unknown; // jsonb en Postgres
+  colores_disponibles?: string[]; // jsonb en Postgres
+  tallas_disponibles?: string[]; // jsonb en Postgres
+  created_at?: string;
+  updated_at?: string;
+
+  // Relaciones opcionales que vienen en el include de tu API
   categorias?: Categoria;
   variantes_producto?: VarianteProducto[];
   fichas_tecnicas?: FichaTecnica | null;
+  almacen_stocks?: AlmacenStockRef[]; // Desglose por si el admin quiere auditar almacenes
 }
 
 export interface ProductosListResponse {
@@ -42,7 +54,7 @@ export interface ProductosListResponse {
 }
 
 export interface ProductoCreateInput {
-  producto: Omit<Producto, 'id' | 'categorias' | 'variantes_producto' | 'fichas_tecnicas'>;
+  producto: Omit<Producto, 'id' | 'categorias' | 'variantes_producto' | 'fichas_tecnicas' | 'almacen_stocks'>;
   variantes?: Omit<VarianteProducto, 'id' | 'producto_id' | 'created_at'>[];
   nueva_ficha_relacional?: Partial<FichaTecnica>;
 }
@@ -58,6 +70,7 @@ export interface ProductosFiltros {
   estado?: string;
   color?: string;
   talla?: string;
+  almacenId?: string; // 🔍 Opcional: Por si quieres que tu API filtre stock local en vez de global
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -72,6 +85,7 @@ export class ProductosService {
       if (filtros?.estado) params.set('estado', filtros.estado);
       if (filtros?.color) params.set('color', filtros.color);
       if (filtros?.talla) params.set('talla', filtros.talla);
+      if (filtros?.almacenId) params.set('almacenId', filtros.almacenId);
 
       const url = `${this.baseUrl}?${params.toString()}`;
       const response = await fetch(url, {
@@ -87,16 +101,19 @@ export class ProductosService {
     }
   }
 
-  static async obtenerPorId(id: number): Promise<Producto | null> {
+  static async obtenerPorId(id: number, almacenId?: number): Promise<Producto | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const params = new URLSearchParams();
+      if (almacenId) params.set('almacenId', almacenId.toString());
+
+      const url = `${this.baseUrl}/${id}${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url, {
         headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const result = await response.json();
-      return result ?? null;
+      return await response.json();
     } catch (error) {
       console.error('[ProductosService] Error fetching by ID:', error);
       return null;

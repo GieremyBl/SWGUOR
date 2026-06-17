@@ -4,6 +4,7 @@ import {
   ESTADOS_COTIZACION_PARA_GENERAR_OC,
 } from '@/lib/constants/estados';
 import { generarYAlmacenarPdfOrdenCompra } from '@/lib/services/orden-compra-documento.service';
+import { MovimientosInventarioService } from '@/lib/services/movimientos-inventario.service';
 import type {
   CrearOrdenCompra,
   CrearOrdenDesdeCotizacion,
@@ -74,7 +75,6 @@ async function assertSinOcActivaParaCotizacion(cotizacionId: bigint) {
 
 export const ordenesCompraService = {
   listar: async (filtros?: FiltrosOrdenCompra): Promise<OrdenCompraDetalle[]> => {
-    // Construir filtro de estado: soporta valor único o múltiples via `estado_in`
     const estadoWhere = filtros?.estado_in?.length
       ? { estado: { in: filtros.estado_in as EstadoOrdenCompra[] } }
       : filtros?.estado
@@ -204,7 +204,7 @@ export const ordenesCompraService = {
       const hasInsumo = item.insumo_id != null;
       if (hasMaterial === hasInsumo) {
         throw new Error(
-          'La cotización contiene ítems inválidos (debe tener material o insumo)',
+          'La cotización contains ítems inválidos (debe tener material o insumo)',
         );
       }
     }
@@ -308,7 +308,6 @@ export const ordenesCompraService = {
     });
   },
 
-  // Alias para compatibilidad con código existente
   crear: async (
     datos: Prisma.ordenes_compraUncheckedCreateInput,
   ) => {
@@ -334,12 +333,40 @@ export const ordenesCompraService = {
     return ordenesCompraService.obtenerPorId(ordenId);
   },
 
-  recibir: async (ordenId: bigint) => {
+  recibir: async (ordenId: bigint, usuarioEjecutorId?: string | number) => {
+    const idOC = BigInt(ordenId);
+
+    // 1. Buscamos la orden de compra incluyendo sus ítems asociados para conocer las cantidades
+    const ordenCompleta = await prisma.ordenes_compra.findUnique({
+      where: { id: idOC },
+      include: {
+        ordenes_compra_items: true,
+      },
+    });
+
+    if (!ordenCompleta) throw new Error('Orden de compra no encontrada para recepcionar');
+    if (ordenCompleta.estado === 'completada') throw new Error('Esta orden ya fue completada previamente');
+
+    // 2. Ejecutamos la actualización de estado normal dentro de una transacción
     await prisma.ordenes_compra.update({
-      where: { id: ordenId },
+      where: { id: idOC },
       data: { estado: 'completada', fecha_recepcion: new Date() },
     });
-    return ordenesCompraService.obtenerPorId(ordenId);
+
+    // 3. AUTOMATIZACIÓN: Iteramos cada ítem de la orden e impactamos el inventario
+    for (const item of ordenCompleta.ordenes_compra_items) {
+      await MovimientosInventarioService.registrar({
+        cantidad: Number(item.cantidad_pedida),
+        tipo_movimiento: 'entrada',
+        referencia_tipo: 'ORDEN_COMPRA',
+        motivo: `Ingreso automático por recepción total de la Orden de Compra #${idOC}`,
+        usuario_id: usuarioEjecutorId,
+        ...(item.insumo_id != null && { insumo_id: String(item.insumo_id) }),
+        ...(item.material_id != null && { material_id: String(item.material_id) }),
+      });
+    }
+
+    return ordenesCompraService.obtenerPorId(idOC);
   },
 
   actualizarEstado: async (ordenId: bigint, nuevoEstado: EstadoOrdenCompra) => {

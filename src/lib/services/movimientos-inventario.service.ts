@@ -10,105 +10,155 @@ import {
 import { insertarMovimiento } from '@/lib/helpers/rpc-helpers';
 import { aplicarMovimientoStockProducto } from '@/lib/helpers/producto-stock-transaction.helper';
 
-export interface RegistrarParams {
-  insumo_id?: string | number;
-  material_id?: string | number;
-  producto_id?: string | number;
-  cantidad: number;
-  tipo_movimiento: TipoMovimiento;
-  referencia_tipo: ReferenciaMovimiento;
-  referencia_id?: number;
-  motivo: string;
-  usuario_id?: string | number;
-  almacen_id?: string | number;
-}
+// ─── TIPOS DE ENTRADA CONFIGURADOS SEGÚN EL DDL ──────────────────────────────
 
-/** @deprecated Usar `ListarMovimientosParams` desde movimientos-filtros.helper */
-export type ListarParams = ListarMovimientosParams;
+export type OrigenMovimiento =
+  | { tipo: 'ORDEN_COMPRA'; id: bigint | string | number }
+  | { tipo: 'ORDEN_PRODUCCION'; id: bigint | string | number }
+  | { tipo: 'PEDIDO_CLIENTE'; id: bigint | string | number }
+  | { tipo: 'AJUSTE_MANUAL'; id: bigint | string | number }
+  | { tipo: 'INVENTARIO_INICIAL'; id: bigint | string | number };
+
+export interface RegistrarParams {
+  insumo_id?: string | number | bigint;
+  material_id?: string | number | bigint;
+  producto_id?: string | number | bigint;
+  cantidad: number; // Siempre positivo (la BD valida chk_cantidad_positiva)
+  tipo_movimiento?: TipoMovimiento;
+  referencia_tipo?: ReferenciaMovimiento;
+  origen?: OrigenMovimiento;
+  motivo: string;
+  usuario_id?: string | number | bigint;
+  almacen_id?: string | number | bigint;
+  verificarStock?: boolean;
+}
 
 const LIMITE_DEFECTO = 50;
 const LIMITE_CON_FILTROS = 100;
 
-// Lista oficial indexada de tu enum en Supabase
 const TODOS_LOS_TIPOS: TipoMovimiento[] = [
-  'entrada',
-  'salida',
-  'ajuste',
-  'consumo_orden_produccion',
-  'consumo_orden_produccion_item',
-  'produccion_entrada',
-  'devolucion_consumo',
-  'devolucion_a_proveedor',
-  'recepcion_devolucion_proveedor',
-  'incidencia_taller',
-  'devolucion_a_cliente',
-  'recepcion_devolucion_cliente',
+  'entrada', 'salida', 'ajuste', 'consumo_orden_produccion',
+  'consumo_orden_produccion_item', 'produccion_entrada', 'devolucion_consumo',
+  'devolucion_a_proveedor', 'recepcion_devolucion_proveedor', 'incidencia_taller',
+  'devolucion_a_cliente', 'recepcion_devolucion_cliente',
 ];
+
+// ─── HELPERS DE RESOLUCIÓN SEMÁNTICA ─────────────────────────────────────────
+
+const resolverDireccionYTipo = (origen: { tipo: string }, tipoSuministrado?: TipoMovimiento): {
+  direccion: 'entrada' | 'salida';
+  tipo: TipoMovimiento;
+} => {
+  if (tipoSuministrado) {
+    const esSalida = ['salida', 'consumo_orden_produccion', 'incidencia_taller', 'devolucion_a_proveedor'].includes(tipoSuministrado);
+    return { direccion: esSalida ? 'salida' : 'entrada', tipo: tipoSuministrado };
+  }
+
+  const mapa: Record<string, { entrada: TipoMovimiento; salida: TipoMovimiento }> = {
+    ORDEN_COMPRA: { entrada: 'entrada', salida: 'devolucion_a_proveedor' },
+    ORDEN_PRODUCCION: { entrada: 'produccion_entrada', salida: 'consumo_orden_produccion' },
+    PEDIDO_CLIENTE: { entrada: 'recepcion_devolucion_cliente', salida: 'salida' },
+    AJUSTE_MANUAL: { entrada: 'ajuste', salida: 'ajuste' },
+    INVENTARIO_INICIAL: { entrada: 'entrada', salida: 'ajuste' },
+  };
+
+  const configuracion = mapa[origen.tipo] || { entrada: 'entrada', salida: 'salida' };
+  return { direccion: 'entrada', tipo: configuracion.entrada };
+};
+
+// ─── SERVICE UNIFICADO MÁSTER ─────────────────────────────────────────────────
 
 export const MovimientosInventarioService = {
 
   async registrar(params: RegistrarParams) {
     const {
-      insumo_id, material_id, producto_id,
-      cantidad, tipo_movimiento, referencia_tipo,
-      referencia_id, motivo, usuario_id, almacen_id,
+      insumo_id, material_id, producto_id, cantidad,
+      motivo, usuario_id, almacen_id, verificarStock = true,
     } = params;
 
-    // Refleja el CHECK constraint chk_un_solo_recurso (= 1) de la DB
+    // 1. Validaciones estructurales fieles a las Constraints de la BD
     const recursos = [insumo_id, material_id, producto_id].filter(Boolean).length;
-    if (recursos === 0)
-      throw new Error('Debe proporcionar exactamente un ID de insumo, material o producto');
-    if (recursos > 1)
-      throw new Error('Solo puede proporcionar un recurso a la vez: insumo, material o producto');
-
-    // Refleja el CHECK constraint chk_cantidad_positiva (cantidad > 0) de la DB
-    if (cantidad <= 0)
-      throw new Error('La cantidad debe ser mayor a 0');
+    if (recursos !== 1) {
+      throw new Error('chk_un_solo_recurso: Debe proporcionar exactamente un recurso (insumo, material o producto)');
+    }
+    if (cantidad <= 0) {
+      throw new Error('chk_cantidad_positiva: La cantidad a registrar debe ser estrictamente mayor a 0');
+    }
 
     const usuarioId = usuario_id ? BigInt(usuario_id) : null;
     const almacenId = almacen_id ? BigInt(almacen_id) : null;
 
-    // Productos: transacción Prisma explícita (productos.stock + movimiento)
-    if (producto_id) {
-      await prisma.$transaction(async (tx) => {
-        const productoId = BigInt(producto_id);
+    // 2. Extracción de Referencias nativas
+    let referenciaTipo: ReferenciaMovimiento = params.referencia_tipo ?? 'AJUSTE_MANUAL';
+    let documentoId: number | null = null;
 
-        await aplicarMovimientoStockProducto(
-          tx,
-          productoId,
-          cantidad,
-          tipo_movimiento,
-        );
+    if (params.origen) {
+      referenciaTipo = params.origen.tipo as ReferenciaMovimiento;
+      documentoId = Number(params.origen.id);
+    }
 
-        await tx.movimientos_inventario.create({
+    const { direccion, tipo: tipoMovimiento } = resolverDireccionYTipo(
+      params.origen ? { tipo: params.origen.tipo } : { tipo: referenciaTipo },
+      params.tipo_movimiento
+    );
+
+    // Inyectamos de forma segura el ID del documento en el motivo para no perder la trazabilidad
+    const motivoFinal = documentoId
+      ? `${motivo} (${referenciaTipo} #${documentoId})`
+      : motivo;
+
+    return prisma.$transaction(async (tx) => {
+
+      // 3. Control preventivo de stock para salidas consultando la tabla intermedia
+      if (direccion === 'salida' && verificarStock && almacenId) {
+        const itemStock = await tx.almacen_stock.findFirst({
+          where: {
+            almacen_id: almacenId,
+            producto_id: producto_id ? BigInt(producto_id) : null,
+            insumo_id: insumo_id ? BigInt(insumo_id) : null,
+            material_id: material_id ? BigInt(material_id) : null,
+          }
+        });
+        const disponible = Number(itemStock?.cantidad ?? 0);
+        if (disponible < cantidad) {
+          throw new Error(`Stock insuficiente en almacén: disponible ${disponible}, solicitado ${cantidad}`);
+        }
+      }
+
+      // 4. Inserción en la Base de Datos (Los triggers se encargan del resto de tablas)
+      if (producto_id) {
+        // Sincronización histórica manual para stocks globales de productos terminados
+        await aplicarMovimientoStockProducto(tx, BigInt(producto_id), cantidad, tipoMovimiento);
+
+        const mov = await tx.movimientos_inventario.create({
           data: {
-            producto_id: productoId,
-            cantidad,
-            motivo,
-            tipo_movimiento,
-            referencia_tipo,
+            producto_id: BigInt(producto_id),
+            cantidad, // Siempre positivo (la función en BD o triggers restarán internamente si es salida)
+            motivo: motivoFinal,
+            tipo_movimiento: tipoMovimiento,
+            referencia_tipo: referenciaTipo,
             usuario_id: usuarioId,
             almacen_id: almacenId,
           },
         });
-      });
-      return { success: true };
-    }
+        return serializeBigInt(mov);
+      } else {
+        // Insumos y Materiales delegan en tu Trigger BEFORE INSERT 'tr_procesar_movimiento_insumo'
+        await insertarMovimiento({
+          tipoMovimiento,
+          referenciaType: referenciaTipo,
+          referenciaId: documentoId ?? undefined, // El RPC consume este parámetro para cruces lógicos
+          cantidad,
+          motivo: motivoFinal,
+          insumoId: insumo_id ? Number(insumo_id) : undefined,
+          materialId: material_id ? Number(material_id) : undefined,
+          usuarioId: usuarioId ? Number(usuarioId) : undefined,
+          almacenId: almacenId ? Number(almacenId) : undefined,
+        });
 
-    // Insumos / materiales: RPC + triggers de BD (stock_actual en sus tablas)
-    await insertarMovimiento({
-      tipoMovimiento: tipo_movimiento,
-      referenciaType: referencia_tipo,
-      referenciaId: referencia_id,
-      cantidad,
-      motivo,
-      insumoId: insumo_id ? Number(insumo_id) : undefined,
-      materialId: material_id ? Number(material_id) : undefined,
-      usuarioId: usuario_id ? Number(usuario_id) : undefined,
-      almacenId: almacen_id ? Number(almacen_id) : undefined,
+        return { success: true };
+      }
     });
-
-    return { success: true };
   },
 
   async listar(params?: ListarMovimientosParams) {
@@ -123,6 +173,7 @@ export const MovimientosInventarioService = {
 
     if (params?.tipo_movimiento) where.tipo_movimiento = params.tipo_movimiento;
     if (params?.referencia_tipo) where.referencia_tipo = params.referencia_tipo;
+    if (params?.almacen_id) where.almacen_id = BigInt(params.almacen_id);
 
     if (params?.producto_id === 'any') where.producto_id = { not: null };
     else if (params?.producto_id) where.producto_id = BigInt(params.producto_id);
@@ -134,7 +185,6 @@ export const MovimientosInventarioService = {
     else if (params?.insumo_id) where.insumo_id = BigInt(params.insumo_id);
 
     if (params?.usuario_id) where.usuario_id = BigInt(params.usuario_id);
-    if (params?.almacen_id) where.almacen_id = BigInt(params.almacen_id);
 
     const q = params?.busqueda?.trim();
     if (q) {
@@ -146,18 +196,8 @@ export const MovimientosInventarioService = {
       ];
     }
 
-    const sinFiltros =
-      !params?.busqueda &&
-      !params?.tipo_movimiento &&
-      !params?.referencia_tipo &&
-      !params?.producto_id &&
-      !params?.insumo_id &&
-      !params?.material_id &&
-      !params?.desde &&
-      !params?.hasta;
-
-    const take =
-      params?.limite ?? (sinFiltros ? LIMITE_DEFECTO : LIMITE_CON_FILTROS);
+    const sinFiltros = !params?.busqueda && !params?.tipo_movimiento && !params?.referencia_tipo && !params?.almacen_id && !params?.producto_id && !params?.insumo_id && !params?.material_id && !params?.desde && !params?.hasta;
+    const take = params?.limite ?? (sinFiltros ? LIMITE_DEFECTO : LIMITE_CON_FILTROS);
 
     const movimientos = await prisma.movimientos_inventario.findMany({
       where,
@@ -175,7 +215,6 @@ export const MovimientosInventarioService = {
     return serializeBigInt(movimientos);
   },
 
-  /** Atajo desde filtros del UI / Server Action */
   async listarDesdeFiltros(filtros: FiltrosMovimientosInput = {}) {
     const params = mapFiltrosMovimientosToListar(filtros);
     if (filtrosMovimientosVacios(filtros) && !params.limite) {
@@ -184,16 +223,20 @@ export const MovimientosInventarioService = {
     return this.listar(params);
   },
 
-  /**
-   * Optimización Avanzada: Reduce 12 consultas independientes a 1 sola agregación agrupada
-   */
-  async obtenerResumen(params?: {
-    tipo_movimiento?: TipoMovimiento;
-    desde?: Date;
-    hasta?: Date;
-  }) {
-    const whereBase: Record<string, unknown> = {};
+  async obtenerStockPorAlmacen(almacenId: string | number, item: { producto_id?: string; insumo_id?: string; material_id?: string }) {
+    const stock = await prisma.almacen_stock.findFirst({
+      where: {
+        almacen_id: BigInt(almacenId),
+        producto_id: item.producto_id ? BigInt(item.producto_id) : null,
+        insumo_id: item.insumo_id ? BigInt(item.insumo_id) : null,
+        material_id: item.material_id ? BigInt(item.material_id) : null,
+      }
+    });
+    return stock ? serializeBigInt(stock) : { cantidad: 0 };
+  },
 
+  async obtenerResumen(params?: { tipo_movimiento?: TipoMovimiento; desde?: Date; hasta?: Date }) {
+    const whereBase: Record<string, unknown> = {};
     if (params?.tipo_movimiento) whereBase.tipo_movimiento = params.tipo_movimiento;
     if (params?.desde || params?.hasta) {
       whereBase.created_at = {
@@ -202,7 +245,6 @@ export const MovimientosInventarioService = {
       };
     }
 
-    // 1. Ejecutamos el conteo global y la agregación por lotes en paralelo (solo 2 promesas)
     const [totalMovimientos, agrupacionPorTipo] = await Promise.all([
       prisma.movimientos_inventario.count({ where: whereBase }),
       prisma.movimientos_inventario.groupBy({
@@ -212,13 +254,11 @@ export const MovimientosInventarioService = {
       })
     ]);
 
-    // 2. Inicializamos el mapa con todos los tipos en cero para garantizar consistencia estructural
     const porTipo = TODOS_LOS_TIPOS.reduce((acc, tipo) => {
       acc[tipo] = 0;
       return acc;
     }, {} as Record<TipoMovimiento, number>);
 
-    // 3. Volcamos los resultados agrupados de la base de datos en nuestro mapa base
     agrupacionPorTipo.forEach((grupo) => {
       if (grupo.tipo_movimiento in porTipo) {
         porTipo[grupo.tipo_movimiento] = grupo._count.tipo_movimiento;
@@ -227,11 +267,9 @@ export const MovimientosInventarioService = {
 
     return {
       totalMovimientos,
-      // Fallbacks de compatibilidad hacia atrás
       totalEntradas: porTipo.entrada,
       totalSalidas: porTipo.salida,
       totalAjustes: porTipo.ajuste,
-      // Desglose limpio de los 12 tipos reales de Supabase
       porTipo,
     };
   },

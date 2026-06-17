@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { Prisma } from '@prisma/client';
+import { MovimientosInventarioService } from '@/lib/services/movimientos-inventario.service';
 
 export const MaterialesService = {
 
@@ -12,7 +13,6 @@ export const MaterialesService = {
     proveedor_id?: string;
     sort?: 'asc' | 'desc';
   }) {
-    // FIX: Tipado estricto utilizando el contrato WhereInput nativo de Prisma
     const where: Prisma.materialesWhereInput = {};
 
     if (params?.tipo) {
@@ -36,7 +36,6 @@ export const MaterialesService = {
         : { nombre: 'asc' },
     });
 
-    // Prisma no permite comparar dos columnas → filtramos en JS
     const resultado = params?.bajo_stock
       ? materiales.filter(m => Number(m.stock_actual) <= Number(m.stock_minimo))
       : materiales;
@@ -157,40 +156,64 @@ export const MaterialesService = {
     return serializeBigInt(material);
   },
 
-  // ── Ajustar Stock ───────────────────────────────────────────
+  // ── Ajustar Stock Auditado Manualmente ──────────────────────
   async ajustarStock(id: string, input: {
     operacion: 'sumar' | 'restar' | 'absoluto';
     cantidad: number;
     precio_unitario?: number;
     motivo?: string;
+    usuario_id: string | number;
   }) {
-    const material = await prisma.materiales.findUniqueOrThrow({
-      where: { id: BigInt(id) },
+    return prisma.$transaction(async (tx) => {
+      const material = await tx.materiales.findUniqueOrThrow({
+        where: { id: BigInt(id) },
+      });
+
+      const stockAnterior = Number(material.stock_actual);
+      let nuevoStock: number;
+
+      if (input.operacion === 'sumar') nuevoStock = stockAnterior + input.cantidad;
+      else if (input.operacion === 'restar') nuevoStock = stockAnterior - input.cantidad;
+      else nuevoStock = input.cantidad;
+
+      if (nuevoStock < 0) {
+        throw new Error(`Stock insuficiente. Actual: ${stockAnterior}`);
+      }
+
+      const deltaCantidad = Math.abs(nuevoStock - stockAnterior);
+
+      // Si se intenta un ajuste donde la variación física es 0, evitamos escrituras vacías
+      if (deltaCantidad === 0) {
+        return serializeBigInt(material);
+      }
+
+      // 1. Determinar dinámicamente si es un ajuste positivo ('ajuste') o negativo ('salida')
+      const tipoMovimiento = nuevoStock > stockAnterior ? 'ajuste' : 'salida';
+
+      // 2. Modificación física del metraje del rollo/tela
+      const actualizado = await tx.materiales.update({
+        where: { id: BigInt(id) },
+        data: {
+          stock_actual: nuevoStock,
+          updated_at: new Date(),
+          ...(input.precio_unitario !== undefined && {
+            precio_unitario: input.precio_unitario,
+          }),
+        },
+      });
+
+      // 3. Registro de auditoría integrado usando el motor unificado de movimientos
+      await MovimientosInventarioService.registrar({
+        material_id: id,
+        cantidad: deltaCantidad,
+        tipo_movimiento: tipoMovimiento,
+        referencia_tipo: 'AJUSTE_MANUAL',
+        motivo: input.motivo ?? `Ajuste manual de stock textil en almacén (${input.operacion})`,
+        usuario_id: input.usuario_id,
+      });
+
+      return serializeBigInt(actualizado);
     });
-
-    const stockAnterior = Number(material.stock_actual);
-    let nuevoStock: number;
-
-    if (input.operacion === 'sumar') nuevoStock = stockAnterior + input.cantidad;
-    else if (input.operacion === 'restar') nuevoStock = stockAnterior - input.cantidad;
-    else nuevoStock = input.cantidad;
-
-    if (nuevoStock < 0) {
-      throw new Error(`Stock insuficiente. Actual: ${stockAnterior}`);
-    }
-
-    const actualizado = await prisma.materiales.update({
-      where: { id: BigInt(id) },
-      data: {
-        stock_actual: nuevoStock,
-        updated_at: new Date(),
-        ...(input.precio_unitario !== undefined && {
-          precio_unitario: input.precio_unitario,
-        }),
-      },
-    });
-
-    return serializeBigInt(actualizado);
   },
 
   // ── Eliminar ────────────────────────────────────────────────
