@@ -96,7 +96,18 @@ export interface LoteExterno {
   servicio: string;
   estado: string;
   entrega: string;
+  entrega_iso: string | null;
   avance: number;
+  etapa_actual: string;
+  inicio_iso: string | null;
+  fin_iso: string | null;
+  timeline: {
+    etapa: string;
+    inicio: string;
+    fin: string;
+    activo: boolean;
+    duracion_minutos: number | null;
+  }[];
 }
 
 export interface RepresentanteMetrics {
@@ -433,9 +444,14 @@ export const DashboardService = {
           productos: { select: { nombre: true } },
           talleres: { select: { nombre: true } },
           seguimiento_produccion: {
-            orderBy: { created_at: 'desc' },
-            take: 1,
-            select: { etapa: true },
+            orderBy: { iniciado_en: 'asc' },
+            select: {
+              etapa: true,
+              iniciado_en: true,
+              completado_en: true,
+              activo: true,
+              duracion_minutos: true,
+            },
           },
         },
       }),
@@ -469,22 +485,46 @@ export const DashboardService = {
       (leadTimeResult as { avg_dias: number | null }[])[0]?.avg_dias ?? 4.2
     );
 
+    const now = new Date();
+
     return {
       lotes_externos: lotes.map((o) => {
-        const etapa = o.seguimiento_produccion[0]?.etapa ?? 'corte';
-        const idx = ETAPAS.indexOf(etapa as typeof ETAPAS[number]);
+        const timeline = o.seguimiento_produccion
+          .map((seg) => {
+            const inicio = new Date(seg.iniciado_en);
+            const fin = seg.completado_en ? new Date(seg.completado_en) : (seg.activo ? now : new Date(seg.iniciado_en));
+
+            return {
+              etapa: seg.etapa,
+              inicio: inicio.toISOString(),
+              fin: fin.toISOString(),
+              activo: seg.activo,
+              duracion_minutos: seg.duracion_minutos ?? null,
+            };
+          })
+          .filter((seg) => Boolean(seg.inicio));
+
+        const ultimaEtapa = timeline[timeline.length - 1]?.etapa ?? 'corte';
+        const idx = ETAPAS.indexOf(ultimaEtapa as typeof ETAPAS[number]);
         const avance = Math.round(((idx + 1) / ETAPAS.length) * 100);
         const retraso = o.fecha_entrega && new Date(o.fecha_entrega) < new Date();
+        const inicioIso = timeline[0]?.inicio ?? null;
+        const finIso = timeline[timeline.length - 1]?.fin ?? null;
 
         return {
           id: o.id.toString(),
           taller: o.talleres?.nombre ?? '—',
-          servicio: etapa.replace(/_/g, ' '),
+          servicio: ultimaEtapa.replace(/_/g, ' '),
           estado: retraso ? 'Retrasado' : o.estado === 'en_produccion' ? 'En Proceso' : 'Confirmado',
           entrega: o.fecha_entrega
             ? new Date(o.fecha_entrega).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })
             : 'Sin fecha',
+          entrega_iso: o.fecha_entrega ? new Date(o.fecha_entrega).toISOString() : null,
           avance,
+          etapa_actual: ultimaEtapa,
+          inicio_iso: inicioIso,
+          fin_iso: finIso,
+          timeline,
         };
       }),
       retrasados,
