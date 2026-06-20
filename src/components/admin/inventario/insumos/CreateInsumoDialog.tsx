@@ -32,13 +32,13 @@ export default function CreateInsumoDialog({ isOpen, onClose, onSuccess }: Props
 
   useEffect(() => {
     if (isOpen) {
-      fetch("/api/admin/categorias")
+      fetch("/api/admin/categorias-insumo")
         .then((res) => {
           if (!res.ok) throw new Error();
           return res.json();
         })
-        .then((data) => {
-          setCategorias(Array.isArray(data) ? data : []);
+        .then((json) => {
+          setCategorias(Array.isArray(json.data) ? json.data : []);
         })
         .catch(() => {
           toast.error("Error al cargar las categorías de insumos");

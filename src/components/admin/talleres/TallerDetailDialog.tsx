@@ -10,22 +10,22 @@ import {
 } from "lucide-react";
 import type { Taller } from "./TalleresTable";
 
-interface TallerDetailProps extends Taller {
+type TallerDetailProps = Omit<Taller, "contacto" | "email"> & {
   contacto?: string | null;
-  email?:    string | null;
+  email?: string | null;
   created_at?: string | null;
-}
+};
 
 interface TallerDetailDialogProps {
-  isOpen:  boolean;
-  taller:  TallerDetailProps | null;
+  isOpen: boolean;
+  taller: TallerDetailProps | null;
   onClose: () => void;
 }
 
 const STATUS_CONFIG: Record<string, { class: string; label: string }> = {
-  activo:     { class: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "Activo"     },
-  inactivo:   { class: "bg-gray-100 text-gray-500 border-gray-200",          label: "Inactivo"   },
-  suspendido: { class: "bg-amber-100 text-amber-700 border-amber-200",         label: "Suspendido" },
+  activo: { class: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "Activo" },
+  inactivo: { class: "bg-gray-100 text-gray-500 border-gray-200", label: "Inactivo" },
+  suspendido: { class: "bg-amber-100 text-amber-700 border-amber-200", label: "Suspendido" },
 };
 
 export default function TallerDetailDialog({ isOpen, taller, onClose }: TallerDetailDialogProps) {
@@ -35,18 +35,18 @@ export default function TallerDetailDialog({ isOpen, taller, onClose }: TallerDe
   const status = STATUS_CONFIG[estadoKey] ?? STATUS_CONFIG.inactivo;
 
   const fields = [
-    { icon: Hash,   label: "RUC",          value: taller.ruc,          mono: true,  preventCapitalize: true  },
-    { icon: User,   label: "Contacto",     value: taller.contacto,     mono: false, preventCapitalize: false },
-    { icon: Phone,  label: "Teléfono",     value: taller.telefono,     mono: true,  preventCapitalize: true  },
-    { icon: Mail,   label: "Email",        value: taller.email,        mono: false, preventCapitalize: true  },
-    { icon: MapPin, label: "Dirección",    value: taller.direccion,    mono: false, preventCapitalize: false },
+    { icon: Hash, label: "RUC", value: taller.ruc, mono: true, preventCapitalize: true },
+    { icon: User, label: "Contacto", value: taller.contacto, mono: false, preventCapitalize: false },
+    { icon: Phone, label: "Teléfono", value: taller.telefono, mono: true, preventCapitalize: true },
+    { icon: Mail, label: "Email", value: taller.email, mono: false, preventCapitalize: true },
+    { icon: MapPin, label: "Dirección", value: taller.direccion, mono: false, preventCapitalize: false },
     { icon: Wrench, label: "Especialidad", value: taller.especialidad, mono: false, preventCapitalize: false },
   ];
 
   const createdAt = taller.created_at
     ? new Date(taller.created_at).toLocaleDateString("es-PE", {
-        day: "2-digit", month: "long", year: "numeric",
-      })
+      day: "2-digit", month: "long", year: "numeric",
+    })
     : null;
 
   return (
@@ -95,9 +95,8 @@ export default function TallerDetailDialog({ isOpen, taller, onClose }: TallerDe
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   {label}
                 </span>
-                <span className={`text-sm font-semibold text-slate-700 break-words text-balance mt-0.5 ${
-                  mono ? "font-mono tracking-tight" : ""
-                } ${preventCapitalize ? "normal-case" : "capitalize"}`}>
+                <span className={`text-sm font-semibold text-slate-700 break-words text-balance mt-0.5 ${mono ? "font-mono tracking-tight" : ""
+                  } ${preventCapitalize ? "normal-case" : "capitalize"}`}>
                   {value || <span className="text-slate-300 font-normal italic">No registrado</span>}
                 </span>
               </div>

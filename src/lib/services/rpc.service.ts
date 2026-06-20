@@ -299,7 +299,7 @@ export async function notificarPagoPendiente(data: {
         mensaje:       `Confección #${data.confeccionId} completada. Pago pendiente: S/ ${data.monto}`,
         referenciaType: 'PAGO',
         referenciaId:   data.confeccionId,
-        urlDestino:    '/admin/Panel-Administrativo/talleres/pagos',
+        urlDestino:    '/admin/Panel-Administrativo/pagos-taller',
       }),
     ),
   );

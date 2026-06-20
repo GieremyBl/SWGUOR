@@ -5,7 +5,7 @@ import { Plus, Search, Pencil, Ban, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePromociones, useOfertas } from '@/lib/hooks/usePromocionesOfertas';
-import type { CampanaForm, CampanaRow } from '@/lib/schemas/promociones-ofertas';
+import type { CampanaConEscalasForm, CampanaRow } from '@/lib/schemas/promociones-ofertas';
 import { CampanaFormModal } from './CampanaFormModal';
 import { ActivoBadge } from './ActivoBadge';
 import { formatFecha } from './utils';
@@ -56,7 +56,7 @@ export function CampanasPanel({ tipo, canCreate, canEdit, canArchive }: Props) {
 
   const label = tipo === 'promocion' ? 'promoción' : 'oferta';
 
-  const handleSave = (data: CampanaForm) => {
+  const handleSave = (data: CampanaConEscalasForm) => {
     save(data);
     setShowForm(false);
     setEditing(null);
@@ -122,7 +122,7 @@ export function CampanasPanel({ tipo, canCreate, canEdit, canArchive }: Props) {
           <thead className="bg-slate-50 text-slate-600">
             <tr>
               <th className="text-left p-3 font-semibold">Nombre</th>
-              <th className="text-left p-3 font-semibold">Reglas</th>
+              <th className="text-left p-3 font-semibold">Escalas</th>
               <th className="text-left p-3 font-semibold">Vigencia</th>
               <th className="text-left p-3 font-semibold">Estado</th>
               <th className="text-right p-3 font-semibold">Acciones</th>
@@ -151,7 +151,7 @@ export function CampanasPanel({ tipo, canCreate, canEdit, canArchive }: Props) {
                     <p className="text-xs text-slate-500 line-clamp-1">{row.descripcion}</p>
                   )}
                 </td>
-                <td className="p-3">{countReglas(row)} regla(s)</td>
+                <td className="p-3">{countReglas(row)} escala(s)</td>
                 <td className="p-3 text-slate-600 text-xs">
                   {formatFecha(row.fecha_inicio)}
                   {row.fecha_fin ? ` — ${formatFecha(row.fecha_fin)}` : ' — Sin fin'}
@@ -213,18 +213,19 @@ export function CampanasPanel({ tipo, canCreate, canEdit, canArchive }: Props) {
         </div>
       )}
 
-      {showForm && (
-        <CampanaFormModal
-          tipo={tipo}
-          campana={editing}
-          isSaving={isSaving}
-          onClose={() => {
+      <CampanaFormModal
+        open={showForm}
+        onOpenChange={(open) => {
+          if (!open) {
             setShowForm(false);
             setEditing(null);
-          }}
-          onSave={handleSave}
-        />
-      )}
+          }
+        }}
+        tipo={tipo}
+        campana={editing}
+        isSaving={isSaving}
+        onSave={handleSave}
+      />
     </div>
   );
 }

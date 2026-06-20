@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { Prisma, EstadoCotizacion, EstadoProducto, EstadoCliente } from '@prisma/client';
-import { calcularTotalesCotizacion } from '@/lib/logic/cotizaciones-logic';
-import { recalcularDescuentoCotizacion } from '@/lib/helpers/rpc-helpers';
+import { calcularDescuentosEscalaAutomaticos, recalcularDescuentoCotizacionEnDb } from '@/lib/services/descuento-escala-automatico.service';
 import { notificarClienteSobrePedido } from '@/lib/helpers/pedido-seguimiento.helper';
 import { crearNotificacionCliente } from '@/lib/helpers/crear-notificacion.helper';
 
@@ -245,16 +244,21 @@ export const CotizacionesService = {
       ...metadatos
     } = input;
 
-    // Calcular totales con la lógica de negocio existente
-    const totales = calcularTotalesCotizacion(
-      items.map((i) => ({ precioBase: i.precio_unitario, cantidad: i.cantidad }))
-    );
-
+    const costoEnvio = Number(costo_envio ?? 0);
     const esExportacion = tipo_operacion === 'Exportación';
     const tasa = esExportacion ? 0 : (tasa_impuesto === 'IGV' ? 0.18 : 0);
-    const igv = totales.subtotalConDescuento * tasa;
-    const costoEnvio = Number(costo_envio ?? 0);
-    const total = totales.subtotalConDescuento + igv + costoEnvio;
+
+    const totales = await calcularDescuentosEscalaAutomaticos(
+      items.map((i) => ({
+        producto_id: i.producto_id,
+        cantidad: i.cantidad,
+        precio_unitario: i.precio_unitario,
+      })),
+      { costoEnvio, tasaIgv: tasa },
+    );
+
+    const igv = totales.igv;
+    const total = totales.total;
 
     const count = await prisma.cotizaciones.count();
     const numero = `COT-${String(count + 1).padStart(6, '0')}`;
@@ -311,12 +315,13 @@ export const CotizacionesService = {
           cliente_id: clienteIdProcesado,
           estado: estadoInicial,
           origen: estadoInicial === 'enviada' ? 'manual_admin' : 'manual',
-          subtotal: new Prisma.Decimal(totales.subtotalConDescuento),
+          subtotal: new Prisma.Decimal(totales.subtotalBruto),
           igv: new Prisma.Decimal(igv),
           total: new Prisma.Decimal(total),
           valida_hasta: new Date(valida_hasta),
           expira_at: new Date(valida_hasta),
           notas_internas: notasFinales,
+          monto_descuento: new Prisma.Decimal(totales.montoDescuento),
           costo_envio: new Prisma.Decimal(costoEnvio),
           costo_total_estimado: new Prisma.Decimal(total),
           moneda: moneda ?? 'PEN',
@@ -338,9 +343,8 @@ export const CotizacionesService = {
       });
     });
 
-    // Llamamos al RPC para recalcular descuentos según las reglas de la base de datos
-    await recalcularDescuentoCotizacion(Number(cotizacion.id)).catch((err: unknown) => {
-      console.error('Error al recalcular descuento vía RPC:', err);
+    await recalcularDescuentoCotizacionEnDb(cotizacion.id).catch((err: unknown) => {
+      console.error('Error al recalcular descuento de cotización:', err);
     });
 
     const today = new Date();
@@ -456,11 +460,21 @@ export const CotizacionesService = {
         (sum, item) => sum + Number(item.subtotal),
         0,
       );
-      const montoDescuento = Number(cotizacion.monto_descuento ?? 0);
-      const subtotalNeto = Math.max(0, subtotalBruto - montoDescuento);
-      const igv = subtotalNeto * 0.18;
-      const costoEnvio = Number(cotizacion.costo_envio ?? 0);
-      const total = subtotalNeto + igv + costoEnvio;
+
+      const totalesDescuento = await calcularDescuentosEscalaAutomaticos(
+        itemsActualizados.map((item) => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          precio_unitario: Number(item.precio_unitario_snapshot),
+        })),
+        { costoEnvio: Number(cotizacion.costo_envio ?? 0) },
+      );
+
+      const montoDescuento = totalesDescuento.montoDescuento;
+      const subtotalNeto = totalesDescuento.subtotalConDescuento;
+      const igv = totalesDescuento.igv;
+      const costoEnvio = totalesDescuento.costoEnvio;
+      const total = totalesDescuento.total;
 
       const totalUnidades = itemsActualizados.reduce(
         (sum, item) => sum + item.cantidad,
@@ -515,6 +529,7 @@ export const CotizacionesService = {
         where: { id: BigInt(id) },
         data: {
           subtotal: new Prisma.Decimal(subtotalBruto),
+          monto_descuento: new Prisma.Decimal(montoDescuento),
           igv: new Prisma.Decimal(igv),
           total: new Prisma.Decimal(total),
           costo_total_estimado: new Prisma.Decimal(total),

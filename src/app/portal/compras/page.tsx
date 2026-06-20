@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -18,9 +18,9 @@ import { formatCurrency } from '@/lib/helpers/format-helpers';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
-  DireccionDespachoPeruFields,
-  esDireccionDespachoPeruValida,
-} from '@/components/shared/DireccionDespachoPeruFields';
+  CheckoutDireccionSelector,
+  type CheckoutDireccionState,
+} from '@/components/portal/compras/CheckoutDireccionSelector';
 
 export default function ConfirmarCompraPage() {
   const items = useCartStore((s) => s.items);
@@ -33,10 +33,19 @@ export default function ConfirmarCompraPage() {
   const { cliente, zonaEnvio, costosEnvio } = usePortal();
   const zonaEnvioSeleccionada = costosEnvio.find((z) => z.zona === zonaEnvio);
   const [isPending, startTransition] = useTransition();
-  const [direccion, setDireccion] = useState(cliente?.direccion_fiscal ?? '');
+  const [direccionState, setDireccionState] = useState<CheckoutDireccionState>({
+    id: null,
+    direccionDespacho: null,
+    listo: false,
+    vacio: false,
+  });
+
+  const handleDireccionChange = useCallback((state: CheckoutDireccionState) => {
+    setDireccionState(state);
+  }, []);
 
   const subtotal = getTotal();
-  const puedeConfirmar = canCheckout && cliente;
+  const puedeConfirmar = canCheckout && cliente && direccionState.listo;
 
   const handleConfirmar = () => {
     if (!puedeConfirmar) return;
@@ -49,8 +58,8 @@ export default function ConfirmarCompraPage() {
       return;
     }
 
-    if (!esDireccionDespachoPeruValida(direccion)) {
-      toast.error('Complete departamento, provincia, distrito y ubicación exacta de entrega.');
+    if (!direccionState.listo || !direccionState.direccionDespacho) {
+      toast.error('Seleccione una dirección de despacho registrada para continuar.');
       return;
     }
 
@@ -68,7 +77,7 @@ export default function ConfirmarCompraPage() {
               color_snapshot: i.color || 'Único',
               talla_snapshot: i.talla || 'U',
             })),
-            direccion_despacho: direccion || cliente?.direccion_fiscal,
+            direccion_despacho: direccionState.direccionDespacho,
             zona_envio: zonaEnvio,
             zona_envio_id: zonaEnvioSeleccionada?.id ?? null,
             costo_envio: zonaEnvioSeleccionada?.costo ?? 0,
@@ -263,13 +272,20 @@ export default function ConfirmarCompraPage() {
             >
               Dirección de despacho
             </label>
-            <DireccionDespachoPeruFields
-              value={direccion}
-              onChange={setDireccion}
-              variant="portal"
-              showPreview={false}
+            <CheckoutDireccionSelector
+              selectedId={direccionState.id}
+              onDireccionChange={handleDireccionChange}
             />
           </div>
+
+          {direccionState.vacio && (
+            <p
+              className="text-[10px] leading-relaxed font-bold"
+              style={{ color: '#92400e' }}
+            >
+              Debe registrar al menos una sede de despacho antes de confirmar el pedido.
+            </p>
+          )}
 
           <button
             type="button"

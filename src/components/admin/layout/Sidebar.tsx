@@ -13,6 +13,7 @@ import {
   ChevronRight, Layers,
   ShoppingBag,
   Tag,
+  Percent,
 } from 'lucide-react';
 import type { usuarios } from '@prisma/client';
 import { usePermissions } from '@/lib/hooks/usePermissions';
@@ -75,6 +76,34 @@ const GESTION_OPERATIVA: NavGroup = {
       resource: 'dashboard' as RecursoKey,
     },
 
+    {
+      title: 'Analítica Financiera',
+      href: '/admin/Panel-Administrativo/reportes/analitica-financiera',
+      icon: DollarSign,
+      resource: 'reportes' as RecursoKey,
+    },
+
+    {
+      title: 'Inventarios y Abastecimiento',
+      href: '/admin/Panel-Administrativo/reportes/inventario-abastecimiento',
+      icon: Boxes,
+      resource: 'inventario' as RecursoKey,
+    },
+
+    {
+      title: 'Eficiencia Manufactura',
+      href: '/admin/Panel-Administrativo/reportes/eficiencia-manufactura',
+      icon: Scissors,
+      resource: 'produccion' as RecursoKey,
+    },
+
+    {
+      title: 'Conversión Comercial',
+      href: '/admin/Panel-Administrativo/reportes/conversion-comercial',
+      icon: ShoppingCart,
+      resource: 'cotizaciones' as RecursoKey,
+    },
+
   ],
 },
     {
@@ -86,6 +115,7 @@ const GESTION_OPERATIVA: NavGroup = {
         { title: 'Categorías', href: '/admin/Panel-Administrativo/categorias', icon: Grid3x3, resource: 'categorias' as RecursoKey },
         { title: 'Fichas Técnicas', href: '/admin/Panel-Administrativo/fichas-tecnicas', icon: FileText, resource: 'fichas_tecnicas' as RecursoKey },
         { title: 'Promociones y Ofertas', href: '/admin/Panel-Administrativo/promociones', icon: Tag, resource: 'promociones' as RecursoKey },
+        { title: 'Matriz de Precios', href: '/admin/Panel-Administrativo/matriz-descuentos', icon: Percent, resource: 'promociones' as RecursoKey },
       ],
     },
     {
@@ -95,8 +125,10 @@ const GESTION_OPERATIVA: NavGroup = {
       subItems: [
         { title: 'Pedidos', href: '/admin/Panel-Administrativo/pedidos', icon: ShoppingCart, resource: 'pedidos' as RecursoKey },
         { title: 'Cotizaciones', href: '/admin/Panel-Administrativo/cotizaciones', icon: FileText, resource: 'cotizaciones' as RecursoKey },
-        { title: 'Devoluciones', href: '/admin/Panel-Administrativo/devoluciones-cliente', icon: Truck, resource: 'devoluciones_clientes' as RecursoKey },
-        { title: 'Pagos', href: '/admin/Panel-Administrativo/pagos', icon: DollarSign, resource: 'pagos' as RecursoKey },
+        { title: 'Costos de Envío', href: '/admin/Panel-Administrativo/costo-envio', icon: Truck, resource: 'cotizaciones' as RecursoKey },
+        { title: 'Devoluciones', href: '/admin/Panel-Administrativo/devoluciones-cliente', icon: Truck, resource: 'devoluciones_cliente' as RecursoKey },
+        { title: 'Últimos Pagos', href: '/admin/Panel-Administrativo/pagos', icon: DollarSign, resource: 'pagos' as RecursoKey },
+        { title: 'Libro Diario', href: '/admin/Panel-Administrativo/asientos-contables', icon: FileText, resource: 'asientos_contables' as RecursoKey },
       ],
     },
     {
@@ -107,8 +139,9 @@ const GESTION_OPERATIVA: NavGroup = {
         { title: 'Órdenes de Producción', href: '/admin/Panel-Administrativo/ordenes-produccion', icon: Package, resource: 'produccion' as RecursoKey },
         { title: 'Confecciones', href: '/admin/Panel-Administrativo/confecciones', icon: Scissors, resource: 'confecciones' as RecursoKey },
         { title: 'Talleres', href: '/admin/Panel-Administrativo/talleres', icon: Building, resource: 'talleres' as RecursoKey },
-        { title: 'Incidencias de Taller', href: '/admin/Panel-Administrativo/incidencias-taller', icon: Bell, resource: 'incidencias' as RecursoKey },
-        { title: 'Incidencias de Cliente', href: '/admin/Panel-Administrativo/incidencias-cliente', icon: Bell, resource: 'incidencias' as RecursoKey },
+        { title: 'Pagos a Talleres', href: '/admin/Panel-Administrativo/pagos-taller', icon: DollarSign, resource: 'talleres' as RecursoKey },
+        { title: 'Incidencias de Taller', href: '/admin/Panel-Administrativo/incidencias-taller', icon: Bell, resource: 'incidencias_taller' as RecursoKey },
+        { title: 'Incidencias de Cliente', href: '/admin/Panel-Administrativo/incidencias-cliente', icon: Bell, resource: 'incidencias_clientes' as RecursoKey },
       ],
     },
   ]
@@ -172,6 +205,7 @@ const GESTION_LOGISTICA: NavGroup = {
       roles: ['gerente', 'administrador', 'ayudante', 'recepcionista'],
       subItems: [
         { title: 'Despachos', href: '/admin/Panel-Administrativo/despachos', icon: Truck, resource: 'despachos' as RecursoKey },
+        { title: 'Guías de Remisión', href: '/admin/Panel-Administrativo/guias-remision', icon: FileText, resource: 'despachos' as RecursoKey },
       ],
     },
   ]

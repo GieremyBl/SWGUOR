@@ -13,7 +13,7 @@ export async function fetchInsumos(params?: {
 }): Promise<{ insumos: any[]; proveedores: any[] }> {
   const query = new URLSearchParams();
   if (params?.tipo)                                     query.set("tipo",       params.tipo);
-  if (params?.categoria)                                query.set("categoria_insumo", params.categoria);
+  if (params?.categoria)                                query.set("categoria_id", params.categoria);
   if (params?.busqueda)                                 query.set("busqueda",   params.busqueda);
   if (params?.stockBajo)                                query.set("stock_bajo", "true");
   if (params?.sortOrder && params.sortOrder !== "none") query.set("sort",       params.sortOrder);
@@ -48,7 +48,7 @@ export async function updateInsumo(
   data: {
     nombre?:           string;
     tipo?:             string;
-    categoria_insumo?: string;
+    categoria_id?: number;
     unidad_medida?:    string;
     stock_minimo?:     number;
     stock_maximo?:     number | null;

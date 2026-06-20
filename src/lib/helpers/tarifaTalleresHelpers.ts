@@ -1,52 +1,36 @@
-import { TarifaTaller } from '@/lib/schemas/tarifa-talleres';
+import type { TarifaTallerRow } from '@/lib/schemas/tarifa-talleres';
+import {
+  estaVigente,
+  estaActivaYVigente,
+} from '@/lib/helpers/tarifas-taller-helpers';
 
 export const tarifaTalleresHelpers = {
-  estaVigente: (tarifa: TarifaTaller): boolean => {
-    const ahora = new Date();
-    const desdeOk = ahora >= tarifa.vigenciaDesde;
-    const hastaOk = !tarifa.vigenciaHasta || ahora <= tarifa.vigenciaHasta;
-    return desdeOk && hastaOk;
-  },
+  estaVigente,
+  estaActivaYVigente,
 
-  estaActivaYVigente: (tarifa: TarifaTaller): boolean =>
-    tarifa.activo && tarifaTalleresHelpers.estaVigente(tarifa),
+  calcularCostoTotal: (tarifa: TarifaTallerRow, cantidad: number): number =>
+    Number(tarifa.precio_unitario) * cantidad,
 
-  calcularCostoTotal: (tarifa: TarifaTaller, cantidad: number): number =>
-    tarifa.precioUnitario * cantidad,
-
-  agruparPorTipo: (tarifas: TarifaTaller[]) =>
+  agruparPorEspecialidad: (tarifas: TarifaTallerRow[]) =>
     tarifas.reduce((acc, curr) => {
-      if (!acc[curr.tipoServicio]) acc[curr.tipoServicio] = [];
-      acc[curr.tipoServicio].push(curr);
+      const key = curr.especialidad;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(curr);
       return acc;
-    }, {} as Record<string, TarifaTaller[]>),
+    }, {} as Record<string, TarifaTallerRow[]>),
 
-  agruparPorTaller: (tarifas: TarifaTaller[]) =>
+  agruparPorTaller: (tarifas: TarifaTallerRow[]) =>
     tarifas.reduce((acc, curr) => {
-      if (!acc[curr.tallerId]) acc[curr.tallerId] = [];
-      acc[curr.tallerId].push(curr);
+      const key = String(curr.taller_id);
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(curr);
       return acc;
-    }, {} as Record<string, TarifaTaller[]>),
+    }, {} as Record<string, TarifaTallerRow[]>),
 
-  obtenerMasBarata: (tarifas: TarifaTaller[]): TarifaTaller | undefined =>
-    tarifas.reduce((prev, curr) => curr.precioUnitario < prev.precioUnitario ? curr : prev),
+  obtenerMasBarata: (tarifas: TarifaTallerRow[]): TarifaTallerRow | undefined =>
+    tarifas.reduce((prev, curr) =>
+      (Number(curr.precio_unitario) < Number(prev.precio_unitario) ? curr : prev)),
 
-  obtenerMasCara: (tarifas: TarifaTaller[]): TarifaTaller | undefined =>
-    tarifas.reduce((prev, curr) => curr.precioUnitario > prev.precioUnitario ? curr : prev),
-
-  obtenerTarifasPorTipo: (tarifas: TarifaTaller[], tipo: string) =>
-    tarifas.filter(t => t.tipoServicio === tipo && tarifaTalleresHelpers.estaActivaYVigente(t)),
-
-  calcularDuracionEstimada: (tarifa: TarifaTaller, cantidad: number): string | null => {
-    if (!tarifa.tiempoEstimado) return null;
-    const totalMinutos = tarifa.tiempoEstimado * cantidad;
-    const unidad = tarifa.unidadTiempo || 'MINUTOS';
-
-    if (unidad === 'MINUTOS') {
-      const horas = Math.floor(totalMinutos / 60);
-      const minutos = totalMinutos % 60;
-      return `${horas}h ${minutos}m`;
-    }
-    return `${totalMinutos} ${unidad}`;
-  },
+  obtenerTarifasPorEspecialidad: (tarifas: TarifaTallerRow[], especialidad: string) =>
+    tarifas.filter((t) => t.especialidad === especialidad && estaActivaYVigente(t)),
 };

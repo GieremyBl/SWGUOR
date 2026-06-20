@@ -24,6 +24,22 @@ export const APLICABLE_DESCUENTO = {
 } as const;
 
 export const ESTADO_DESCUENTO_APLICACION = {
-  ACTIVO: 'activo',
-  ANULADO: 'anulado',
+  APLICADO: 'aplicado',
+  REVERTIDO: 'revertido',
 } as const;
+
+export const ALCANCE_CAMPANA_OPCIONES = [
+  { value: 'catalogo', label: 'Todo el catálogo' },
+  { value: 'categoria', label: 'Por categoría' },
+  { value: 'producto', label: 'Por producto específico' },
+] as const;
+
+export const ENTIDAD_DESCUENTO = {
+  CATALOGO: 'catalogo',
+  GLOBAL: 'global',
+  CATEGORIA: 'categoria',
+  PRODUCTO: 'producto',
+} as const;
+
+export type AlcanceCampanaValue =
+  (typeof ALCANCE_CAMPANA_OPCIONES)[number]['value'];

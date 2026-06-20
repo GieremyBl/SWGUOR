@@ -10,6 +10,8 @@ import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { ESTADOS_FICHA } from "@/lib/constants/fichas-tecnicas";
+import type { EstadoFicha } from "@prisma/client";
 
 // ─── Tipos ────────────────────────────────────────────────────
 export interface FichaTecnicaRow {
@@ -21,7 +23,7 @@ export interface FichaTecnicaRow {
   costo_estimado:        number | null;
   ficha_url:             string | null;
   created_at:            string;
-  productos:             { id: string; nombre: string; sku: string; imagen_url: string | null } | null;
+  productos:             { id: string; nombre: string; sku: string; imagen: string | null } | null;
   ficha_medidas:         { id: string }[];
 }
 
@@ -32,15 +34,8 @@ interface Props {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
-const ESTADOS: Record<string, { label: string; color: string }> = {
-  borrador:  { label: "Borrador",  color: "bg-gray-50    text-gray-600    border-gray-200"    },
-  activo:    { label: "Activo",    color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  revisión:  { label: "Revisión",  color: "bg-amber-50   text-amber-700   border-amber-200"   },
-  obsoleto:  { label: "Obsoleto",  color: "bg-red-50     text-red-700     border-red-200"     },
-};
-
 function EstadoBadge({ estado }: { estado: string }) {
-  const s = ESTADOS[estado] ?? ESTADOS.borrador;
+  const s = ESTADOS_FICHA[estado as EstadoFicha] ?? ESTADOS_FICHA.borrador;
   return (
     <Badge variant="outline" className={`rounded-full px-3 py-0.5 text-[10px] font-bold uppercase border ${s.color}`}>
       {s.label}
@@ -118,8 +113,8 @@ function FichasTecnicasTable({ data, loading, onEdit }: Props) {
               <TableCell className="py-4 px-6 rounded-l-xl">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-pink-50 border border-pink-100 text-pink-600 flex items-center justify-center font-black text-xs shrink-0 group-hover:scale-105 transition-transform">
-                    {ficha.productos?.imagen_url
-                      ? <img src={ficha.productos.imagen_url} alt="" className="h-10 w-10 object-cover rounded-xl" />
+                    {ficha.productos?.imagen
+                      ? <img src={ficha.productos.imagen} alt="" className="h-10 w-10 object-cover rounded-xl" />
                       : iniciales}
                   </div>
                   <div className="flex flex-col min-w-0">

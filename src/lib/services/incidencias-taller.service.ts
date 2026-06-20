@@ -43,6 +43,7 @@ export const IncidenciasTallerService = {
         take: limit,
         skip,
         include: {
+          pedidos: { select: { id: true } },
           confecciones: {
             select: {
               id: true,
@@ -50,9 +51,7 @@ export const IncidenciasTallerService = {
               talleres: { select: { id: true, nombre: true } },
             },
           },
-          // Quién reportó
           usuario_reportador: { select: { id: true, email: true } },
-          // A quién se asignó
           usuario_asignado: { select: { id: true, email: true } },
         },
         orderBy: { fecha_reporte: 'desc' },
@@ -70,6 +69,7 @@ export const IncidenciasTallerService = {
     const incidencia = await prisma.incidencias_taller.findUnique({
       where: { id: BigInt(id) },
       include: {
+        pedidos: { select: { id: true } },
         confecciones: {
           include: { talleres: { select: { id: true, nombre: true } } },
         },
@@ -144,9 +144,39 @@ export const IncidenciasTallerService = {
 
   // ── Asignar ─────────────────────────────────────────────────
   async asignar(id: string, asignado_a: string) {
+    const actual = await prisma.incidencias_taller.findUnique({ where: { id: BigInt(id) } });
+    if (!actual) throw new Error('Incidencia no encontrada');
+    if (actual.resuelto) throw new Error('No se puede reasignar una incidencia resuelta');
+
     const incidencia = await prisma.incidencias_taller.update({
       where: { id: BigInt(id) },
       data: { asignado_a: BigInt(asignado_a), updated_at: new Date() },
+    });
+    return serializeBigInt(incidencia);
+  },
+
+  // ── Editar (solo pendientes) ────────────────────────────────
+  async actualizar(id: string, data: {
+    tipo?: TipoIncidencia;
+    severidad?: SeveridadIncidencia;
+    descripcion?: string;
+    impacto_horas?: number | null;
+    foto_url?: string | null;
+  }) {
+    const actual = await prisma.incidencias_taller.findUnique({ where: { id: BigInt(id) } });
+    if (!actual) throw new Error('Incidencia no encontrada');
+    if (actual.resuelto) throw new Error('No se puede editar una incidencia resuelta');
+
+    const incidencia = await prisma.incidencias_taller.update({
+      where: { id: BigInt(id) },
+      data: {
+        ...(data.tipo !== undefined && { tipo: data.tipo }),
+        ...(data.severidad !== undefined && { severidad: data.severidad }),
+        ...(data.descripcion !== undefined && { descripcion: data.descripcion }),
+        ...(data.impacto_horas !== undefined && { impacto_horas: data.impacto_horas }),
+        ...(data.foto_url !== undefined && { foto_url: data.foto_url }),
+        updated_at: new Date(),
+      },
     });
     return serializeBigInt(incidencia);
   },

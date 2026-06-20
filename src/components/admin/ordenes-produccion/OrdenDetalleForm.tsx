@@ -2,12 +2,15 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useCreateOrdenProduccion } from "@/lib/hooks/useOrdenProduccion";
 import { ETAPAS_PRODUCCION, ETAPA_LABELS } from "@/lib/schemas/ordenes-produccion";
+import { useSeguimientoProduccion } from "@/lib/hooks/useSeguimientoProduccion";
+import { etapaActualDesdeSeguimiento } from "@/lib/helpers/seguimiento-produccion-helpers";
 import OrdenStepper from "./OrdenStepper";
+import SeguimientoProduccionTimeline from "./SeguimientoProduccionTimeline";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { OrdenProduccion, SeguimientoProduccion } from "@/components/admin/ordenes-produccion/types";
+import { OrdenProduccion } from "@/components/admin/ordenes-produccion/types";
+import OrdenProduccionItems from "./OrdenProduccionItems";
 import {
   Factory,
   Package,
@@ -16,7 +19,6 @@ import {
   Calendar,
   Layers,
   ArrowLeft,
-  User
 } from "lucide-react";
 
 interface OrdenDetalleFormProps {
@@ -26,8 +28,8 @@ interface OrdenDetalleFormProps {
 }
 
 export default function OrdenDetalleForm({ initialData: orden, onClose: onVolver }: OrdenDetalleFormProps) {
-  // Extraemos 'registrarEtapa' e 'isChangingEtapa' para controlar el estado visual de carga
-  const { registrarEtapa, isChangingEtapa } = useCreateOrdenProduccion();
+  const ordenId = orden?.id?.toString() ?? '';
+  const { seguimientos, registrarEtapa, isRegistrando } = useSeguimientoProduccion(ordenId);
 
   if (!orden) {
     return (
@@ -37,17 +39,13 @@ export default function OrdenDetalleForm({ initialData: orden, onClose: onVolver
     );
   }
 
-  const etapaActual = orden.seguimiento_produccion?.[0]?.etapa || "pendiente";
+  const etapaActual = etapaActualDesdeSeguimiento(seguimientos, orden.etapa);
 
   const handleCambiarEtapa = (nuevaEtapa: string) => {
-    // Obtenemos el nombre legible de la etapa para construir la observación automática
     const nombreEtapa = ETAPA_LABELS[nuevaEtapa as keyof typeof ETAPA_LABELS] || nuevaEtapa;
-
-    // AHORA SÍ: Pasamos el objeto completo incluyendo la observación requerida
     registrarEtapa({
-      orden_id: orden.id.toString(),
-      etapa: nuevaEtapa,
-      observaciones: `Cambio manual de etapa a: ${nombreEtapa}.`
+      etapa: nuevaEtapa as typeof ETAPAS_PRODUCCION[number],
+      observaciones: `Cambio manual de etapa a: ${nombreEtapa}.`,
     });
   };
 
@@ -58,7 +56,7 @@ export default function OrdenDetalleForm({ initialData: orden, onClose: onVolver
         <div className="space-y-1">
           <button
             onClick={onVolver}
-            disabled={isChangingEtapa}
+            disabled={isRegistrando}
             className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors mb-2 disabled:opacity-50"
           >
             <ArrowLeft size={16} /> Volver a órdenes
@@ -128,6 +126,20 @@ export default function OrdenDetalleForm({ initialData: orden, onClose: onVolver
             </div>
           </div>
 
+          {/* Ítems vinculados al pedido */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 className="text-sm font-black uppercase text-slate-400 tracking-wider">
+              Ítems de Producción
+            </h3>
+            <p className="text-xs text-slate-500">
+              Líneas del pedido asignadas a esta orden. Cada ítem define producto, variante y cantidad a fabricar.
+            </p>
+            <OrdenProduccionItems
+              ordenId={orden.id.toString()}
+              pedidoId={orden.pedido_id ?? null}
+            />
+          </div>
+
           {/* Panel de Control de Cambios de Etapa */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
             <h3 className="text-sm font-black uppercase text-slate-400 tracking-wider">
@@ -144,7 +156,7 @@ export default function OrdenDetalleForm({ initialData: orden, onClose: onVolver
                     key={etapa}
                     variant={isCurrent ? "default" : "outline"}
                     // Se deshabilitan los botones temporalmente mientras se procesa la mutación en red
-                    disabled={isCurrent || isChangingEtapa}
+                    disabled={isCurrent || isRegistrando}
                     onClick={() => handleCambiarEtapa(etapa)}
                     className={`justify-start h-12 px-4 rounded-xl font-medium transition-all ${isCurrent
                       ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
@@ -163,46 +175,16 @@ export default function OrdenDetalleForm({ initialData: orden, onClose: onVolver
 
         </div>
 
-        {/* Columna Derecha: Historial y Auditoría Logística */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <h3 className="text-sm font-black uppercase text-slate-400 tracking-wider">
-              Historial de Auditoría
-            </h3>
-            <span className="text-xs font-mono font-bold bg-slate-100 px-2.5 py-1 rounded-full text-slate-600">
-              {orden.seguimiento_produccion?.length || 0} Hitos
-            </span>
-          </div>
-
-          <div className="relative pl-6 space-y-6 before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-slate-100">
-            {orden.seguimiento_produccion?.map((event: SeguimientoProduccion, idx: number) => {
-              const isLatest = idx === 0;
-              return (
-                <div key={event.id} className="relative space-y-1.5">
-                  <div className={`absolute -left-[21px] top-1 w-4 h-4 rounded-full border-4 border-white shadow-sm ${isLatest ? "bg-rose-600 ring-4 ring-rose-50" : "bg-slate-300"
-                    }`} />
-
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-black uppercase tracking-tight ${isLatest ? "text-rose-600" : "text-slate-700"}`}>
-                      {ETAPA_LABELS[event.etapa as keyof typeof ETAPA_LABELS] || event.etapa}
-                    </span>
-                    <span className="text-[10px] font-bold font-mono text-slate-400">
-                      {format(new Date(event.created_at), "HH:mm 'hs'", { locale: es })}
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-slate-500 leading-snug">
-                    {event.observaciones || "Transición de estado aprobada."}
-                  </p>
-
-                  <div className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
-                    <User size={10} />
-                    <span>{format(new Date(event.created_at), "dd LLL, yyyy", { locale: es })}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* Columna Derecha: Historial de seguimiento */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <h3 className="text-sm font-black uppercase text-slate-400 tracking-wider border-b border-slate-100 pb-4">
+            Historial de Auditoría
+          </h3>
+          <SeguimientoProduccionTimeline
+            ordenId={ordenId}
+            etapaOrden={orden.etapa}
+            compact
+          />
         </div>
 
       </div>

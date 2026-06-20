@@ -5,13 +5,21 @@ import {
   calcularCostoFicha,
   obtenerAuditoriaRegistro,
 } from '@/lib/helpers/rpc-helpers';
+import { FichaMedidasService } from '@/lib/services/ficha-medidas.service';
 
 export const FichasTecnicasService = {
 
-  async listar(filtros?: { estado?: EstadoFicha; busqueda?: string }) {
+  async listar(filtros?: {
+    estado?: EstadoFicha;
+    busqueda?: string;
+    categoria_id?: string;
+  }) {
     const fichas = await prisma.fichas_tecnicas.findMany({
       where: {
         ...(filtros?.estado && { estado: filtros.estado }),
+        ...(filtros?.categoria_id && {
+          productos: { categoria_id: BigInt(filtros.categoria_id) },
+        }),
         ...(filtros?.busqueda && {
           OR: [
             { version: { contains: filtros.busqueda, mode: 'insensitive' } },
@@ -22,8 +30,18 @@ export const FichasTecnicasService = {
         }),
       },
       include: {
-        productos: { select: { id: true, nombre: true, sku: true, imagen: true } },
+        productos: {
+          select: {
+            id: true,
+            nombre: true,
+            sku: true,
+            imagen: true,
+            categoria_id: true,
+            categorias_productos: { select: { id: true, nombre: true } },
+          },
+        },
         ficha_medidas: { select: { id: true } },
+        _count: { select: { fichas_tecnicas_detalle: true } },
       },
       orderBy: { created_at: 'desc' },
     });
@@ -39,7 +57,7 @@ export const FichasTecnicasService = {
         fichas_tecnicas_detalle: {
           include: {
             materiales: { select: { id: true, nombre: true, tipo: true, composicion: true, color: true, unidad_medida: true, precio_unitario: true } },
-            insumo: { select: { id: true, nombre: true, tipo: true, unidad_medida: true, precio_unitario: true } },
+            insumo: { select: { id: true, nombre: true, tipo: true, unidad_medida: true, precio_unitario: true } },  // ✅ Singular
           },
           orderBy: { id: 'asc' },
         },
@@ -119,33 +137,11 @@ export const FichasTecnicasService = {
     valor_cm?: number;
     tolerancia?: number;
   }[]) {
-    return prisma.$transaction(async (tx) => {
-      await tx.ficha_medidas.deleteMany({ where: { id_ficha: BigInt(ficha_id) } });
-
-      if (medidas.length > 0) {
-        await tx.ficha_medidas.createMany({
-          data: medidas.map(m => ({
-            id_ficha: BigInt(ficha_id),
-            punto_medida: m.punto_medida || (m as any).point_medida,
-            talla: m.talla,
-            valor_cm: m.valor_cm ?? null,
-            tolerancia: m.tolerancia ?? null,
-          })),
-        });
-      }
-
-      return serializeBigInt(
-        await tx.ficha_medidas.findMany({
-          where: { id_ficha: BigInt(ficha_id) },
-          orderBy: [{ talla: 'asc' }, { punto_medida: 'asc' }],
-        })
-      );
-    });
+    return FichaMedidasService.guardar(ficha_id, medidas);
   },
 
   async eliminarMedida(id: string) {
-    await prisma.ficha_medidas.delete({ where: { id: BigInt(id) } });
-    return { success: true };
+    return FichaMedidasService.eliminarMedida(id);
   },
 
   async obtenerCostoFicha(fichaId: string | number): Promise<number> {

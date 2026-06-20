@@ -15,7 +15,7 @@ import { TIPOS_INSUMO } from '@/lib/constants/insumos';
 import { UNIDADES_MEDIDA } from '@/lib/constants/estados';
 import type { InsumoCompraRow } from '@/lib/helpers/insumos-helpers';
 import { exportToExcel, exportToPDF } from '@/lib/utils/export-utils';
-import { TipoInsumo, UnidadMedida } from '@prisma/client';
+import type { TipoInsumo, UnidadMedida } from '@prisma/client';
 
 const InsumoFormDialog = dynamic(() => import('@/components/admin/insumos/InsumoFormDialog'));
 
@@ -86,7 +86,7 @@ export default function InsumosPage() {
         filtered.map((i) => ({
           Nombre: i.nombre,
           Tipo: TIPOS_INSUMO[i.tipo as TipoInsumo]?.label ?? i.tipo,
-          Categoría: i.categoria_insumo ?? '—',
+          Categoría: i.categoria_insumo?.nombre ?? (i.categoria_id ? `Cat. #${i.categoria_id}` : '—'),
           Proveedor: i.proveedores?.razon_social ?? '—',
           Stock: Number(i.stock_actual),
           Unidad: UNIDADES_MEDIDA[i.unidad_medida as UnidadMedida]?.label ?? i.unidad_medida,

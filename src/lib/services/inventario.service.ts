@@ -136,7 +136,6 @@ export const InventarioService = {
         stock_maximo: data.stock_maximo != null ? data.stock_maximo.toString() : null,
         precio_unitario: data.precio_unitario != null ? data.precio_unitario.toString() : null,
         proveedor_id: data.proveedor_id ? BigInt(data.proveedor_id) : null,
-        ubicacion_almacen: data.ubicacion_almacen ?? null,
         alerta_bajo_stock: data.alerta_bajo_stock ?? true,
       },
     });
@@ -191,6 +190,49 @@ export const InventarioService = {
       console.error('Error obteniendo stock disponible:', error);
       return null;
     }
+  },
+
+  async ajustarStock(id: string, data: AjustarStockInput) {
+    const insumo = await prisma.insumo.findUnique({
+      where: { id: BigInt(id) },
+    });
+
+    if (!insumo) {
+      throw new Error('Insumo no encontrado');
+    }
+
+    const stockActual = data.stock_actual ?? Number(insumo.stock_actual) + (data.stock_delta ?? 0);
+
+    if (stockActual < 0) {
+      throw new Error('Stock insuficiente');
+    }
+
+    // Register movement if needed
+    if (data.usuario_id && data.referencia_tipo) {
+      await insertarMovimiento({
+        tipoMovimiento: data.stock_delta && data.stock_delta > 0 ? 'entrada' : 'salida',  // ✅ Changed to camelCase
+        referenciaType: data.referencia_tipo,
+        cantidad: Math.abs(data.stock_delta ?? 0),
+        motivo: data.motivo || 'Ajuste de stock',
+        usuarioId: data.usuario_id ? Number(data.usuario_id) : undefined,
+        insumoId: Number(id),
+      });
+    }
+
+    const updated = await prisma.insumo.update({
+      where: { id: BigInt(id) },
+      data: {
+        stock_actual: stockActual.toString(),
+        ...(data.costo_unitario && { precio_unitario: data.costo_unitario.toString() }),
+        updated_at: new Date(),
+      },
+      include: {
+        categoria_insumo: { select: { id: true, nombre: true } },
+        proveedores: { select: { id: true, razon_social: true } },
+      },
+    });
+
+    return serializeBigInt(updated);
   },
 
   async validarStock(productoId: number, cantidad: number): Promise<boolean> {

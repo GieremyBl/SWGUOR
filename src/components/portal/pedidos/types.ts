@@ -16,6 +16,8 @@ export interface Pedido {
     created_at: string;
     total_unidades: number;
     moneda: string;
+    monto_pagado?: number;
+    saldo_pendiente?: number;
     fecha_entrega_est?: string | null;
     notas_cliente?: string | null;
     clientes?: unknown;

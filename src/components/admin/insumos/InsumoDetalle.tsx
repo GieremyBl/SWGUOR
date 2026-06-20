@@ -33,7 +33,7 @@ export function InsumoDetalle({ insumo }: Props) {
           <div>
             <h1 className="text-2xl font-bold text-guor-ink">{insumo.nombre}</h1>
             <p className="text-sm text-guor-soft mt-1">
-              {TIPOS_INSUMO[insumo.tipo as TipoInsumo]?.label} · {insumo.categoria_insumo?.nombre ?? '—'}
+              {TIPOS_INSUMO[insumo.tipo as TipoInsumo]?.label} · {insumo.categoria_insumo?.nombre ?? 'Sin categoría'}
             </p>
           </div>
         </div>

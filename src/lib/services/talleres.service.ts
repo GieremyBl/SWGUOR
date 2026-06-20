@@ -1,16 +1,47 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { Prisma } from '@prisma/client';
-import { EspecialidadTaller, EstadoTaller } from '@prisma/client';
+import type { EspecialidadTaller, EstadoTaller } from '@prisma/client';
+
+const TALLER_INCLUDE = {
+  _count: { select: { confecciones: true, ordenes_produccion: true } },
+} as const;
 
 export const TalleresService = {
 
-  async listar() {
+  async listar(params?: {
+    search?: string;
+    estado?: string;
+  }) {
+    const where: Prisma.talleresWhereInput = {};
+
+    if (params?.estado && params.estado !== 'todos') {
+      where.estado = params.estado as EstadoTaller;
+    }
+
+    if (params?.search) {
+      where.OR = [
+        { nombre: { contains: params.search, mode: 'insensitive' } },
+        { ruc: { contains: params.search } },
+        { contacto: { contains: params.search, mode: 'insensitive' } },
+        { email: { contains: params.search, mode: 'insensitive' } },
+      ];
+    }
+
     const talleres = await prisma.talleres.findMany({
-      include: { _count: { select: { confecciones: true } } },
+      where,
+      include: TALLER_INCLUDE,
       orderBy: { nombre: 'asc' },
     });
     return serializeBigInt(talleres);
+  },
+
+  async obtenerPorId(id: string) {
+    const taller = await prisma.talleres.findUnique({
+      where: { id: BigInt(id) },
+      include: TALLER_INCLUDE,
+    });
+    return taller ? serializeBigInt(taller) : null;
   },
 
   async crear(data: {
@@ -34,6 +65,7 @@ export const TalleresService = {
         especialidad: data.especialidad ?? null,
         estado: data.estado ?? 'activo',
       },
+      include: TALLER_INCLUDE,
     });
     return serializeBigInt(taller);
   },
@@ -42,17 +74,18 @@ export const TalleresService = {
     nombre: string;
     contacto: string;
     telefono: string;
-    email: string;
+    email: string | null;
     direccion: string;
-    especialidad: EspecialidadTaller;
+    especialidad: EspecialidadTaller | null;
     estado: EstadoTaller;
   }>) {
     const taller = await prisma.talleres.update({
       where: { id: BigInt(id) },
       data: {
         ...data,
-        updated_at: new Date()
+        updated_at: new Date(),
       } as Prisma.talleresUpdateInput,
+      include: TALLER_INCLUDE,
     });
     return serializeBigInt(taller);
   },
@@ -60,9 +93,23 @@ export const TalleresService = {
   async desactivar(id: string) {
     const taller = await prisma.talleres.update({
       where: { id: BigInt(id) },
-      data: { 
-        estado: 'inactivo' 
+      data: {
+        estado: 'inactivo',
+        updated_at: new Date(),
       },
+      include: TALLER_INCLUDE,
+    });
+    return serializeBigInt(taller);
+  },
+
+  async suspender(id: string) {
+    const taller = await prisma.talleres.update({
+      where: { id: BigInt(id) },
+      data: {
+        estado: 'suspendido',
+        updated_at: new Date(),
+      },
+      include: TALLER_INCLUDE,
     });
     return serializeBigInt(taller);
   },

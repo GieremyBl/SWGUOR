@@ -53,6 +53,11 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     const body = await req.json() as Record<string, unknown>;
+    const categoriaId =
+      body.categoria_id != null && body.categoria_id !== ''
+        ? Number(body.categoria_id)
+        : undefined;
+
     const insumo = await InventarioService.actualizar(id, {
       nombre: typeof body.nombre === 'string' ? body.nombre : '',
       tipo: body.tipo as TipoInsumo,

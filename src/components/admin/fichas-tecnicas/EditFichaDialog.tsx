@@ -19,6 +19,7 @@ import {
   Loader2, Save, Scissors
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ESTADOS_FICHA, LISTA_ESTADOS_FICHA } from "@/lib/constants/fichas-tecnicas";
 
 interface Props {
   isOpen:    boolean;
@@ -26,13 +27,6 @@ interface Props {
   onClose:   () => void;
   onSuccess: () => void;
 }
-
-const ESTADOS = [
-  { value: "borrador", label: "Borrador",  dot: "bg-slate-400",   glow: "shadow-slate-200" },
-  { value: "activo",   label: "Activo",    dot: "bg-emerald-500", glow: "shadow-emerald-200" },
-  { value: "revision", label: "Revisión",  dot: "bg-amber-400",   glow: "shadow-amber-200" },
-  { value: "obsoleto", label: "Obsoleto",  dot: "bg-red-500",     glow: "shadow-red-200" },
-];
 
 export default function EditFichaDialog({ isOpen, ficha, onClose, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
@@ -89,7 +83,7 @@ export default function EditFichaDialog({ isOpen, ficha, onClose, onSuccess }: P
     }
   };
 
-  const estadoActual = ESTADOS.find((e) => e.value === form.estado);
+  const estadoActual = ESTADOS_FICHA[form.estado as keyof typeof ESTADOS_FICHA] ?? ESTADOS_FICHA.borrador;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -151,16 +145,19 @@ export default function EditFichaDialog({ isOpen, ficha, onClose, onSuccess }: P
                 <Select value={form.estado} onValueChange={(v) => set("estado", v)}>
                   <SelectTrigger className={cn(inputCls, "bg-white")}>
                     <div className="flex items-center gap-3">
-                      <span className={cn("w-2.5 h-2.5 rounded-full shadow-lg transition-all", estadoActual?.dot, estadoActual?.glow)} />
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shadow-lg transition-all"
+                        style={{ backgroundColor: estadoActual.dot }}
+                      />
                       <SelectValue />
                     </div>
                   </SelectTrigger>
                   <SelectContent className="rounded-3xl border-none shadow-2xl p-2 bg-white/95 backdrop-blur-xl">
-                    {ESTADOS.map((e) => (
-                      <SelectItem key={e.value} value={e.value} className="rounded-2xl py-3 px-4 font-bold focus:bg-fuchsia-50 transition-colors">
+                    {LISTA_ESTADOS_FICHA.map((value) => (
+                      <SelectItem key={value} value={value} className="rounded-2xl py-3 px-4 font-bold focus:bg-fuchsia-50 transition-colors">
                         <div className="flex items-center gap-3">
-                          <span className={cn("w-2 h-2 rounded-full", e.dot)} />
-                          {e.label}
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ESTADOS_FICHA[value].dot }} />
+                          {ESTADOS_FICHA[value].label}
                         </div>
                       </SelectItem>
                     ))}
@@ -304,4 +301,4 @@ function Field({ label, icon, children }: { label: string; icon: React.ReactNode
       {children}
     </div>
   );
-}
+}

@@ -16,6 +16,11 @@ const TIPOS_VALIDOS = new Set<TipoInsumo>([
   'materia_prima', 'avio', 'empaque', 'suministro'
 ]);
 
+async function validarCategoriaId(id: number): Promise<boolean> {
+  const cat = await prisma.categoria_insumo.findUnique({ where: { id } });
+  return cat !== null;
+}
+
 export async function GET(req: NextRequest) {
   const auth = await requireServerRole(INSUMOS_ROLES);
   if (!auth.success)
@@ -26,6 +31,24 @@ export async function GET(req: NextRequest) {
     const rawCategoriaId = searchParams.get('categoria_id');
     const rawTipo = searchParams.get('tipo');
     const rawSort = searchParams.get('sort');
+
+    if (rawCategoriaId) {
+      if (isNaN(Number(rawCategoriaId))) {
+        return NextResponse.json({ error: 'categoria_id debe ser un número' }, { status: 400 });
+      }
+      const existe = await validarCategoriaId(Number(rawCategoriaId));
+      if (!existe) {
+        return NextResponse.json({ error: `categoria_id ${rawCategoriaId} no existe` }, { status: 400 });
+      }
+    }
+
+    if (rawTipo && !TIPOS_VALIDOS.has(rawTipo as TipoInsumo)) {
+      return NextResponse.json({ error: `tipo inválido: ${rawTipo}` }, { status: 400 });
+    }
+    if (rawSort && rawSort !== 'asc' && rawSort !== 'desc') {
+      return NextResponse.json({ error: 'sort debe ser "asc" o "desc"' }, { status: 400 });
+    }
+
     const proveedorId = searchParams.get('proveedor_id');
 
     // Validar categoria_id como número
@@ -41,26 +64,23 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: `categoria_id ${rawCategoriaId} no existe` }, { status: 400 });
     }
 
-    if (rawTipo && !TIPOS_VALIDOS.has(rawTipo as TipoInsumo))
-      return NextResponse.json({ error: `tipo inválido: ${rawTipo}` }, { status: 400 });
+    const [insumos, categorias] = await Promise.all([
+      InsumosService.listar({
+        categoria_id: rawCategoriaId ? Number(rawCategoriaId) : undefined,
+        tipo: rawTipo ? (rawTipo as TipoInsumo) : undefined,
+        busqueda: searchParams.get('busqueda') ?? undefined,
+        bajo_stock: searchParams.get('bajo_stock') === 'true',
+        proveedor_id: proveedorId ?? undefined,
+        sort: rawSort ? (rawSort as 'asc' | 'desc') : undefined,
+      }),
+      prisma.categoria_insumo.findMany({
+        where: { activo: true },
+        select: { id: true, nombre: true },
+        orderBy: { nombre: 'asc' },
+      }),
+    ]);
 
-    if (rawSort && rawSort !== 'asc' && rawSort !== 'desc')
-      return NextResponse.json({ error: 'sort debe ser "asc" o "desc"' }, { status: 400 });
-
-    if (proveedorId && !/^\d+$/.test(proveedorId))
-      return NextResponse.json({ error: 'proveedor_id inválido' }, { status: 400 });
-
-    const insumos = await InsumosService.listar({
-      categoria_id: rawCategoriaId !== null ? Number(rawCategoriaId) : undefined,
-      tipo: rawTipo ? (rawTipo as TipoInsumo) : undefined,
-      busqueda: searchParams.get('busqueda') ?? undefined,
-      bajo_stock: searchParams.get('bajo_stock') === 'true',
-      proveedor_id: proveedorId !== null ? proveedorId : undefined,
-      sort: rawSort ? (rawSort as 'asc' | 'desc') : undefined,
-    });
-
-    return NextResponse.json({ success: true, data: { insumos } });
-
+    return NextResponse.json({ success: true, data: { insumos, categorias } });
   } catch (error) {
     console.error('[GET /insumos]', error);
     return NextResponse.json(
@@ -92,6 +112,14 @@ export async function POST(req: NextRequest) {
     });
     if (!categoriaExiste)
       return NextResponse.json({ error: 'La categoría indicada no existe' }, { status: 400 });
+
+    const categoriaId = body.categoria_id != null ? Number(body.categoria_id) : NaN;
+    if (!categoriaId || isNaN(categoriaId)) {
+      return NextResponse.json({ error: 'categoria_id es obligatorio' }, { status: 400 });
+    }
+    if (!(await validarCategoriaId(categoriaId))) {
+      return NextResponse.json({ error: `categoria_id ${categoriaId} no existe` }, { status: 400 });
+    }
 
     const insumo = await InventarioService.crear({
       nombre: body.nombre,

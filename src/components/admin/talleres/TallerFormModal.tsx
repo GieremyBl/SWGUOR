@@ -1,166 +1,88 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { toast } from 'sonner';
-import type { Taller } from './TalleresTable';
-
-type EstadoTaller = 'activo' | 'inactivo' | 'suspendido';
-type EspecialidadTaller = 'corte' | 'costura' | 'confeccion' | 'bordado' | 'estampado' | 'acabados' | 'otro';
-
-const ESPECIALIDADES: { value: EspecialidadTaller; label: string }[] = [
-  { value: 'corte',      label: 'Corte' },
-  { value: 'costura',    label: 'Costura' },
-  { value: 'confeccion', label: 'Confección' },
-  { value: 'bordado',    label: 'Bordado' },
-  { value: 'estampado',  label: 'Estampado' },
-  { value: 'acabados',   label: 'Acabados' },
-  { value: 'otro',       label: 'Otro' },
-];
-
-interface TallerForm {
-  nombre:       string;
-  ruc:          string;
-  contacto:     string;
-  telefono:     string;
-  email:        string;
-  direccion:    string;
-  especialidad: EspecialidadTaller | '';
-  estado:       EstadoTaller;
-}
-
-interface TallerFormProps extends Taller {
-  contacto?: string | null;
-  email?:    string | null;
-}
+import { tallerSchema, ESPECIALIDADES_TALLER, ESTADOS_TALLER } from '@/lib/schemas/talleres';
+import { ESPECIALIDAD_TALLER_LABELS } from '@/lib/constants/talleres';
+import type { Taller, TallerForm } from '@/lib/schemas/talleres';
 
 interface Props {
-  taller?:    TallerFormProps | null;
-  onClose:   () => void;
-  onSuccess: () => void;
+  taller?: Taller | null;
+  onClose: () => void;
+  onSave: (data: TallerForm) => Promise<{ success?: boolean; error?: string }>;
+  isSaving?: boolean;
 }
 
 const EMPTY: TallerForm = {
-  nombre: '', ruc: '', contacto: '', telefono: '',
-  email: '', direccion: '', especialidad: '', estado: 'activo',
+  nombre: '',
+  ruc: '',
+  contacto: '',
+  telefono: '',
+  email: '',
+  direccion: '',
+  especialidad: undefined,
+  estado: 'activo',
 };
 
-export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
-  const [form, setForm] = useState<TallerForm>(() => {
-    if (taller) {
-      return {
-        nombre:       taller.nombre ?? '',
-        ruc:          taller.ruc ?? '',
-        contacto:     taller.contacto ?? '',
-        telefono:     taller.telefono ?? '',
-        email:        taller.email ?? '',
-        direccion:    taller.direccion ?? '',
-        especialidad: (taller.especialidad as EspecialidadTaller) ?? '',
-        estado:       (taller.estado as EstadoTaller) ?? 'activo',
-      };
-    }
-    return EMPTY;
-  });
-
-  const [errors, setErrors]     = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  
-  const isMountedRef = useRef<boolean>(true);
-  const supabase = getSupabaseBrowserClient();
+export default function TallerFormModal({ taller, onClose, onSave, isSaving }: Props) {
+  const [form, setForm] = useState<TallerForm>(EMPTY);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const prevTallerIdRef = useRef<string | undefined>(taller?.id);
-  if (taller?.id !== prevTallerIdRef.current) {
-    prevTallerIdRef.current = taller?.id;
-    setForm(taller ? {
-      nombre:       taller.nombre ?? '',
-      ruc:          taller.ruc ?? '',
-      contacto:     taller.contacto ?? '',
-      telefono:     taller.telefono ?? '',
-      email:        taller.email ?? '',
-      direccion:    taller.direccion ?? '',
-      especialidad: (taller.especialidad as EspecialidadTaller) ?? '',
-      estado:       (taller.estado as EstadoTaller) ?? 'activo',
-    } : EMPTY);
+    if (taller) {
+      setForm({
+        nombre: taller.nombre ?? '',
+        ruc: taller.ruc ?? '',
+        contacto: taller.contacto ?? '',
+        telefono: taller.telefono ?? '',
+        email: taller.email ?? '',
+        direccion: taller.direccion ?? '',
+        especialidad: taller.especialidad,
+        estado: taller.estado ?? 'activo',
+      });
+    } else {
+      setForm(EMPTY);
+    }
     setErrors({});
-  }
+  }, [taller]);
 
   const handleChange = (field: keyof TallerForm, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    setErrors(prev => { 
-      const c = { ...prev }; 
-      delete c[field]; 
-      return c; 
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => {
+      const copy = { ...prev };
+      delete copy[field];
+      return copy;
     });
-  };
-
-  const validate = (): boolean => {
-    const e: Record<string, string> = {};
-    if (!form.nombre.trim())            e.nombre = 'El nombre es requerido';
-    if (!form.ruc.trim())              e.ruc = 'El RUC es requerido';
-    if (form.ruc.trim().length !== 11)  e.ruc = 'El RUC debe tener 11 dígitos';
-    if (!form.especialidad)            e.especialidad = 'Seleccione una especialidad';
-    if (!form.contacto.trim())          e.contacto = 'El nombre del responsable es requerido';
-    
-    setErrors(e);
-    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
-    setIsSaving(true);
 
-    try {
-      const payload = {
-        ...form,
-        especialidad: form.especialidad === '' ? null : form.especialidad
-      };
+    const payload: TallerForm = {
+      ...form,
+      email: form.email?.trim() || undefined,
+      especialidad: form.especialidad || undefined,
+    };
 
-      if (!taller) {
-        const { data: existing } = await supabase
-          .from('talleres')
-          .select('ruc')
-          .eq('ruc', form.ruc)
-          .maybeSingle();
-          
-        if (existing) {
-          if (isMountedRef.current) {
-            setErrors({ ruc: `El RUC ${form.ruc} ya está registrado` });
-            setIsSaving(false);
-          }
-          return;
-        }
+    const parsed = tallerSchema.omit({ id: true }).safeParse(payload);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      parsed.error.issues.forEach((issue) => {
+        const key = String(issue.path[0] ?? 'form');
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
 
-        const { error } = await supabase.from('talleres').insert([payload]);
-        if (error) throw error;
-        toast.success('Taller registrado exitosamente');
-      } else {
-        const { error } = await supabase.from('talleres').update(payload).eq('id', Number(taller.id));
-        if (error) throw error;
-        toast.success('Datos del taller actualizados');
-      }
-
-      if (isMountedRef.current) {
-        onSuccess();
-        onClose();
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al guardar el taller';
-      toast.error(message);
-    } finally {
-      if (isMountedRef.current) {
-        setIsSaving(false);
-      }
+    const res = await onSave(parsed.data);
+    if (res.success) {
+      onClose();
+    } else if (res.error) {
+      toast.error(res.error);
     }
   };
 
@@ -171,9 +93,8 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
@@ -188,32 +109,28 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nombre *</label>
               <Input
                 value={form.nombre}
-                onChange={e => handleChange('nombre', e.target.value)}
+                onChange={(e) => handleChange('nombre', e.target.value)}
                 placeholder="Ej: Taller El Sol"
-                className={errors.nombre ? 'border-red-400 focus:ring-red-400' : ''}
+                className={errors.nombre ? 'border-red-400' : ''}
               />
               {errors.nombre && <p className="text-xs text-red-500 mt-1">{errors.nombre}</p>}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">RUC *</label>
-              {/* FIX (TS 2345): Asegura que el rebanado numérico .slice(0, 11) se ejecute limpiamente sobre el string obtenido */}
               <Input
                 value={form.ruc}
-                onChange={e => {
-                  const rucLimpio = e.target.value.replace(/\D/g, '').slice(0, 11);
-                  handleChange('ruc', rucLimpio);
-                }}
+                onChange={(e) => handleChange('ruc', e.target.value.replace(/\D/g, '').slice(0, 11))}
                 placeholder="20123456789"
                 maxLength={11}
-                className={errors.ruc ? 'border-red-400 focus:ring-red-400' : ''}
+                disabled={!!taller}
+                className={errors.ruc ? 'border-red-400' : ''}
               />
               {errors.ruc && <p className="text-xs text-red-500 mt-1">{errors.ruc}</p>}
             </div>
@@ -221,17 +138,17 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Especialidad *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Especialidad</label>
               <select
-                value={form.especialidad}
-                onChange={e => handleChange('especialidad', e.target.value)}
+                value={form.especialidad ?? ''}
+                onChange={(e) => handleChange('especialidad', e.target.value)}
                 className={`w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 ${
                   errors.especialidad ? 'border-red-400' : 'border-gray-200'
                 }`}
               >
                 <option value="">Seleccionar...</option>
-                {ESPECIALIDADES.map(esp => (
-                  <option key={esp.value} value={esp.value}>{esp.label}</option>
+                {ESPECIALIDADES_TALLER.map((esp) => (
+                  <option key={esp} value={esp}>{ESPECIALIDAD_TALLER_LABELS[esp]}</option>
                 ))}
               </select>
               {errors.especialidad && <p className="text-xs text-red-500 mt-1">{errors.especialidad}</p>}
@@ -241,12 +158,12 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Estado</label>
               <select
                 value={form.estado}
-                onChange={e => handleChange('estado', e.target.value)}
+                onChange={(e) => handleChange('estado', e.target.value)}
                 className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-                <option value="suspendido">Suspendido</option>
+                {ESTADOS_TALLER.map((est) => (
+                  <option key={est} value={est}>{est}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -255,50 +172,58 @@ export default function TallerFormModal({ taller, onClose, onSuccess }: Props) {
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Contacto *</label>
             <Input
               value={form.contacto}
-              onChange={e => handleChange('contacto', e.target.value)}
+              onChange={(e) => handleChange('contacto', e.target.value)}
               placeholder="Nombre del responsable"
-              className={errors.contacto ? 'border-red-400 focus:ring-red-400' : ''}
+              className={errors.contacto ? 'border-red-400' : ''}
             />
             {errors.contacto && <p className="text-xs text-red-500 mt-1">{errors.contacto}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Teléfono</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Teléfono *</label>
               <Input
                 value={form.telefono}
-                onChange={e => handleChange('telefono', e.target.value)}
+                onChange={(e) => handleChange('telefono', e.target.value)}
                 placeholder="9xx xxx xxx"
                 className={errors.telefono ? 'border-red-400' : ''}
               />
+              {errors.telefono && <p className="text-xs text-red-500 mt-1">{errors.telefono}</p>}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
               <Input
                 type="email"
-                value={form.email}
-                onChange={e => handleChange('email', e.target.value)}
+                value={form.email ?? ''}
+                onChange={(e) => handleChange('email', e.target.value)}
                 placeholder="taller@email.com"
                 className={errors.email ? 'border-red-400' : ''}
               />
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Dirección</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Dirección *</label>
             <Input
               value={form.direccion}
-              onChange={e => handleChange('direccion', e.target.value)}
+              onChange={(e) => handleChange('direccion', e.target.value)}
               placeholder="Av. / Jr. ..."
+              className={errors.direccion ? 'border-red-400' : ''}
             />
+            {errors.direccion && <p className="text-xs text-red-500 mt-1">{errors.direccion}</p>}
           </div>
 
           <div className="flex gap-3 pt-4 border-t">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1 h-11" disabled={isSaving}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white" disabled={isSaving}>
+            <Button
+              type="submit"
+              className="flex-1 h-11 bg-rose-600 hover:bg-rose-700 text-white"
+              disabled={isSaving}
+            >
               {isSaving ? (
                 <span className="flex items-center justify-center">
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />

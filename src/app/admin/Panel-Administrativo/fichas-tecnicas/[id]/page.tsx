@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import ImagenGeometralExtractor from "@/components/admin/common/ImagenGeometralExtractor";
+import { ESTADOS_FICHA } from "@/lib/constants/fichas-tecnicas";
+import type { EstadoFicha } from "@prisma/client";
 
 const EditFichaDialog    = dynamic(() => import("@/components/admin/fichas-tecnicas/EditFichaDialog"));
 const MedidasEditor      = dynamic(() => import("@/components/admin/fichas-tecnicas/MedidasEditor"));
@@ -52,14 +54,6 @@ interface DatosExtraidos {
   medidas: MedidaExtraida[];
   materiales?: MaterialExtraido[];
 }
-
-// ── Estados ────────────────────────────────────────────────────
-const ESTADOS: Record<string, { label: string; color: string }> = {
-  borrador: { label: "Borrador", color: "bg-gray-50    text-gray-600    border-gray-200"    },
-  activo:   { label: "Activo",   color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  revision: { label: "Revisión", color: "bg-amber-50   text-amber-700   border-amber-200"   },
-  obsoleto: { label: "Obsoleto", color: "bg-red-50     text-red-700     border-red-200"     },
-};
 
 // ── Página principal ───────────────────────────────────────────
 export default function FichaTecnicaDetallePage() {
@@ -148,7 +142,7 @@ export default function FichaTecnicaDetallePage() {
     </div>
   );
 
-  const estadoInfo = ESTADOS[ficha.estado] ?? ESTADOS.borrador;
+  const estadoInfo = ESTADOS_FICHA[ficha.estado as EstadoFicha] ?? ESTADOS_FICHA.borrador;
 
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50 min-h-screen">

@@ -44,19 +44,19 @@ const UNIDADES = Object.keys(UNIDADES_MEDIDA) as UnidadMedida[];
 const FORM_DEFAULT = {
   nombre: '',
   tipo: 'materia_prima' as TipoInsumo,
-  categoria_id: 0,
+  categoria_id: '',
   unidad_medida: 'metros' as UnidadMedida,
   stock_actual: '0',
   stock_minimo: '10',
   precio_unitario: '',
   proveedor_id: '',
+  ubicacion_almacen: '',
 };
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSaving }: Props) {
   const isEdit = !!insumo;
-
   const [proveedores, setProveedores] = useState<{ id: string; razon_social: string }[]>([]);
   const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
   const [form, setForm] = useState(FORM_DEFAULT);
@@ -67,6 +67,19 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
     fetchProveedores(1, 200, '', 'activo')
       .then((res) => setProveedores(Array.isArray(res.data) ? res.data as { id: string; razon_social: string }[] : []))
       .catch(() => toast.error('Error al cargar proveedores'));
+
+    fetch('/api/admin/categorias-insumo')
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((json) => {
+        setCategorias(Array.isArray(json.data) ? json.data : []);
+      })
+      .catch(() => {
+        toast.error('Error al cargar categorías de insumo');
+        setCategorias([]);
+      });
   }, [isOpen]);
 
   // Cargar categorías desde la DB (tabla categoria_insumo)
@@ -85,33 +98,44 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
       setForm({
         nombre: insumo.nombre,
         tipo: insumo.tipo as TipoInsumo,
-        categoria_id: typeof insumo.categoria_insumo === 'object' && insumo.categoria_insumo !== null
-          ? (insumo.categoria_insumo as { id: number }).id
-          : 0,
+        categoria_id: insumo.categoria_id
+          ? String(insumo.categoria_id)
+          : insumo.categoria_insumo?.id
+            ? String(insumo.categoria_insumo.id)
+            : '',
         unidad_medida: insumo.unidad_medida as UnidadMedida,
         stock_actual: String(insumo.stock_actual),
         stock_minimo: String(insumo.stock_minimo),
         precio_unitario: insumo.precio_unitario != null ? String(insumo.precio_unitario) : '',
         proveedor_id: insumo.proveedor_id ? String(insumo.proveedor_id) : '',
-
+        ubicacion_almacen: insumo.ubicacion_almacen || '',
       });
     } else {
-      setForm(FORM_DEFAULT);
+      setForm({
+        nombre: '',
+        tipo: 'materia_prima',
+        categoria_id: '',
+        unidad_medida: 'metros',
+        stock_actual: '0',
+        stock_minimo: '10',
+        precio_unitario: '',
+        proveedor_id: '',
+        ubicacion_almacen: '',
+      });
     }
   }, [isOpen, insumo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.categoria_id) {
-      toast.error('Seleccione una categoría');
+      toast.error('Selecciona una categoría de insumo');
       return;
     }
 
     const payload: Record<string, unknown> = {
       nombre: form.nombre.trim(),
       tipo: form.tipo,
-      categoria_id: form.categoria_id,
+      categoria_id: Number(form.categoria_id),
       unidad_medida: form.unidad_medida,
       stock_minimo: parseFloat(form.stock_minimo || '0'),
       precio_unitario: form.precio_unitario ? parseFloat(form.precio_unitario) : null,
@@ -188,21 +212,19 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
               <div className="space-y-2">
                 <Label className={fieldLabelClass}>Categoría</Label>
                 <Select
-                  value={form.categoria_id ? String(form.categoria_id) : ''}
-                  onValueChange={(v) => setForm({ ...form, categoria_id: Number(v) })}
+                  value={form.categoria_id}
+                  onValueChange={(v) => setForm({ ...form, categoria_id: v })}
                   disabled={isSaving}
                 >
-                  <SelectTrigger className={fieldSelectClass}>
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
+                  <SelectTrigger className={fieldSelectClass}><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                   <SelectContent className="bg-white text-slate-900 border-slate-200">
-                    {categorias.map((c) => (
+                    {categorias.map((cat) => (
                       <SelectItem
-                        key={c.id}
-                        value={String(c.id)}
+                        key={String(cat.id)}
+                        value={String(cat.id)}
                         className="text-slate-900 focus:bg-amber-50 focus:text-slate-900"
                       >
-                        {c.nombre}
+                        {cat.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -303,6 +325,18 @@ export default function InsumoFormDialog({ isOpen, onClose, onSave, insumo, isSa
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Ubicación en almacén */}
+            <div className="space-y-2">
+              <Label className={fieldLabelClass}>Ubicación en almacén</Label>
+              <Input
+                className={fieldInputClass}
+                placeholder="Ej: Estante A-5, Pasillo 2"
+                value={form.ubicacion_almacen}
+                onChange={(e) => setForm({ ...form, ubicacion_almacen: e.target.value })}
+                disabled={isSaving}
+              />
             </div>
 
             <DialogFooter className="pt-4 border-t border-slate-100 gap-2">

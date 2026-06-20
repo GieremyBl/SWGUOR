@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, ShoppingBag, Truck,
   ChevronRight, Settings, Package, PackageOpen,
-  ShoppingCart, UserCircle
+  ShoppingCart, UserCircle, CreditCard, MapPin, LifeBuoy,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -20,7 +20,8 @@ const MENU_GROUPS = [
     items: [
       { href: '/portal/catalogo', label: 'Catálogo', icon: ShoppingBag },
       { href: '/portal/cotizaciones', label: 'Cotizaciones', icon: FileText },
-      { href: '/portal/pedidos', label: 'Mis pedidos', icon: Package },
+      { href: '/portal/mis-pedidos', label: 'Mis pedidos', icon: Package },
+      { href: '/portal/pagos', label: 'Mis pagos', icon: CreditCard },
       { href: '/portal/compras', label: 'Confirmar compra', icon: ShoppingCart },
 
     ],
@@ -30,13 +31,14 @@ const MENU_GROUPS = [
     items: [
       { href: '/portal/seguimiento-pedido', label: 'Trazabilidad', icon: Truck },
       { href: '/portal/despachos', label: 'Envíos', icon: PackageOpen },
-
+      { href: '/portal/soporte', label: 'Soporte', icon: LifeBuoy },
     ],
   },
   {
     group: 'Cuenta',
     items: [
       { href: '/portal/perfil', label: 'Mi Perfil', icon: UserCircle },
+      { href: '/portal/direcciones', label: 'Mis Direcciones', icon: MapPin },
       { href: '/portal/configuracion', label: 'Ajustes', icon: Settings },
     ],
   },

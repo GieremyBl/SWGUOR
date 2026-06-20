@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { ESTADO_DESCUENTO_APLICACION } from '@/lib/constants/promociones';
+import { reglaAplicaProductoCatalogo } from '@/lib/helpers/promociones-catalogo.helper';
 
 export type TipoCampanaPortal = 'promocion' | 'oferta';
 
@@ -44,15 +46,6 @@ function reglaVigente(
   return regla.fecha_inicio <= now && regla.fecha_fin >= now;
 }
 
-function reglaAplicaProducto(
-  regla: { categoria_id: bigint | null },
-  categoriaId: bigint | null,
-): boolean {
-  if (!regla.categoria_id) return true;
-  if (!categoriaId) return false;
-  return regla.categoria_id === categoriaId;
-}
-
 export async function obtenerCatalogoPromocionesPortal() {
   const now = new Date();
 
@@ -62,7 +55,15 @@ export async function obtenerCatalogoPromocionesPortal() {
       include: {
         promocion_reglas: {
           orderBy: { prioridad: 'asc' },
-          include: { reglas_descuento: true },
+          include: {
+            reglas_descuento: {
+              include: {
+                descuento_aplicaciones: {
+                  where: { estado: { not: ESTADO_DESCUENTO_APLICACION.REVERTIDO } },
+                },
+              },
+            },
+          },
         },
       },
     }),
@@ -71,7 +72,15 @@ export async function obtenerCatalogoPromocionesPortal() {
       include: {
         oferta_reglas: {
           orderBy: { prioridad: 'asc' },
-          include: { reglas_descuento: true },
+          include: {
+            reglas_descuento: {
+              include: {
+                descuento_aplicaciones: {
+                  where: { estado: { not: ESTADO_DESCUENTO_APLICACION.REVERTIDO } },
+                },
+              },
+            },
+          },
         },
       },
     }),
@@ -119,12 +128,20 @@ export async function obtenerCatalogoPromocionesPortal() {
 
     for (const producto of productos) {
       const match = reglasValidas.some((pr) =>
-        reglaAplicaProducto(pr.reglas_descuento, producto.categoria_id),
+        reglaAplicaProductoCatalogo(
+          pr.reglas_descuento,
+          producto.id,
+          producto.categoria_id,
+        ),
       );
       if (!match) continue;
 
       const mejor = reglasValidas.find((pr) =>
-        reglaAplicaProducto(pr.reglas_descuento, producto.categoria_id),
+        reglaAplicaProductoCatalogo(
+          pr.reglas_descuento,
+          producto.id,
+          producto.categoria_id,
+        ),
       );
       if (!mejor) continue;
 
@@ -168,12 +185,20 @@ export async function obtenerCatalogoPromocionesPortal() {
 
     for (const producto of productos) {
       const match = reglasValidas.some((or) =>
-        reglaAplicaProducto(or.reglas_descuento, producto.categoria_id),
+        reglaAplicaProductoCatalogo(
+          or.reglas_descuento,
+          producto.id,
+          producto.categoria_id,
+        ),
       );
       if (!match) continue;
 
       const mejor = reglasValidas.find((or) =>
-        reglaAplicaProducto(or.reglas_descuento, producto.categoria_id),
+        reglaAplicaProductoCatalogo(
+          or.reglas_descuento,
+          producto.id,
+          producto.categoria_id,
+        ),
       );
       if (!mejor) continue;
 

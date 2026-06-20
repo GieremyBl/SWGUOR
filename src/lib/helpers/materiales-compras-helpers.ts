@@ -30,7 +30,11 @@ export interface MaterialDetalleRow extends MaterialCompraRow {
   codigo_color?: string | null;
   ubicacion_almacen?: string | null;
   alerta_bajo_stock?: boolean | null;
-  almacenes?: { id: string; nombre: string } | null;
+  almacen_stock?: Array<{
+    id: string;
+    cantidad: number | string;
+    almacenes?: { id: string; nombre: string } | null;
+  }>;
   proveedores?: { id: string; razon_social: string; ruc?: string } | null;
   ordenes_compra_items?: Array<{
     id: string;

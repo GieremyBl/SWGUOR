@@ -143,13 +143,6 @@ export async function POST(req: Request) {
 
 // ─── Tool Executors ──────────────────────────────────────────────────────────
 
-const ESCALAS_DESCUENTO = [
-  { min: 400, dcto: 0.00 },
-  { min: 1000, dcto: 0.05 },
-  { min: 5000, dcto: 0.12 },
-  { min: 10000, dcto: 0.18 },
-];
-
 async function ejecutarTool(nombre: string, args: any) {
   switch (nombre) {
     case 'consultar_inventario': {
@@ -201,28 +194,34 @@ async function ejecutarTool(nombre: string, args: any) {
         return { error: 'Se requieren items con producto_id y cantidad' };
       }
 
-      const productoIds = args.items.map((i: any) => Number(i.producto_id)).filter(Boolean);
+      const productoIds = args.items.map((i: { producto_id: number }) => Number(i.producto_id)).filter(Boolean);
       const productos = await prisma.productos.findMany({
         where: { id: { in: productoIds }, estado: 'activo' },
         select: { id: true, nombre: true, precio: true, moq: true },
       });
       const precioMap = new Map(productos.map((p) => [p.id.toString(), p]));
 
-      const subtotalBruto = args.items.reduce((acc: number, item: any) => {
+      const itemsCalculo = args.items.map((item: { producto_id: number; cantidad: number }) => {
         const prod = precioMap.get(String(item.producto_id));
-        return acc + (prod ? Number(prod.precio) : 0) * (item.cantidad || 0);
-      }, 0);
-      const totalUnidades = args.items.reduce((s: number, i: any) => s + (i.cantidad || 0), 0);
-      const escala = [...ESCALAS_DESCUENTO].reverse().find((r) => totalUnidades >= r.min);
-      const pctDescuento = (escala?.dcto ?? 0) * 100;
-      const montoDescuento = subtotalBruto * (escala?.dcto ?? 0);
-      const subtotalConDesc = subtotalBruto - montoDescuento;
-      const igv = subtotalConDesc * 0.18;
-      const total = subtotalConDesc + igv;
-      const escalaSiguiente = ESCALAS_DESCUENTO.find((r) => r.min > totalUnidades);
+        return {
+          producto_id: item.producto_id,
+          cantidad: item.cantidad || 0,
+          precio_unitario: prod ? Number(prod.precio) : 0,
+        };
+      });
+
+      const { calcularDescuentosEscalaAutomaticos } = await import(
+        '@/lib/services/descuento-escala-automatico.service'
+      );
+      const { REGLAS_NEGOCIO } = await import('@/lib/constants/estados');
+      const totales = await calcularDescuentosEscalaAutomaticos(itemsCalculo);
+      const pctDescuento =
+        totales.subtotalBruto > 0
+          ? Math.round((totales.montoDescuento / totales.subtotalBruto) * 10000) / 100
+          : 0;
 
       return {
-        items_detalle: args.items.map((item: any) => {
+        items_detalle: args.items.map((item: { producto_id: number; cantidad: number }) => {
           const prod = precioMap.get(String(item.producto_id));
           return {
             producto: prod?.nombre ?? `Producto #${item.producto_id}`,
@@ -231,20 +230,18 @@ async function ejecutarTool(nombre: string, args: any) {
             subtotal: prod ? Number(prod.precio) * (item.cantidad || 0) : 0,
           };
         }),
-        subtotal_bruto: Math.round(subtotalBruto * 100) / 100,
-        total_unidades: totalUnidades,
+        subtotal_bruto: totales.subtotalBruto,
+        total_unidades: totales.cantidadTotal,
         descuento_aplicado: `${pctDescuento}%`,
-        monto_descuento: Math.round(montoDescuento * 100) / 100,
-        subtotal_con_descuento: Math.round(subtotalConDesc * 100) / 100,
-        igv: Math.round(igv * 100) / 100,
-        total: Math.round(total * 100) / 100,
-        cumple_moq: totalUnidades >= 400,
-        moq_estado: totalUnidades < 400
-          ? `Alerta: No alcanza el mínimo de 400 unidades (actual: ${totalUnidades})`
-          : 'Requisito de pedido mínimo cumplido',
-        proximo_nivel: escalaSiguiente
-          ? `Si llega a ${escalaSiguiente.min} unidades obtendrá ${(escalaSiguiente.dcto * 100).toFixed(0)}% de descuento`
-          : 'Ya cuenta con el descuento máximo disponible',
+        monto_descuento: totales.montoDescuento,
+        subtotal_con_descuento: totales.subtotalConDescuento,
+        igv: totales.igv,
+        total: totales.total,
+        cumple_moq: totales.cumpleMOQ,
+        moq_estado: totales.cumpleMOQ
+          ? 'Requisito de pedido mínimo cumplido'
+          : `Alerta: No alcanza el mínimo de ${REGLAS_NEGOCIO.MOQ_GENERAL} unidades (actual: ${totales.cantidadTotal})`,
+        detalle_descuentos_por_producto: totales.detallePorProducto,
       };
     }
 

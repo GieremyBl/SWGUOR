@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useOrdenesProduccion } from '@/lib/hooks/useOrdenProduccion';
+import { useOrdenProduccionDetalle } from '@/lib/hooks/useOrdenProduccion';
 import OrdenDetalleForm from '@/components/admin/ordenes-produccion/OrdenDetalleForm';
 import { Loader2, Factory, ArrowLeft } from 'lucide-react';
 import { OrdenProduccion } from '@/components/admin/ordenes-produccion/types';
@@ -9,20 +9,14 @@ import { OrdenProduccion } from '@/components/admin/ordenes-produccion/types';
 export default function OrdenDetallePage() {
   const params = useParams();
   const router = useRouter();
-
-  const { ordenes, isLoading } = useOrdenesProduccion({
-    page:  1,
-    limit: 100,
-  }) as { ordenes: OrdenProduccion[]; isLoading: boolean };
-
   const targetId = params?.id ? String(params.id) : '';
-  const orden    = ordenes?.find((o: OrdenProduccion) => o.id.toString() === targetId);
+
+  const { data: orden, isLoading, isError } = useOrdenProduccionDetalle(targetId);
 
   const handleVolver = () => {
     router.push('/admin/Panel-Administrativo/ordenes-produccion');
   };
 
-  /* ── Loading ─────────────────────────────────────────────────────────── */
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center bg-slate-50/50">
@@ -38,8 +32,7 @@ export default function OrdenDetallePage() {
     );
   }
 
-  /* ── Not found ───────────────────────────────────────────────────────── */
-  if (!orden) {
+  if (isError || !orden) {
     return (
       <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center bg-slate-50/50 p-4">
         <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-100 shadow-sm p-8 flex flex-col items-center gap-4 text-center">
@@ -66,12 +59,11 @@ export default function OrdenDetallePage() {
     );
   }
 
-  /* ── Detalle ─────────────────────────────────────────────────────────── */
   return (
     <div className="min-h-screen bg-slate-50/30">
       <OrdenDetalleForm
         open={true}
-        initialData={orden}
+        initialData={orden as OrdenProduccion}
         onClose={handleVolver}
       />
     </div>

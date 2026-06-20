@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { serializeBigInt } from '@/lib/utils/serialize';
 
 export async function GET(req: NextRequest) {
     try {
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
             orderBy: { id: 'desc' },
         });
 
-        return NextResponse.json(grupos);
+        return NextResponse.json(serializeBigInt(grupos));
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Error interno';
         return NextResponse.json({ error: message }, { status: 500 });

@@ -2,22 +2,13 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
-import type { RolUsuario } from '@/lib/constants/roles';
+import { ROLES_LOGISTICA_DESPACHO } from '@/lib/constants/pedidos-logistica';
 import { iniciarRutaDespacho } from '@/lib/helpers/iniciar-ruta-despacho.helper';
-
-const ROLES: RolUsuario[] = [
-  'administrador',
-  'gerente',
-  'recepcionista',
-  'ayudante',
-  'representante_taller',
-  'almacenero',
-];
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(_req: Request, { params }: Params) {
-  const auth = await requireServerRole(ROLES);
+  const auth = await requireServerRole(ROLES_LOGISTICA_DESPACHO);
   if (!auth.success) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

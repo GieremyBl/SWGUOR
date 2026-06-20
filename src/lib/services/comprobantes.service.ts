@@ -1,6 +1,14 @@
 import { prisma } from '@/lib/prisma';
 import { TipoComprobante, EstadoComprobante, Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { obtenerProximoCorrelativoSerie } from '@/lib/helpers/comprobante-correlativo.helper';
+import {
+  type DatosClienteFacturacion,
+  type DatosPedidoFacturacion,
+  determinarTipoComprobantePorDocumento,
+  generarDatosComprobanteSimulado,
+  resolverSeriePorTipo,
+} from '@/lib/helpers/facturacion-simulada.helper';
 
 // Tipo inferido directamente desde Prisma sin ningún cast
 type ComprobanteRow = Prisma.comprobantesGetPayload<Record<string, never>>;
@@ -26,20 +34,19 @@ interface FiltrosComprobante {
   estado_sunat?: EstadoComprobante;
 }
 
+interface EmitirComprobanteSimuladoInput {
+  pedido: DatosPedidoFacturacion;
+  cliente: DatosClienteFacturacion;
+  pagoId?: string | null;
+  fechaEmision?: Date;
+}
+
 // ── Servicio ──────────────────────────────────────────────────────────────────
 
 export const comprobantesService = {
 
   crear: async (input: CrearComprobanteInput): Promise<ComprobanteRow> => {
-    // Obtener el último correlativo de la misma serie para autoincrementar
-    const ultimo = await prisma.comprobantes.findFirst({
-      where: { serie: input.serie },
-      orderBy: { correlativo: 'desc' },
-      select: { correlativo: true },
-    });
-
-    const proximoCorrelativo =
-      (ultimo?.correlativo ? parseInt(ultimo.correlativo, 10) : 0) + 1;
+    const proximoCorrelativo = await obtenerProximoCorrelativoSerie(prisma, input.serie);
 
     return prisma.comprobantes.create({
       data: {
@@ -57,6 +64,28 @@ export const comprobantesService = {
         pago_id: input.pago_id != null ? String(input.pago_id) : null,
       },
     });
+  },
+
+  /**
+   * Emite un comprobante simulado (factura/boleta) aceptado por SUNAT
+   * a partir de datos de pedido y cliente.
+   */
+  emitirComprobanteSimulado: async (
+    input: EmitirComprobanteSimuladoInput,
+  ): Promise<ComprobanteRow> => {
+    const tipo = determinarTipoComprobantePorDocumento(input.cliente.ruc);
+    const serie = resolverSeriePorTipo(tipo);
+    const correlativo = await obtenerProximoCorrelativoSerie(prisma, serie);
+
+    const data = generarDatosComprobanteSimulado({
+      pedido: input.pedido,
+      cliente: input.cliente,
+      pagoId: input.pagoId,
+      correlativo,
+      fechaEmision: input.fechaEmision,
+    });
+
+    return prisma.comprobantes.create({ data });
   },
 
   listar: (filtros?: FiltrosComprobante): Promise<ComprobanteRow[]> => {

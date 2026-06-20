@@ -1,33 +1,32 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export const fichaMedidaSchema = z.object({
+export const fichaMedidaItemSchema = z.object({
   id: z.string().optional(),
-  id_ficha: z.union([z.string(), z.number()]).nullable().optional(), // Match con tu SQL
-  
-  punto_medida: z.string()
-    .min(1, "El punto de medida es requerido")
-    .nullable(),
-    
-  talla: z.string()
-    .min(1, "La talla es requerida")
-    .nullable(),
-    
-  valor_cm: z.coerce.number({
-    message: "Debe ser un número",
-  })
-  .min(0, "La medida no puede ser negativa")
-  .nullable()
-  .optional(),
-  
-  tolerancia: z.coerce.number({
-    message: "Debe ser un número",
-  })
-  .min(0, "La tolerancia no puede ser negativa")
-  .nullable()
-  .optional(),
+  id_ficha: z.union([z.string(), z.number()]).optional(),
+  punto_medida: z.string().min(1, 'El punto de medida es requerido'),
+  talla: z.string().min(1, 'La talla es requerida'),
+  valor_cm: z.coerce.number().min(0, 'La medida no puede ser negativa').nullable().optional(),
+  tolerancia: z.coerce.number().min(0, 'La tolerancia no puede ser negativa').nullable().optional(),
 });
 
-export type FichaMedidaFormValues = z.infer<typeof fichaMedidaSchema>;
+export const fichaMedidasBulkSchema = z.object({
+  ficha_id: z.union([z.string(), z.number()]),
+  medidas: z.array(fichaMedidaItemSchema).min(1, 'Debe haber al menos una medida'),
+});
 
-// Schema para validación de arrays (útil para el servicio guardarMedidas)
-export const fichaMedidasArraySchema = z.array(fichaMedidaSchema);
+export const fichaMedidaSingleSchema = z.object({
+  ficha_id: z.union([z.string(), z.number()]),
+  medida: fichaMedidaItemSchema,
+});
+
+export type FichaMedidaItem = z.infer<typeof fichaMedidaItemSchema>;
+
+export interface FichaMedidaRow {
+  id: string;
+  id_ficha?: string | null;
+  punto_medida: string | null;
+  talla: string | null;
+  valor_cm: number | null;
+  tolerancia: number | null;
+  created_at?: string;
+}

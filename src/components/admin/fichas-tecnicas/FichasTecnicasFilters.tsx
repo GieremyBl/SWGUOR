@@ -19,12 +19,7 @@ import {
   Tag,
 } from "lucide-react";
 
-const ESTADOS = [
-  { value: "borrador",  label: "Borrador",   color: "#94A3B8" },
-  { value: "activo",    label: "Activo",     color: "#10B981" },
-  { value: "revisión",  label: "Revisión",   color: "#F59E0B" },
-  { value: "obsoleto",  label: "Obsoleto",   color: "#EF4444" },
-];
+import { ESTADOS_FICHA, LISTA_ESTADOS_FICHA } from "@/lib/constants/fichas-tecnicas";
 
 export interface FichasTecnicasFiltersProps {
   searchTerm: string;
@@ -138,7 +133,7 @@ export default function FichasTecnicasFilters({
             Todos
           </button>
 
-          {ESTADOS.map(({ value, label, color }) => (
+          {LISTA_ESTADOS_FICHA.map((value) => (
             <button
               key={value}
               onClick={() => setEstadoFilter(value)}
@@ -152,10 +147,10 @@ export default function FichasTecnicasFilters({
                 className="w-2 h-2 rounded-full shrink-0"
                 style={{
                   backgroundColor:
-                    estadoFilter === value ? "white" : color,
+                    estadoFilter === value ? "white" : ESTADOS_FICHA[value].dot,
                 }}
               />
-              {label}
+              {ESTADOS_FICHA[value].label}
             </button>
           ))}
         </div>

@@ -30,6 +30,12 @@ export default function EtaWidget({ despacho }: EtaWidgetProps) {
       color: 'bg-amber-50/40 border-amber-200/40',
       textStyle: 'text-slate-700',
     },
+    preparando: {
+      icon: <Clock3 className="w-4 h-4 text-[#B8962D]" />,
+      mensaje: 'En preparación — El lote se encuentra en almacén central.',
+      color: 'bg-amber-50/40 border-amber-200/40',
+      textStyle: 'text-slate-700',
+    },
     en_almacen: {
       icon: <Clock3 className="w-4 h-4 text-[#B8962D]" />,
       mensaje: 'En zona de carga — Pasando controles de empaquetado final.',

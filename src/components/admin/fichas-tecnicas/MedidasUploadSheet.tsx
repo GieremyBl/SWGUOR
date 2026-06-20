@@ -74,14 +74,14 @@ export default function MedidasUploadSheet({ fichaId, onClose, onSuccess }: Prop
     try {
       setIsSubmitting(true);
 
-      const res = await fetch(`/api/admin/fichas-tecnicas/${fichaId}/medidas/bulk`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medidas: data.medidas }),
+      const res = await fetch('/api/admin/ficha-medidas', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ficha_id: fichaId, medidas: data.medidas }),
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Error al guardar medidas");
+      if (!res.ok || !result.success) throw new Error(result.error || 'Error al guardar medidas');
 
       toast.success("Medidas cargadas correctamente");
       onSuccess();

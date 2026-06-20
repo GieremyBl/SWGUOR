@@ -1,25 +1,34 @@
 import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { getServerAuthUser } from '@/lib/auth/server';
+import { requireServerRole } from '@/lib/auth/server';
+import { ROLES_LOGISTICA_DESPACHO } from '@/lib/constants/pedidos-logistica';
 import { PedidoEntregaForm } from '@/components/admin/pedidos/entrega/PedidoEntregaForm';
 import { PedidoEntregaPendienteRuta } from '@/components/admin/pedidos/entrega/PedidoEntregaPendienteRuta';
 
 export const dynamic = 'force-dynamic';
 
-const ROLES = ['administrador', 'gerente'] as const;
-
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+function redirectOnAuthFailure(error: string) {
+  if (error === 'unauthenticated' || error === 'usuario_no_encontrado') {
+    redirect('/login-admin');
+  }
+  redirect('/admin/acceso-denegado');
+}
+
 export default async function PedidoEntregaPage({ params }: PageProps) {
-  const auth = await getServerAuthUser();
-  if (!auth.success) notFound();
-  if (!ROLES.includes(auth.user.rol as (typeof ROLES)[number])) {
-    redirect('/admin/acceso-denegado');
+  const auth = await requireServerRole(ROLES_LOGISTICA_DESPACHO);
+  if (!auth.success) {
+    redirectOnAuthFailure(auth.error);
   }
 
   const { id } = await params;
+
+  if (!/^\d+$/.test(id)) {
+    notFound();
+  }
 
   const pedido = await prisma.pedidos.findUnique({
     where: { id: BigInt(id) },

@@ -7,7 +7,7 @@ import { ordenProduccionSchema, OrdenProduccionFormValues } from '@/lib/schemas/
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 // 2. Corregimos las importaciones según las sugerencias de tus hooks reales
-import { useCreateOrdenProduccion, useUpdateOrdenProduccion } from '@/lib/hooks/useOrdenProduccion'; 
+import { useCreateOrdenProduccion, useUpdateOrdenProduccion } from '@/lib/hooks/useOrdenProduccion';
 import { OrdenProduccion } from '@/components/admin/ordenes-produccion/types';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -18,18 +18,18 @@ import {
 } from 'lucide-react';
 
 // ─── Option types ─────────────────────────────────────────────────────────────
-interface ProductoOption  { id: number; nombre: string; sku: string; }
-interface TallerOption    { id: number; nombre: string; especialidad: string; }
-interface FichaOption     { id: number; version: string; ficha_url: string | null; producto_nombre: string; }
-interface PedidoOption    { id: number; total_unidades: number; estado: string; prioridad: string; }
+interface ProductoOption { id: number; nombre: string; sku: string; }
+interface TallerOption { id: number; nombre: string; especialidad: string; }
+interface FichaOption { id: number; version: string; ficha_url: string | null; producto_nombre: string; }
+interface PedidoOption { id: number; total_unidades: number; estado: string; prioridad: string; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const ESTADO_PEDIDO_LABELS: Record<string, string> = {
-  pendiente:          'Pendiente',
-  en_produccion:      'En Producción',
-  listo_para_despacho:'Listo p/ despacho',
-  entregado:          'Entregado',
-  cancelado:          'Cancelado',
+  pendiente: 'Pendiente',
+  en_produccion: 'En Producción',
+  listo_para_despacho: 'Listo p/ despacho',
+  entregado: 'Entregado',
+  cancelado: 'Cancelado',
 };
 
 const PRIORIDAD_LABELS: Record<string, string> = {
@@ -45,12 +45,12 @@ const ESPECIALIDAD_LABELS: Record<string, string> = {
 function mapearDatosIniciales(data: OrdenProduccion | null): Partial<OrdenProduccionFormValues> {
   if (!data) return { cantidad_solicitada: 1 };
   return {
-    producto_id:         data.producto_id,
-    taller_id:           data.taller_id,
-    ficha_id:            data.ficha_id,
-    pedido_id:           data.pedido_id,
+    producto_id: Number(data.producto_id),
+    taller_id: Number(data.taller_id),
+    ficha_id: Number(data.ficha_id),
+    pedido_id: Number(data.pedido_id),
     cantidad_solicitada: data.cantidad_solicitada,
-    fecha_entrega:       data.fecha_entrega
+    fecha_entrega: data.fecha_entrega
       ? new Date(data.fecha_entrega).toISOString().split('T')[0]
       : '',
     notas: data.notas ?? '',
@@ -59,8 +59,8 @@ function mapearDatosIniciales(data: OrdenProduccion | null): Partial<OrdenProduc
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface OrdenFormDialogProps {
-  open:        boolean;
-  onClose:     () => void;
+  open: boolean;
+  onClose: () => void;
   initialData: OrdenProduccion | null;
 }
 
@@ -68,30 +68,30 @@ export default function OrdenFormDialog({ open, onClose, initialData }: OrdenFor
   // 2. Adaptamos los hooks de mutación corregidos
   const { create, isCreating } = useCreateOrdenProduccion();
   const { update, isUpdating } = useUpdateOrdenProduccion();
-  
-  const supabase   = getSupabaseBrowserClient();
-  const isEditing  = !!initialData;
-  const isLoading  = isCreating || isUpdating;
+
+  const supabase = getSupabaseBrowserClient();
+  const isEditing = !!initialData;
+  const isLoading = isCreating || isUpdating;
 
   // ── Options state ──────────────────────────────────────────────────────────
-  const [productos,        setProductos]        = useState<ProductoOption[]>([]);
-  const [talleres,         setTalleres]          = useState<TallerOption[]>([]);
-  const [fichas,           setFichas]            = useState<FichaOption[]>([]);
-  const [pedidos,          setPedidos]           = useState<PedidoOption[]>([]);
-  const [loadingOptions,   setLoadingOptions]    = useState(false);
+  const [productos, setProductos] = useState<ProductoOption[]>([]);
+  const [talleres, setTalleres] = useState<TallerOption[]>([]);
+  const [fichas, setFichas] = useState<FichaOption[]>([]);
+  const [pedidos, setPedidos] = useState<PedidoOption[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
 
   // ── Form ───────────────────────────────────────────────────────────────────
   const { register, handleSubmit, reset, control, formState: { errors } } =
     useForm<OrdenProduccionFormValues>({
-      resolver:      zodResolver(ordenProduccionSchema),
+      resolver: zodResolver(ordenProduccionSchema),
       defaultValues: mapearDatosIniciales(initialData),
     });
 
   // 1. Corregimos el uso de watch pasándolo a useWatch para complacer al React Compiler
   const watchProductoId = useWatch({ control, name: 'producto_id' });
-  const watchTallerId   = useWatch({ control, name: 'taller_id' });
-  const watchFichaId    = useWatch({ control, name: 'ficha_id' });
-  const watchPedidoId   = useWatch({ control, name: 'pedido_id' });
+  const watchTallerId = useWatch({ control, name: 'taller_id' });
+  const watchFichaId = useWatch({ control, name: 'ficha_id' });
+  const watchPedidoId = useWatch({ control, name: 'pedido_id' });
 
   // ── Load options on open ───────────────────────────────────────────────────
   useEffect(() => {
@@ -119,18 +119,18 @@ export default function OrdenFormDialog({ open, onClose, initialData }: OrdenFor
         .order('id', { ascending: false }),
     ])
       .then(([p, t, f, ped]) => {
-        if (p.error)   toast.error('Error cargando productos');
-        if (t.error)   toast.error('Error cargando talleres');
-        if (f.error)   toast.error('Error cargando fichas');
+        if (p.error) toast.error('Error cargando productos');
+        if (t.error) toast.error('Error cargando talleres');
+        if (f.error) toast.error('Error cargando fichas');
         if (ped.error) toast.error('Error cargando pedidos');
 
         setProductos((p.data ?? []) as ProductoOption[]);
         setTalleres((t.data ?? []) as TallerOption[]);
         setFichas(
           (f.data ?? []).map((row: any) => ({
-            id:              row.id,
-            version:         row.version ?? 'sin versión',
-            ficha_url:       row.ficha_url ?? null,
+            id: row.id,
+            version: row.version ?? 'sin versión',
+            ficha_url: row.ficha_url ?? null,
             producto_nombre: row.productos?.nombre ?? `Producto #${row.id_producto}`,
           }))
         );
@@ -146,7 +146,7 @@ export default function OrdenFormDialog({ open, onClose, initialData }: OrdenFor
 
   const onSubmit = (data: OrdenProduccionFormValues) => {
     if (isEditing && initialData) {
-      update(String(initialData.id), data); 
+      update(String(initialData.id), data);
     } else {
       create(data);
     }
@@ -156,15 +156,14 @@ export default function OrdenFormDialog({ open, onClose, initialData }: OrdenFor
   if (!open) return null;
 
   // ── Resolved previews ──────────────────────────────────────────────────────
-  const productoSel = productos.find((p) => p.id === Number(watchProductoId))   ?? null;
-  const tallerSel   = talleres.find((t)  => t.id === Number(watchTallerId))     ?? null;
-  const fichaSel    = fichas.find((f)    => f.id === Number(watchFichaId))      ?? null;
-  const pedidoSel   = pedidos.find((p)   => p.id === Number(watchPedidoId))     ?? null;
+  const productoSel = productos.find((p) => p.id === Number(watchProductoId)) ?? null;
+  const tallerSel = talleres.find((t) => t.id === Number(watchTallerId)) ?? null;
+  const fichaSel = fichas.find((f) => f.id === Number(watchFichaId)) ?? null;
+  const pedidoSel = pedidos.find((p) => p.id === Number(watchPedidoId)) ?? null;
 
   // ── Shared select class ────────────────────────────────────────────────────
   const selectCls = (hasError: boolean) =>
-    `w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 disabled:opacity-50 bg-white ${
-      hasError ? 'border-red-400' : 'border-gray-200'
+    `w-full h-10 px-3 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-500 disabled:opacity-50 bg-white ${hasError ? 'border-red-400' : 'border-gray-200'
     }`;
 
   return (

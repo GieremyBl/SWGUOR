@@ -4,16 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   fetchFichaPorProducto,
+  fetchFichasTecnicasList,
   createFichaTecnica,
   updateFichaTecnica,
-  fetchMedidas,
-  saveMedidas,
-  deleteMedida,
+  type ListarFichasParams,
 } from '@/lib/helpers/fichas-tecnicas-helpers';
-import type { Medida } from '@/lib/schemas/fichas-tecnicas';
 
-export const FICHAS_KEY  = 'fichas-tecnicas';
-export const MEDIDAS_KEY = 'ficha-medidas';
+export const FICHAS_KEY = 'fichas-tecnicas';
+
+export { useFichaMedidas, FICHA_MEDIDAS_KEY as MEDIDAS_KEY } from '@/lib/hooks/useFichaMedidas';
 
 // Interfaz estándar para el contrato de respuestas de la API locales
 interface ApiResponse {
@@ -31,6 +30,18 @@ export interface CrearFichaTecnicaInput {
   costo_estimado?:        number;
   ficha_url?:             string;
   imagen_geometral?:      string;
+}
+
+// ── Hook: useFichasTecnicasList ─────────────────────────────────────────────
+
+export function useFichasTecnicasList(params?: ListarFichasParams) {
+  const { estado, busqueda, categoria_id } = params ?? {};
+
+  return useQuery({
+    queryKey: [FICHAS_KEY, 'list', { estado, busqueda, categoria_id }],
+    queryFn:  () => fetchFichasTecnicasList({ estado, busqueda, categoria_id }),
+    refetchOnWindowFocus: false,
+  });
 }
 
 // ── Hook: useFichaTecnica ───────────────────────────────────────────────────
@@ -82,52 +93,5 @@ export function useFichaTecnica(producto_id: string) {
 
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
-  };
-}
-
-// ── Hook: useFichaMedidas ────────────────────────────────────────────────────
-
-export function useFichaMedidas(ficha_id: string) {
-  const queryClient = useQueryClient();
-
-  const query = useQuery({
-    queryKey: [MEDIDAS_KEY, ficha_id],
-    queryFn:  () => fetchMedidas(ficha_id),
-    enabled:  !!ficha_id,
-    refetchOnWindowFocus: false,
-  });
-
-  const saveMutation = useMutation<ApiResponse, Error, { medidas: Omit<Medida, 'id'>[] }>({
-    mutationFn: ({ medidas }) => saveMedidas(ficha_id, medidas),
-    onSuccess: (res) => {
-      if (!res.success) { 
-        toast.error(res.error ?? 'Error al guardar medidas'); 
-        return; 
-      }
-      toast.success('Medidas guardadas');
-      queryClient.invalidateQueries({ queryKey: [MEDIDAS_KEY, ficha_id] });
-    },
-    onError: () => toast.error('Error de conexión'),
-  });
-
-  const deleteMutation = useMutation<ApiResponse, Error, string>({
-    mutationFn: deleteMedida,
-    onSuccess: () => {
-      toast.success('Medida eliminada');
-      queryClient.invalidateQueries({ queryKey: [MEDIDAS_KEY, ficha_id] });
-    },
-    onError: () => toast.error('Error de conexión'),
-  });
-
-  return {
-    medidas:   query.data ?? [],
-    isLoading: query.isLoading,
-    refetch:   query.refetch,
-
-    save:   (medidas: Omit<Medida, 'id'>[]) => saveMutation.mutate({ medidas }),
-    remove: (id: string)                    => deleteMutation.mutate(id),
-
-    isSaving:   saveMutation.isPending,
-    isDeleting: deleteMutation.isPending,
   };
 }

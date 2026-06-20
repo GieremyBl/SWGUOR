@@ -4,7 +4,7 @@ import { Layers, CheckCircle2, PenLine, AlertTriangle } from 'lucide-react';
 import StatCard from '@/components/admin/common/StatCard';
 
 interface FichasTecnicasStatsProps {
-  stats: { total: number; activas: number; borradores: number; revision: number };
+  stats: { total: number; aprobadas: number; borradores: number; enRevision: number };
   statusFilter: string | null;
   onFilterChange: (filter: string | null) => void;
 }
@@ -21,12 +21,12 @@ export function FichasTecnicasStats({ stats, statusFilter, onFilterChange }: Fic
         onClick={() => onFilterChange(null)}
       />
       <StatCard
-        title="En Línea / Activas"
-        value={stats.activas}
+        title="Aprobadas"
+        value={stats.aprobadas}
         icon={CheckCircle2}
         color="emerald"
-        isActive={statusFilter === 'activo'}
-        onClick={() => onFilterChange(statusFilter === 'activo' ? null : 'activo')}
+        isActive={statusFilter === 'aprobada'}
+        onClick={() => onFilterChange(statusFilter === 'aprobada' ? null : 'aprobada')}
       />
       <StatCard
         title="Borradores"
@@ -38,11 +38,11 @@ export function FichasTecnicasStats({ stats, statusFilter, onFilterChange }: Fic
       />
       <StatCard
         title="En Revisión"
-        value={stats.revision}
+        value={stats.enRevision}
         icon={AlertTriangle}
         color="orange"
-        isActive={statusFilter === 'revision'}
-        onClick={() => onFilterChange(statusFilter === 'revision' ? null : 'revision')}
+        isActive={statusFilter === 'en_revision'}
+        onClick={() => onFilterChange(statusFilter === 'en_revision' ? null : 'en_revision')}
       />
     </div>
   );

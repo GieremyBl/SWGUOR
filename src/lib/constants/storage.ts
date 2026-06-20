@@ -14,6 +14,12 @@ export function cotizacionProveedorPdfStoragePath(cotizacionId: string | number)
   return `${STORAGE_PATH_COTIZACIONES_PROVEEDOR}/${cotizacionId}/referencia.pdf`;
 }
 
+export const STORAGE_PATH_COMPROBANTES = 'comprobantes' as const;
+
+export function comprobantePdfStoragePath(comprobanteId: string): string {
+  return `${STORAGE_PATH_COMPROBANTES}/${comprobanteId}/comprobante.pdf`;
+}
+
 export const STORAGE_BUCKET_FICHAS_TECNICAS =
   process.env.SUPABASE_STORAGE_BUCKET_FICHAS ?? 'fichas-tecnicas';
 

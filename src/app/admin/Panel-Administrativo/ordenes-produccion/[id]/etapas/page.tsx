@@ -3,10 +3,13 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { useOrdenesProduccion } from "@/lib/hooks/useOrdenProduccion";
+import { useOrdenProduccionDetalle } from "@/lib/hooks/useOrdenProduccion";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { ETAPAS_PRODUCCION, ETAPA_LABELS } from "@/lib/schemas/ordenes-produccion";
 import OrdenStepper from "@/components/admin/ordenes-produccion/OrdenStepper";
+import SeguimientoProduccionTimeline from "@/components/admin/ordenes-produccion/SeguimientoProduccionTimeline";
+import { etapaActualDesdeSeguimiento } from "@/lib/helpers/seguimiento-produccion-helpers";
+import { useSeguimientoProduccion } from "@/lib/hooks/useSeguimientoProduccion";
 import { FormSelector, Badge } from "@/components/admin/ordenes-produccion/etapas";
 
 type Rol =
@@ -19,8 +22,15 @@ export default function OrdenEtapasPage() {
     const router = useRouter();
     const targetId = params?.id ? String(params.id) : "";
 
-    const { ordenes, isLoading, refetch } = useOrdenesProduccion({ page: 1, limit: 100 });
-    const orden = ordenes?.find((o: any) => o.id.toString() === targetId);
+    const { data: orden, isLoading, refetch } = useOrdenProduccionDetalle(targetId);
+    const { seguimientos } = useSeguimientoProduccion(targetId);
+    const etapaActual = (orden && seguimientos)
+        ? etapaActualDesdeSeguimiento(seguimientos, String(orden.etapa ?? "diseno"))
+        : "diseno";
+
+    const productoNombre = orden && "productos" in orden && orden.productos && "nombre" in orden.productos
+        ? String(orden.productos.nombre)
+        : "Producto no especificado";
 
     const [rolActual, setRolActual] = useState<Rol | null>(null);
 
@@ -71,18 +81,18 @@ export default function OrdenEtapasPage() {
                             <p className="text-slate-500 mt-2 flex items-center gap-2">
                                 <span className="font-mono text-sm bg-slate-100 px-3 py-1 rounded-lg">Orden #{orden.id}</span>
                                 <span>•</span>
-                                <span className="font-semibold">{orden.productos?.nombre || "Producto no especificado"}</span>
+                                <span className="font-semibold">{productoNombre}</span>
                             </p>
                         </div>
                         <Badge
-                            label={ETAPA_LABELS[orden.seguimiento_produccion?.[0]?.etapa as keyof typeof ETAPA_LABELS] ?? "Pendiente"}
+                            label={ETAPA_LABELS[etapaActual as keyof typeof ETAPA_LABELS] ?? "Pendiente"}
                             color="bg-rose-50 text-rose-600 border border-rose-100"
                         />
                     </div>
                 </div>
 
                 {/* Stepper */}
-                <OrdenStepper etapas={ETAPAS_PRODUCCION} etapaActual={orden.seguimiento_produccion?.[0]?.etapa || "diseno"} />
+                <OrdenStepper etapas={ETAPAS_PRODUCCION} etapaActual={etapaActual} />
 
                 {/* Formulario según rol activo */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
@@ -90,6 +100,16 @@ export default function OrdenEtapasPage() {
                         orden={orden}
                         rol={rolActual}
                         onComplete={() => refetch?.()}
+                    />
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+                    <h2 className="text-sm font-black uppercase text-slate-400 tracking-wider mb-4">
+                        Historial de seguimiento
+                    </h2>
+                    <SeguimientoProduccionTimeline
+                        ordenId={targetId}
+                        etapaOrden={orden.etapa as string}
                     />
                 </div>
             </div>

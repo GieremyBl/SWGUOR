@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { serializeBigInt } from '@/lib/utils/serialize';
 
 export async function GET(
     req: NextRequest,
@@ -24,7 +25,7 @@ export async function GET(
             return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 });
         }
 
-        const grupoId = Number(id);
+        const grupoId = BigInt(id);
 
         const pertenece = await prisma.despachos_grupo_pedidos.findFirst({
             where: {
@@ -52,7 +53,7 @@ export async function GET(
             return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
         }
 
-        return NextResponse.json(grupo);
+        return NextResponse.json(serializeBigInt(grupo));
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Error interno';
         return NextResponse.json({ error: message }, { status: 500 });

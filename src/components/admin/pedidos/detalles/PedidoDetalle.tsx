@@ -3,9 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { PedidoDetalleHeader } from './PedidoDetalleHeader';
 import { PedidoDetalleSecciones } from './PedidoDetalleSecciones';
-import { PedidoDetalleTabs } from './PedidoDetalleTabs';
+import { PedidoDetalleTabs, type TabId } from './PedidoDetalleTabs';
 import OrdenesTable from '@/components/admin/ordenes-produccion/OrdenesTable';
 import { SectionCard } from './PedidoDetalleUI';
+import { ChatAsistenciaAdmin } from './ChatAsistenciaAdmin';
+import { requiereAtencionChat, type MensajeChatPedidoUI } from '@/lib/helpers/pedido-chat-ui.helper';
 import type { DetallePedidoData, TallerOption } from './types';
 
 export type { DetallePedidoData, TallerOption };
@@ -19,13 +21,34 @@ export default function PedidoDetalle({
   pedido,
   puedeCambiarEstado,
 }: PedidoDetalleProps) {
-  const [activeTab, setActiveTab] = useState<'items' | 'seguimiento' | 'produccion' | 'pagos'>('items');
+  const [activeTab, setActiveTab] = useState<TabId>('items');
   const [ordenes, setOrdenes] = useState<any[]>([]);
   const [totalOrdenes, setTotalOrdenes] = useState<number>(0);
   const [loadingOrdenes, setLoadingOrdenes] = useState(false);
+  const [chatPendiente, setChatPendiente] = useState(false);
 
   useEffect(() => {
-    // Obtener el conteo total de órdenes para el badge y, si la pestaña está activa, la lista
+    let activo = true;
+
+    async function fetchChatPendiente() {
+      try {
+        const res = await fetch(`/api/pedidos/${pedido.id}/chat`, { cache: 'no-store' });
+        const json = await res.json();
+        if (activo && res.ok && Array.isArray(json.data)) {
+          setChatPendiente(requiereAtencionChat(json.data as MensajeChatPedidoUI[]));
+        }
+      } catch (e) {
+        console.error('Error fetching chat pendiente', e);
+      }
+    }
+
+    fetchChatPendiente();
+    return () => {
+      activo = false;
+    };
+  }, [pedido.id]);
+
+  useEffect(() => {
     async function fetchOrdenesCount() {
       try {
         const res = await fetch(`/api/admin/ordenes-produccion?pedido_id=${pedido.id}&page=1&limit=1`);
@@ -69,8 +92,9 @@ export default function PedidoDetalle({
 
       <div className="flex items-center justify-between">
         <PedidoDetalleTabs
-          activeTab={activeTab === 'pagos' ? 'pagos' : (activeTab as any)}
+          activeTab={activeTab}
           totalOrdenes={totalOrdenes}
+          chatPendiente={chatPendiente}
           onTabChange={(t) => setActiveTab(t)}
         />
       </div>
@@ -87,6 +111,13 @@ export default function PedidoDetalle({
               onEdit={(orden) => window.location.assign(`/admin/Panel-Administrativo/ordenes-produccion/${orden.id}`)}
             />
           )}
+        </SectionCard>
+      ) : activeTab === 'asistencia' ? (
+        <SectionCard title="Asistencia al cliente">
+          <ChatAsistenciaAdmin
+            pedidoId={pedido.id}
+            onPendienteChange={setChatPendiente}
+          />
         </SectionCard>
       ) : (
         <PedidoDetalleSecciones

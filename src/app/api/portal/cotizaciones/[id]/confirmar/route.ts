@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { buildPedidoItemsFromCotizacion } from '@/lib/helpers/crear-pedido-items-desde-cotizacion.helper';
 
 export async function POST(
     req: NextRequest,
@@ -91,6 +92,12 @@ export async function POST(
                     ),
                 },
             });
+
+            if (cotizacion.cotizacion_items.length > 0) {
+                await tx.pedido_items.createMany({
+                    data: buildPedidoItemsFromCotizacion(pedido.id, cotizacion.cotizacion_items),
+                });
+            }
 
             await tx.cotizaciones.update({
                 where: { id: cotizacionId },

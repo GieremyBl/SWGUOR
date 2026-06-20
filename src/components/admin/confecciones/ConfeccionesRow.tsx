@@ -11,7 +11,6 @@ import type { ConfeccionRow_T } from "./ConfeccionesTable";
 import { useRouter } from "next/navigation";
 import { CerrarConfeccionModal } from "./CerrarConfeccionModal";
 import { EditarConfeccionModal } from "./EditarConfeccionModal";
-import router from "next/router";
 
 export const ESTADO_BADGE: Record<string, string> = {
   pendiente: "bg-slate-50  text-slate-600  border-slate-200",

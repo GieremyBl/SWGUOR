@@ -3,9 +3,13 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
 import type { RolUsuario } from '@/lib/constants/roles';
-import { campanaSchema } from '@/lib/schemas/promociones-ofertas';
+import { campanaConEscalasSchema } from '@/lib/schemas/promociones-ofertas';
 import { ofertasService } from '@/lib/services/ofertas.service';
 import { serializeBigInt } from '@/lib/utils/serialize';
+import {
+  normalizarAplicableTipo,
+  normalizarEstadoDescuento,
+} from '@/lib/helpers/descuento-aplicaciones.helper';
 
 const ROLES: RolUsuario[] = ['administrador', 'gerente'];
 
@@ -53,13 +57,29 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const parsed = campanaSchema.safeParse(body);
+    const parsed = campanaConEscalasSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },
         { status: 400 },
       );
     }
+
+    const alcanceNormalizado = parsed.data.alcance.trim().toLowerCase();
+    const aplicableTipoPreview = normalizarAplicableTipo(
+      alcanceNormalizado,
+      parsed.data.alcance,
+    );
+    const estadoPreview = normalizarEstadoDescuento('aplicado');
+
+    console.info('[POST /api/admin/ofertas] descuento_aplicaciones preview', {
+      alcanceFormulario: parsed.data.alcance,
+      alcanceNormalizado,
+      aplicable_tipo: aplicableTipoPreview,
+      estado: estadoPreview,
+      categoria_id: parsed.data.categoria_id ?? null,
+      producto_id: parsed.data.producto_id ?? null,
+    });
 
     const created = await ofertasService.crear(parsed.data);
     return NextResponse.json(

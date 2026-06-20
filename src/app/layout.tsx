@@ -3,6 +3,7 @@ import { DM_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
+import { Providers } from "@/providers/Providers";
 
 // Carga optimizada de la fuente para el cuerpo de texto
 const dmSans = DM_Sans({
@@ -53,16 +54,18 @@ export default function RootLayout({
         style={{ backgroundColor: "#0f0d0b", color: "#fdf9f3" }}
         suppressHydrationWarning
       >
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          expand={false}
-          theme="dark"
-        />
-        <div className="relative flex min-h-screen flex-col">
-          {children}
-        </div>
+        <Providers>
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            expand={false}
+            theme="dark"
+          />
+          <div className="relative flex min-h-screen flex-col">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );

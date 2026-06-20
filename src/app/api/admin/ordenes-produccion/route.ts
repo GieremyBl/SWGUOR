@@ -1,10 +1,17 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { OrdenesProduccionService } from '@/lib/services/ordenes-produccion.service';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
+import { ordenProduccionSchema } from '@/lib/schemas/ordenes-produccion';
 import type { RolUsuario } from '@/lib/constants/roles';
 
-const ROLES_LECTURA = ['administrador', 'gerente', 'representante_taller', 'recepcionista', 'disenador', 'almacenero'] as RolUsuario[];
+const ROLES_LECTURA: RolUsuario[] = [
+  'administrador', 'gerente', 'representante_taller', 'recepcionista', 'disenador', 'almacenero',
+];
+const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller'];
 
 export async function GET(req: Request) {
   const auth = await requireServerRole(ROLES_LECTURA);
@@ -48,21 +55,100 @@ export async function GET(req: Request) {
       taller_id,
       pedido_id,
       estado: estadoParam,
-      etapa,  // Pasa limpio como string | undefined resolviendo el sub-where
+      etapa,
       search,
       page,
       limit,
     });
 
-    // 6. Formatear la salida idéntica a lo que espera tu hook useOrdenesProduccion en Front
+    const [enProceso, completadas] = await Promise.all([
+      prisma.ordenes_produccion.count({
+        where: { estado: { in: ['borrador', 'confirmada', 'en_produccion', 'pausada'] } },
+      }),
+      prisma.ordenes_produccion.count({ where: { estado: 'completada' } }),
+    ]);
+
     return NextResponse.json({
       success: true,
       ordenes: result?.data || [],
-      meta: result?.meta || { total: 0, totalPages: 1, page, limit }
+      meta: {
+        ...(result?.meta || { total: 0, totalPages: 1, page, limit }),
+        enProceso,
+        completadas,
+      },
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    console.error('[GET /ordenes-produccion]', error);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  const auth = await requireServerRole(ROLES_ESCRITURA);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  try {
+    const body = await req.json();
+    const parsed = ordenProduccionSchema.safeParse({
+      ...body,
+      producto_id: Number(body.producto_id),
+      taller_id: Number(body.taller_id),
+      ficha_id: Number(body.ficha_id),
+      pedido_id: body.pedido_id != null && body.pedido_id !== ''
+        ? Number(body.pedido_id)
+        : undefined,
+      cantidad_solicitada: Number(body.cantidad_solicitada),
     });
 
-  } catch (error: any) {
-    console.error('[GET /ordenes-produccion] Error Crítico:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },
+        { status: 400 },
+      );
+    }
+
+    const orden = await OrdenesProduccionService.crear({
+      ...parsed.data,
+      creado_por: auth.user.id,
+    });
+
+    return NextResponse.json({ success: true, data: orden }, { status: 201 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  const auth = await requireServerRole(ROLES_ESCRITURA);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  try {
+    const body = await req.json();
+    const id = body.id;
+    if (!id || !/^\d+$/.test(String(id))) {
+      return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+    }
+
+    const { id: _id, ...updates } = body;
+    const orden = await OrdenesProduccionService.actualizar(String(id), {
+      fecha_entrega: updates.fecha_entrega,
+      notas: updates.notas,
+      estado: updates.estado,
+      taller_id: updates.taller_id != null ? String(updates.taller_id) : undefined,
+      cantidad_solicitada: updates.cantidad_solicitada != null
+        ? Number(updates.cantidad_solicitada)
+        : undefined,
+    });
+
+    return NextResponse.json({ success: true, data: orden });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

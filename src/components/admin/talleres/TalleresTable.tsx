@@ -11,16 +11,10 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { ESPECIALIDAD_TALLER_LABELS } from "@/lib/constants/talleres";
+import type { Taller } from "@/lib/schemas/talleres";
 
-export interface Taller {
-  id:           string;
-  nombre:       string;
-  ruc:          string;
-  telefono:     string;
-  direccion:    string | null;
-  especialidad: string;
-  estado:       string;
-}
+export type { Taller };
 
 interface TalleresTableProps {
   data:      Taller[];
@@ -94,7 +88,9 @@ export default function TalleresTable({
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-100 capitalize">
-                    {taller.especialidad}
+                    {taller.especialidad
+                      ? ESPECIALIDAD_TALLER_LABELS[taller.especialidad as keyof typeof ESPECIALIDAD_TALLER_LABELS] ?? taller.especialidad
+                      : '—'}
                   </Badge>
                 </TableCell>
                 <TableCell>

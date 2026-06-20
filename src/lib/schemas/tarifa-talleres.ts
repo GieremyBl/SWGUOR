@@ -1,49 +1,52 @@
 import { z } from 'zod';
+import { ESPECIALIDADES_TALLER } from '@/lib/schemas/talleres';
 
-export const tarifaTallerBaseSchema = z.object({
-  id: z.string().uuid(),
-  tallerId: z.string().uuid(),
-  nombreServicio: z.string().min(3).max(150),
-  descripcion: z.string().max(500).optional(),
-  tipoServicio: z.enum(['CONFECCION', 'DISEÑO', 'ACABADO', 'ESTAMPADO', 'BORDADO', 'OTRO']),
-  precioUnitario: z.number().positive(),
-  unidadMedida: z.enum(['PIEZA', 'METRO', 'HORA', 'DOCENA']),
-  moneda: z.enum(['PEN', 'USD']).default('PEN'),
-  tiempoEstimado: z.number().int().positive().optional(),
-  unidadTiempo: z.enum(['MINUTOS', 'HORAS', 'DIAS']).optional(),
-  vigenciaDesde: z.date(),
-  vigenciaHasta: z.date().nullable().optional(),
+export const MONEDAS_TARIFA = ['PEN', 'USD'] as const;
+
+export const tarifaTallerSchema = z.object({
+  taller_id: z.coerce.number().min(1, 'Taller requerido'),
+  especialidad: z.enum(ESPECIALIDADES_TALLER),
+  precio_unitario: z.coerce.number().positive('El precio debe ser mayor a 0'),
+  moneda: z.enum(MONEDAS_TARIFA).default('PEN'),
+  vigente_desde: z.string().optional(),
+  vigente_hasta: z.string().nullable().optional(),
   activo: z.boolean().default(true),
-  observaciones: z.string().max(500).optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  notas: z.string().nullable().optional(),
 });
 
-export const crearTarifaTallerSchema = tarifaTallerBaseSchema.omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const tarifaTallerUpdateSchema = tarifaTallerSchema
+  .omit({ taller_id: true })
+  .partial()
+  .refine((d) => Object.keys(d).length > 0, { message: 'Sin cambios' });
+
+export const calcularCostoTarifaSchema = z.object({
+  cantidad: z.coerce.number().positive('Cantidad debe ser mayor a 0'),
 });
 
-export const actualizarTarifaTallerSchema = crearTarifaTallerSchema.partial();
+export type TarifaTallerForm = z.infer<typeof tarifaTallerSchema>;
+export type TarifaTallerUpdate = z.infer<typeof tarifaTallerUpdateSchema>;
 
-export const obtenerTarifasSchema = z.object({
-  filtro: z.object({
-    tallerId: z.string().uuid().optional(),
-    tipoServicio: z.enum(['CONFECCION', 'DISEÑO', 'ACABADO', 'ESTAMPADO', 'BORDADO', 'OTRO']).optional(),
-    activo: z.boolean().optional(),
-  }).optional(),
-  paginacion: z.object({
-    pagina: z.number().int().positive().default(1),
-    limite: z.number().int().positive().default(20),
-  }).optional(),
-});
+export interface TarifaTallerRow {
+  id: string | number;
+  taller_id: string | number;
+  especialidad: string;
+  precio_unitario: string | number;
+  moneda: string;
+  vigente_desde: string;
+  vigente_hasta?: string | null;
+  activo: boolean;
+  notas?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  talleres?: {
+    id: string | number;
+    nombre: string;
+  };
+}
 
-export const calcularCostoServicioSchema = z.object({
-  tarifaTallerId: z.string().uuid(),
-  cantidad: z.number().positive(),
-});
-
-export type TarifaTaller = z.infer<typeof tarifaTallerBaseSchema>;
-export type CrearTarifaTaller = z.infer<typeof crearTarifaTallerSchema>;
-export type ActualizarTarifaTaller = z.infer<typeof actualizarTarifaTallerSchema>;
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}

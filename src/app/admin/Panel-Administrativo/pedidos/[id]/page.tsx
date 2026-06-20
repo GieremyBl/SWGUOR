@@ -5,6 +5,11 @@ import { getServerAuthUser } from '@/lib/auth/server';
 import PedidoDetalle, {
   type DetallePedidoData,
 } from '@/components/admin/pedidos/detalles/PedidoDetalle';
+import {
+  mapCotizacionItemsToPedidoItems,
+  mapPedidoItemRow,
+} from '@/lib/helpers/pedido-items-display.helper';
+import { obtenerDocumentosPedidoAdmin } from '@/lib/services/comprobante-documento.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +52,17 @@ export default async function PedidoDetallePage({ params }: PageProps) {
           select: {
             id: true,
             numero: true,
+            cotizacion_items: {
+              include: {
+                productos: {
+                  select: { id: true, nombre: true, sku: true, imagen: true },
+                },
+                variantes_producto: {
+                  select: { id: true, color: true, talla: true, sku: true },
+                },
+              },
+              orderBy: { id: 'asc' },
+            },
           },
         },
         pedido_items: {
@@ -82,10 +98,21 @@ export default async function PedidoDetallePage({ params }: PageProps) {
     notFound();
   }
 
+  const itemsDisplay =
+    pedido.pedido_items.length > 0
+      ? pedido.pedido_items.map((item) => mapPedidoItemRow(item))
+      : pedido.cotizacion?.cotizacion_items
+        ? mapCotizacionItemsToPedidoItems(pedido.cotizacion.cotizacion_items)
+        : [];
+
+  const documentos = await obtenerDocumentosPedidoAdmin(pedido.id);
+
   const serializado = serializeBigInt(pedido) as Record<string, unknown>;
 
   const pedidoFormateado: DetallePedidoData = {
     ...(serializado as unknown as DetallePedidoData),
+    pedido_items: itemsDisplay,
+    documentos,
     seguimiento_pedido: (
       (serializado.seguimiento_pedido as Array<Record<string, unknown>>) ?? []
     ).map((s) => ({

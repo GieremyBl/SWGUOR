@@ -57,6 +57,11 @@ export const MaterialesService = {
       where: { id: BigInt(id) },
       include: {
         proveedores: { select: { id: true, razon_social: true, ruc: true } },
+        almacen_stock: {
+          include: {
+            almacenes: { select: { id: true, nombre: true } },
+          },
+        },
         ordenes_compra_items: {
           include: {
             ordenes_compra: {
@@ -114,7 +119,6 @@ export const MaterialesService = {
         stock_minimo: data.stock_minimo ?? 10,
         precio_unitario: data.precio_unitario ?? null,
         proveedor_id: data.proveedor_id ? BigInt(data.proveedor_id) : null,
-        ubicacion_almacen: data.ubicacion_almacen ?? null,
         alerta_bajo_stock: data.alerta_bajo_stock ?? true,
       },
     });

@@ -30,7 +30,7 @@ export interface PedidoConSeguimiento {
 }
 
 export async function getPedidosActivos(): Promise<PedidoConSeguimiento[]> {
-  const res = await fetch('/api/portal/pedidos/seguimiento', {
+  const res = await fetch('/api/portal/pedidos', {
     credentials: 'include',
     cache: 'no-store',
   });

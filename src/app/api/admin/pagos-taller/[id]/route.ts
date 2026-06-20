@@ -1,81 +1,92 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { pagoTallerBaseSchema as pagosTallerUpdateSchema } from '@/lib/schemas/pagos-talleres';
-import { serializeBigInt } from '@/lib/utils/serialize';
+import { requireServerRole } from '@/lib/auth/server';
+import { PAGOS_TALLER_ROLES_ESCRITURA, PAGOS_TALLER_ROLES_VER } from '@/lib/constants/pagos-taller';
+import {
+  actualizarPagoTallerInputSchema,
+  anularPagoTallerInputSchema,
+  registrarPagoTallerInputSchema,
+} from '@/lib/schemas/pagos-talleres';
+import { PagosTallerService } from '@/lib/services/pagos-talleres.service';
 import { ZodError } from 'zod';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Params = { params: Promise<{ id: string }> };
+
+export async function GET(_req: Request, { params }: Params) {
+  const auth = await requireServerRole(PAGOS_TALLER_ROLES_VER);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
-    const pago = await prisma.pagos_taller.findUnique({
-      where: { id: BigInt(id) },
-      include: {
-        talleres: true,
-        confecciones: true,
-        ordenes_produccion: true,
-        usuarios: true,
-      },
-    });
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
 
-    if (!pago) {
+    const data = await PagosTallerService.obtenerPorId(id);
+    if (!data) {
       return NextResponse.json({ error: 'Pago no encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json(serializeBigInt(pago));
-  } catch (error: any) {
-    console.error('[GET /pagos-taller/:id]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, data });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, { params }: Params) {
+  const auth = await requireServerRole(PAGOS_TALLER_ROLES_ESCRITURA);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
-    const body = await request.json();
-    const validated = pagosTallerUpdateSchema.parse(body);
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
 
-    const pago = await prisma.pagos_taller.update({
-      where: { id: BigInt(id) },
-      data: {
-        ...(validated.taller_id ? { taller_id: BigInt(validated.taller_id) } : {}),
-        ...(validated.confeccion_id ? { confeccion_id: BigInt(validated.confeccion_id) } : {}),
-        ...(validated.orden_produccion_id ? { orden_produccion_id: BigInt(validated.orden_produccion_id) } : {}),
-        ...(validated.monto !== undefined ? { monto: validated.monto } : {}),
-        ...(validated.moneda ? { moneda: validated.moneda } : {}),
-        ...(validated.metodo_pago ? { metodo_pago: validated.metodo_pago } : {}),
-        ...(validated.estado ? { estado: validated.estado } : {}),
-        ...(validated.fecha_pago ? { fecha_pago: new Date(validated.fecha_pago) } : {}),
+    const body = await req.json();
+
+    if (body.accion === 'anular') {
+      const validated = anularPagoTallerInputSchema.parse(body);
+      const data = await PagosTallerService.anular(id, validated.notas);
+      return NextResponse.json({ success: true, data });
+    }
+
+    if (body.accion === 'registrar') {
+      const validated = registrarPagoTallerInputSchema.parse(body);
+      const data = await PagosTallerService.registrarPago(id, {
+        monto: validated.monto,
+        metodo_pago: validated.metodo_pago,
+        fecha_pago: validated.fecha_pago,
         numero_operacion: validated.numero_operacion,
-        comprobante_url: validated.comprobante_url,
+        comprobante_url: validated.comprobante_url || undefined,
         notas: validated.notas,
-        ...(validated.registrado_por ? { registrado_por: BigInt(validated.registrado_por) } : {}),
-      },
-      include: {
-        talleres: true,
-        confecciones: true,
-        ordenes_produccion: true,
-        usuarios: true,
-      },
-    });
+      });
+      return NextResponse.json({ success: true, data });
+    }
 
-    return NextResponse.json(serializeBigInt(pago));
+    const validated = actualizarPagoTallerInputSchema.parse(body);
+    const data = await PagosTallerService.actualizar(id, {
+      ...validated,
+      comprobante_url: validated.comprobante_url === '' ? null : validated.comprobante_url,
+    });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Datos inválidos', details: error.issues },
+        { status: 400 },
+      );
     }
-    console.error('[PUT /pagos-taller/:id]', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
-  }
-}
-
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    await prisma.pagos_taller.delete({ where: { id: BigInt(id) } });
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[DELETE /pagos-taller/:id]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Error interno';
+    const status =
+      message.includes('no encontrado') || message.includes('No se puede') ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

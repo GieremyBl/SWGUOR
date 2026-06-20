@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
 import type { RolUsuario } from '@/lib/constants/roles';
-import { campanaSchema } from '@/lib/schemas/promociones-ofertas';
+import { campanaConEscalasSchema } from '@/lib/schemas/promociones-ofertas';
 import { ofertasService } from '@/lib/services/ofertas.service';
 import { serializeBigInt } from '@/lib/utils/serialize';
 
@@ -39,7 +39,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await req.json();
-    const parsed = campanaSchema.safeParse({ ...body, id });
+    const parsed = campanaConEscalasSchema.safeParse({ ...body, id });
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },

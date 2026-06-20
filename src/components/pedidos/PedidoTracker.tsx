@@ -244,9 +244,14 @@ export function PedidoTracker({
               </button>
             </>
           ) : data.direccion_despacho ? (
-            <p className="text-sm text-slate-800">
-              {formatearVistaDireccionDespacho(data.direccion_despacho)}
-            </p>
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                Solo lectura
+              </p>
+              <p className="text-sm text-slate-800">
+                {formatearVistaDireccionDespacho(data.direccion_despacho)}
+              </p>
+            </div>
           ) : (
             <p className="text-sm text-slate-500 italic">
               Sin dirección registrada.

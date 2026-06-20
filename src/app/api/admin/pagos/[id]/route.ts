@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireServerRole } from '@/lib/auth/server';
+import type { RolUsuario } from '@/lib/constants/roles';
 import { generarOrdenParaPedido } from '@/lib/helpers/generar-ordenes-pedidos-pagados.helper';
+import { obtenerPagoDetalleAdmin } from '@/lib/services/admin-pago-detalle.service';
+
+const PAGOS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'recepcionista'];
+
+/** GET /api/admin/pagos/[id] — detalle con pedido y comprobante */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireServerRole(PAGOS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+  }
+
+  try {
+    const { id } = await params;
+    const detalle = await obtenerPagoDetalleAdmin(id);
+
+    if (!detalle) {
+      return NextResponse.json({ success: false, error: 'Pago no encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: detalle });
+  } catch (error) {
+    console.error('[GET /api/admin/pagos/:id]', error);
+    return NextResponse.json({ success: false, error: 'Error interno del servidor' }, { status: 500 });
+  }
+}
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

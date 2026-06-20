@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
+import { ESTADO_DESCUENTO_APLICACION } from '@/lib/constants/promociones';
 import type { ReglaDescuentoForm } from '@/lib/schemas/promociones-ofertas';
 
 export interface ReglasDescuentoFilters {
@@ -10,8 +11,10 @@ export interface ReglasDescuentoFilters {
   limit?: number;
 }
 
-const INCLUDE_CATEGORIA = {
-  categorias_productos: { select: { id: true, nombre: true } },
+const INCLUDE_APLICACIONES = {
+  descuento_aplicaciones: {
+    where: { estado: { not: ESTADO_DESCUENTO_APLICACION.REVERTIDO } },
+  },
 } as const;
 
 function toDate(value: string): Date {
@@ -22,12 +25,10 @@ function mapReglaInput(input: ReglaDescuentoForm) {
   return {
     nombre: input.nombre.trim(),
     cantidad_min: input.cantidad_min,
-    monto_min_compra: input.monto_min_compra ?? null,
     tipo_beneficio: input.tipo_beneficio as Prisma.reglas_descuentoCreateInput['tipo_beneficio'],
     valor_descuento: input.valor_descuento,
     fecha_inicio: toDate(input.fecha_inicio),
     fecha_fin: toDate(input.fecha_fin),
-    categoria_id: input.categoria_id ? BigInt(input.categoria_id) : null,
     tipo_conteo: (input.tipo_conteo ?? null) as Prisma.reglas_descuentoCreateInput['tipo_conteo'],
     activo: input.activo ?? true,
   };
@@ -41,7 +42,15 @@ export const reglasDescuentoService = {
 
     const where: Prisma.reglas_descuentoWhereInput = {};
     if (filters.activo !== undefined) where.activo = filters.activo;
-    if (filters.categoria_id) where.categoria_id = filters.categoria_id;
+    if (filters.categoria_id) {
+      where.descuento_aplicaciones = {
+        some: {
+          aplicable_id: filters.categoria_id,
+          descripcion: { startsWith: 'alcance:categoria' },
+          estado: { not: ESTADO_DESCUENTO_APLICACION.REVERTIDO },
+        },
+      };
+    }
     if (filters.busqueda) {
       where.nombre = { contains: filters.busqueda, mode: 'insensitive' };
     }
@@ -49,7 +58,7 @@ export const reglasDescuentoService = {
     const [data, total] = await Promise.all([
       prisma.reglas_descuento.findMany({
         where,
-        include: INCLUDE_CATEGORIA,
+        include: INCLUDE_APLICACIONES,
         orderBy: [{ activo: 'desc' }, { fecha_inicio: 'desc' }],
         skip,
         take: limit,
@@ -68,7 +77,7 @@ export const reglasDescuentoService = {
         fecha_inicio: { lte: now },
         fecha_fin: { gte: now },
       },
-      include: INCLUDE_CATEGORIA,
+      include: INCLUDE_APLICACIONES,
       orderBy: { nombre: 'asc' },
     });
   },
@@ -76,14 +85,14 @@ export const reglasDescuentoService = {
   async obtenerPorId(id: bigint) {
     return prisma.reglas_descuento.findUnique({
       where: { id },
-      include: INCLUDE_CATEGORIA,
+      include: INCLUDE_APLICACIONES,
     });
   },
 
   async crear(input: ReglaDescuentoForm) {
     return prisma.reglas_descuento.create({
       data: mapReglaInput(input),
-      include: INCLUDE_CATEGORIA,
+      include: INCLUDE_APLICACIONES,
     });
   },
 
@@ -91,7 +100,7 @@ export const reglasDescuentoService = {
     return prisma.reglas_descuento.update({
       where: { id },
       data: mapReglaInput(input),
-      include: INCLUDE_CATEGORIA,
+      include: INCLUDE_APLICACIONES,
     });
   },
 
@@ -99,7 +108,7 @@ export const reglasDescuentoService = {
     return prisma.reglas_descuento.update({
       where: { id },
       data: { activo: false },
-      include: INCLUDE_CATEGORIA,
+      include: INCLUDE_APLICACIONES,
     });
   },
 };

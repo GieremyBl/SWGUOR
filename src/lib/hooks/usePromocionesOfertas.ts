@@ -14,7 +14,7 @@ import {
   saveOferta,
   deactivateOferta,
 } from '@/lib/helpers/promociones-helpers';
-import type { CampanaForm, ReglaDescuentoForm } from '@/lib/schemas/promociones-ofertas';
+import type { CampanaConEscalasForm, ReglaDescuentoForm } from '@/lib/schemas/promociones-ofertas';
 
 export const REGLAS_KEY = 'reglas-descuento';
 export const PROMOCIONES_KEY = 'promociones';
@@ -131,7 +131,7 @@ function useCampanas(
     pagination: query.data?.pagination,
     isLoading: query.isLoading,
     refetch: query.refetch,
-    save: (data: CampanaForm) => saveMut.mutate(data),
+    save: (data: CampanaConEscalasForm) => saveMut.mutate(data),
     deactivate: (id: string | number) => deactivateMut.mutate(id),
     isSaving: saveMut.isPending,
     isDeactivating: deactivateMut.isPending,

@@ -24,7 +24,7 @@ interface FichaTecnica {
   costo_estimado:        number | null;
   ficha_url:             string | null;
   created_at:            string;
-  productos:             { id: string; nombre: string; sku: string; imagen_url: string | null } | null;
+  productos:             { id: string; nombre: string; sku: string; imagen: string | null } | null;
   ficha_medidas:         { id: string }[];
 }
 
@@ -52,7 +52,7 @@ export default function FichasTecnicasPage() {
       const query = new URLSearchParams();
       if (estadoFilter)              query.append('estado',    estadoFilter);
       if (searchTerm)                query.append('busqueda',  searchTerm);
-      if (selectedCategoria !== 'all') query.append('categoria', selectedCategoria);
+      if (selectedCategoria !== 'all') query.append('categoria_id', selectedCategoria);
 
       const res  = await fetch(`/api/admin/fichas-tecnicas?${query.toString()}`);
       const json = await res.json();
@@ -83,9 +83,10 @@ export default function FichasTecnicasPage() {
 
   const fichasProcesadas = useMemo(() => {
     let result = [...fichas];
-    if (statusFilter === 'activo')   result = result.filter(f => f.estado === 'activo');
-    if (statusFilter === 'borrador') result = result.filter(f => f.estado === 'borrador');
-    if (statusFilter === 'revision') result = result.filter(f => f.estado === 'revisión');
+    if (statusFilter === 'aprobada')     result = result.filter(f => f.estado === 'aprobada');
+    if (statusFilter === 'borrador')     result = result.filter(f => f.estado === 'borrador');
+    if (statusFilter === 'en_revision')  result = result.filter(f => f.estado === 'en_revision');
+    if (statusFilter === 'obsoleta')     result = result.filter(f => f.estado === 'obsoleta');
     if (sortOrder === 'asc')  result.sort((a, b) => (a.costo_estimado ?? 0) - (b.costo_estimado ?? 0));
     if (sortOrder === 'desc') result.sort((a, b) => (b.costo_estimado ?? 0) - (a.costo_estimado ?? 0));
     return result;
@@ -93,9 +94,9 @@ export default function FichasTecnicasPage() {
 
   const stats = useMemo(() => ({
     total:      fichas.length,
-    activas:    fichas.filter(f => f.estado === 'activo').length,
+    aprobadas:  fichas.filter(f => f.estado === 'aprobada').length,
     borradores: fichas.filter(f => f.estado === 'borrador').length,
-    revision:   fichas.filter(f => f.estado === 'revisión').length,
+    enRevision: fichas.filter(f => f.estado === 'en_revision').length,
   }), [fichas]);
 
   const totalPages    = Math.ceil(fichasProcesadas.length / PAGE_SIZE);

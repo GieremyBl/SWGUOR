@@ -110,6 +110,7 @@ export function DespachoTable({
                       {desp.estado === 'en_ruta' && (
                         <Link
                           href={`/admin/Panel-Administrativo/pedidos/${desp.pedido_id}/entrega`}
+                          prefetch={false}
                           className="inline-flex items-center h-8 px-3 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100"
                         >
                           <MapPin size={14} className="mr-1" />

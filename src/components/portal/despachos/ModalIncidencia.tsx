@@ -5,20 +5,14 @@ import { AlertTriangle, X, Upload, ChevronDown, CheckCircle2 } from 'lucide-reac
 import type { DespachoPortal } from '../_contexts/PortalContext';
 import { useIncidencia } from '@/lib/hooks/useDespachos';
 import Image from 'next/image';
-import { SeveridadIncidencia, TipoIncidenciaCliente } from '@/lib/services/despachos.service';
+import { TIPO_INCIDENCIA_CLIENTE_LABELS } from '@/lib/constants/incidencias-cliente';
+import type { SeveridadIncidencia } from '@/lib/services/despachos.service';
+import type { TipoIncidenciaCliente } from '@prisma/client';
 
 interface ModalIncidenciaProps {
   despacho: DespachoPortal;
   onClose: () => void;
 }
-
-const TIPO_INCIDENCIA_OPCIONES = {
-  defecto_confeccion: 'Defecto en confección / costura',
-  pedido_incompleto: 'Faltan prendas o tallas en el bulto',
-  error_direccion: 'Problema con la dirección de entrega',
-  retraso_logistico: 'Demora prolongada en el trayecto',
-  producto_danado: 'Empaque violentado o mercancía dañada',
-};
 
 const SEVERIDAD_OPCIONES = {
   baja: {
@@ -44,11 +38,10 @@ const SEVERIDAD_OPCIONES = {
   }
 };
 
-type TipoKey = keyof typeof TIPO_INCIDENCIA_OPCIONES;
 type SeveridadKey = keyof typeof SEVERIDAD_OPCIONES;
 
 export default function ModalIncidencia({ despacho, onClose }: ModalIncidenciaProps) {
-  const [tipo, setTipo] = useState<TipoKey>('defecto_confeccion');
+  const [tipo, setTipo] = useState<TipoIncidenciaCliente>('defecto_confeccion');
   const [severidad, setSeveridad] = useState<SeveridadKey>('media');
   const [descripcion, setDescripcion] = useState('');
   const [foto, setFoto] = useState<File | null>(null);
@@ -161,10 +154,10 @@ export default function ModalIncidencia({ despacho, onClose }: ModalIncidenciaPr
                 <div className="relative">
                   <select
                     value={tipo}
-                    onChange={(e) => setTipo(e.target.value as TipoKey)}
+                    onChange={(e) => setTipo(e.target.value as TipoIncidenciaCliente)}
                     className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 focus:outline-none focus:border-[#B8962D] focus:bg-white transition-colors pr-10 cursor-pointer"
                   >
-                    {Object.entries(TIPO_INCIDENCIA_OPCIONES).map(([value, label]) => (
+                    {Object.entries(TIPO_INCIDENCIA_CLIENTE_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>{label}</option>
                     ))}
                   </select>

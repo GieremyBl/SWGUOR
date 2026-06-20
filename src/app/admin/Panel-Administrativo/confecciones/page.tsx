@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
+  Plus,
   RefreshCw,
   Search,
   ChevronLeft,
   ChevronRight,
+  Scissors,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,8 @@ import { usePermissions } from '@/lib/hooks/usePermissions';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import ConfeccionesTable from '@/components/admin/confecciones/ConfeccionesTable';
 import ConfeccionesStats from '@/components/admin/confecciones/ConfeccionesStats';
+import { NuevaConfeccionModal } from '@/components/admin/confecciones/NuevaOrdenModal';
+import { CONFECCIONES_ROLES_ESCRITURA, CONFECCIONES_ROLES_VER } from '@/lib/constants/confecciones';
 import { ESTADO_CONFECCION, ESTADO_LABELS } from '@/lib/schemas/confecciones';
 
 import type { ConfeccionRow_T } from '@/components/admin/confecciones/ConfeccionesTable';
@@ -28,11 +32,12 @@ type Taller = {
 const PAGE_SIZE = 10;
 
 export default function ConfeccionesPage() {
-  const { isLoading: authLoading } = usePermissions();
+  const { can, hasRole, isLoading: authLoading } = usePermissions();
 
   const [confecciones, setConfecciones] = useState<ConfeccionRow_T[]>([]);
   const [talleres, setTalleres] = useState<Taller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
@@ -116,6 +121,30 @@ export default function ConfeccionesPage() {
     [meta.total, prioridadCounts]
   );
 
+  async function handleEstadoChange(id: number, nuevoEstado: ConfeccionRow_T['estado']) {
+    try {
+      const res = await fetch(`/api/admin/confecciones/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: nuevoEstado }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`Estado actualizado a "${ESTADO_LABELS[nuevoEstado]}"`);
+      fetchData();
+    } catch {
+      toast.error('Error al actualizar el estado.');
+    }
+  }
+
+  const handleDelete = async (_id: number) => {
+    fetchData();
+  };
+
+  const canView =
+    can('view', 'confecciones') || hasRole(CONFECCIONES_ROLES_VER);
+  const canCreate =
+    can('create', 'confecciones') || hasRole(CONFECCIONES_ROLES_ESCRITURA);
+
   if (authLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-50">
@@ -127,21 +156,41 @@ export default function ConfeccionesPage() {
     );
   }
 
+  if (!canView) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center text-center p-6">
+        <h2 className="text-2xl font-black text-slate-900">Acceso restringido</h2>
+        <p className="text-slate-500 mt-2">No tienes permisos para ver confecciones.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header con AdminPageHeader */}
-        <AdminPageHeader
-          title="Confecciones"
-          description="Gestión de producción con talleres externos"
-          actionLabel="Nueva Confección"
-          onAction={() => {
-            // Aquí puedes agregar lógica para abrir un modal o panel si es necesario
-            // Por ahora solo refrescamos los datos
-            fetchData();
-          }}
-        />
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-pink-50 rounded-xl">
+              <Scissors className="w-6 h-6 text-pink-600" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Confecciones</h1>
+              <p className="text-gray-500 text-sm">Gestión de producción con talleres externos</p>
+            </div>
+          </div>
+          {canCreate && (
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-bold"
+            >
+              <Plus className="w-4 h-4" />
+              Nueva confección
+            </button>
+          )}
+        </div>
 
         {/* Stats */}
         <ConfeccionesStats
@@ -229,6 +278,13 @@ export default function ConfeccionesPage() {
             </div>
           )}
         </div>
+
+        <NuevaConfeccionModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          talleres={talleres}
+          onSuccess={fetchData}
+        />
       </div>
     </div>
   );

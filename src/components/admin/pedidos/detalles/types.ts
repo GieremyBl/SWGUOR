@@ -76,6 +76,17 @@ export interface DetallePedidoData {
   } | null;
   pedido_items:       PedidoItem[];
   seguimiento_pedido: SeguimientoPedido[];
+  documentos?: PedidoDocumentoAdmin[];
+}
+
+export interface PedidoDocumentoAdmin {
+  id: string;
+  tipo: string;
+  numero: string;
+  fecha_emision: string;
+  fecha_pago: string | null;
+  url: string;
+  monto: number | null;
 }
 
 // ─── Constantes de UI ─────────────────────────────────────────────────────────

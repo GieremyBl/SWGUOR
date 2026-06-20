@@ -26,6 +26,10 @@ export default function BadgeEstado({ estado }: BadgeEstadoProps) {
       label: 'Programado',
       classes: 'bg-blue-50 text-blue-700 border-blue-200/60',
     },
+    preparando: {
+      label: 'Preparando',
+      classes: 'bg-indigo-50 text-indigo-700 border-indigo-200/60',
+    },
     en_almacen: {
       label: 'En Almacén',
       classes: 'bg-indigo-50 text-indigo-700 border-indigo-200/60',

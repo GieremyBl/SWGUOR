@@ -62,7 +62,7 @@ export function RecentOrders({ pedidos }: RecentOrdersProps) {
           pedidos.map((p) => (
             <Link
               key={p.id}
-              href={`/portal/pedidos/${p.id}`}
+              href={`/portal/mis-pedidos/${p.id}`}
               className="flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-guor-bg text-inherit"
             >
               <div

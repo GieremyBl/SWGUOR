@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { X, DollarSign, CreditCard, FileText, Calendar, User, CheckCircle, XCircle, Loader2, ShieldCheck, Clock } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, DollarSign, CreditCard, FileText, Calendar, User, CheckCircle, XCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { PagoDetalleComprobanteSection } from '@/components/admin/pagos/PagoDetalleComprobanteSection';
+import { PagoDetallePedidoSection } from '@/components/admin/pagos/PagoDetallePedidoSection';
+import type { AdminPagoDetalle } from '@/lib/schemas/admin-pago-detalle';
 import type { Pago } from './PagosTable';
 
 // ─────────────────────────────────────────────────────────────
@@ -12,9 +15,10 @@ import type { Pago } from './PagosTable';
 // ─────────────────────────────────────────────────────────────
 
 const ESTADO_STYLES: Record<string, string> = {
-  pendiente:  'bg-amber-50 text-amber-700 border-amber-200',
-  verificado: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  rechazado:  'bg-red-50 text-red-700 border-red-200',
+  pendiente:   'bg-amber-50 text-amber-700 border-amber-200',
+  pagado:      'bg-emerald-50 text-emerald-700 border-emerald-200',
+  pago_parcial:'bg-emerald-50 text-emerald-700 border-emerald-200',
+  anulado:     'bg-red-50 text-red-700 border-red-200',
 };
 
 const METODO_LABELS: Record<string, string> = {

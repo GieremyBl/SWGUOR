@@ -77,8 +77,10 @@ function DialogContent({
               "disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
             )}
           >
-            <XIcon aria-hidden="true" />
-            <span className="sr-only">Cerrar</span>
+            <span className="inline-flex items-center">
+              <XIcon aria-hidden="true" />
+              <span className="sr-only">Cerrar</span>
+            </span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>

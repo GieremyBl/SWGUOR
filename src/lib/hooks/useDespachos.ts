@@ -1,14 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { INCIDENCIAS_CLIENTE_PORTAL_API } from '@/lib/constants/incidencias-cliente';
 import {
   getDespachoActivos,
   subscribeToGrupo,
+  uploadEvidencia,
   type DespachoFlat,
   type SeguimientoDespacho,
-  type TipoIncidenciaCliente,
   type SeveridadIncidencia,
 } from '@/lib/services/despachos.service';
+import type { TipoIncidenciaCliente } from '@prisma/client';
 import { aplanarDespacho } from '@/lib/helpers/despachos-helpers';
 
 // ─── useDespachos ────────────────────────────────────────────────────────────
@@ -120,19 +122,28 @@ export function useIncidencia(): UseIncidenciaReturn {
     setStatus('loading');
     setErrorMsg('');
     try {
-      const form = new FormData();
-      form.append('pedido_id', String(pedidoId));
-      form.append('tipo', payload.tipo);
-      form.append('severidad', payload.severidad);
-      form.append('descripcion', payload.descripcion);
-      if (payload.foto) form.append('foto', payload.foto);
+      const evidencia_url: string[] = [];
+      if (payload.foto) {
+        const url = await uploadEvidencia(pedidoId, payload.foto);
+        evidencia_url.push(url);
+      }
 
-      const res = await fetch('/api/incidencias', { method: 'POST', body: form });
+      const descripcion = `[Severidad: ${payload.severidad}] ${payload.descripcion.trim()}`;
+
+      const res = await fetch(INCIDENCIAS_CLIENTE_PORTAL_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pedido_id: pedidoId,
+          tipo: payload.tipo,
+          descripcion,
+          evidencia_url,
+        }),
+      });
 
       if (!res.ok) {
-        // ✓ Intentar leer mensaje del servidor antes de lanzar genérico
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message ?? `Error ${res.status}`);
+        throw new Error(body?.error ?? `Error ${res.status}`);
       }
 
       setStatus('success');

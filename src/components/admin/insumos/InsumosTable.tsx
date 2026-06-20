@@ -80,7 +80,7 @@ export default function InsumosTable({ insumos, isLoading, onEdit, canEdit }: Pr
                       {TIPOS_INSUMO[insumo.tipo as TipoInsumo]?.label ?? insumo.tipo}
                     </span>
                     <p className="text-[10px] text-gray-400">
-                      {insumo.categoria_insumo?.nombre ?? '—'}
+                      {insumo.categoria_insumo?.nombre ?? (insumo.categoria_id ? `Cat. #${insumo.categoria_id}` : '—')}
                     </p>
                   </td>
                   <td className={tdClass}>

@@ -36,10 +36,11 @@ export {
 } from './pagos-talleres';
 
 export {
-  tarifaTallerBaseSchema,
-  crearTarifaTallerSchema,
-  type TarifaTaller,
-  type CrearTarifaTaller,
+  tarifaTallerSchema,
+  tarifaTallerUpdateSchema,
+  calcularCostoTarifaSchema,
+  type TarifaTallerForm,
+  type TarifaTallerRow,
 } from './tarifa-talleres';
 
 export {
@@ -93,6 +94,14 @@ export {
   type Pago,
   type CrearPago,
 } from './pagos';
+
+export {
+  direccionClienteCreateSchema,
+  direccionClienteUpdateSchema,
+  type DireccionClienteCreateInput,
+  type DireccionClienteUpdateInput,
+  type DireccionClienteRecord,
+} from './direcciones-cliente';
 
 // ── RPC Schemas (Validación para funciones PostgreSQL RPC)
 export {

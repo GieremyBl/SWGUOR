@@ -5,7 +5,10 @@ import { requireServerAuth } from '@/lib/auth/server';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { PedidosService } from '@/lib/services/pedidos.service';
-import { actualizarDireccionDespachoPedido } from '@/lib/helpers/pedido-direccion.helper';
+import {
+  actualizarDireccionDespachoPedido,
+  puedeClienteEditarDireccionDespacho,
+} from '@/lib/helpers/pedido-direccion.helper';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -32,7 +35,24 @@ export async function GET(_req: Request, { params }: Params) {
             return NextResponse.json({ error: 'No encontrado' }, { status: 404 });
         }
 
-        return NextResponse.json({ success: true, data: serializeBigInt(pedido) });
+        const despacho = await prisma.despachos.findFirst({
+            where: { pedido_id: BigInt(id) },
+            orderBy: { created_at: 'desc' },
+            select: { estado: true },
+        });
+
+        const puedeEditarDireccion = puedeClienteEditarDireccionDespacho(
+            pedido.estado,
+            despacho?.estado,
+        );
+
+        return NextResponse.json({
+            success: true,
+            data: serializeBigInt({
+                ...pedido,
+                puede_editar_direccion: puedeEditarDireccion,
+            }),
+        });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'Error interno';
         return NextResponse.json({ error: message }, { status: 500 });

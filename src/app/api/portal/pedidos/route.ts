@@ -5,6 +5,10 @@ import { serializeBigInt } from '@/lib/utils/serialize';
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { requireServerAuth } from '@/lib/auth/server';
+import {
+  listarPedidosContextoPortal,
+  listarPedidosDetallePortal,
+} from '@/lib/services/portal-pedidos-list.service';
 import { resolverCostoEnvioPedido } from '@/lib/helpers/portal-costo-envio.helper';
 import { resolverItemsPedido } from '@/lib/helpers/portal-pedido-items.helper';
 import { descontarStockLineaPedido } from '@/lib/helpers/producto-stock-transaction.helper';
@@ -36,6 +40,34 @@ async function obtenerClienteSesion() {
     cliente_id: clienteDb.id,
     cliente: clienteDb,
   };
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const incluirFinalizados = searchParams.get('todos') === '1';
+    const vistaContexto = searchParams.get('vista') === 'contexto';
+
+    const resultado = vistaContexto
+      ? await listarPedidosContextoPortal()
+      : await listarPedidosDetallePortal({ incluirFinalizados });
+
+    if (!('data' in resultado)) {
+      return NextResponse.json(
+        { success: false, error: 'error' in resultado ? resultado.error : 'Error desconocido' },
+        { status: 'status' in resultado ? resultado.status : 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: serializeBigInt(resultado.data),
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error interno';
+    console.error('[Portal] GET pedidos:', error);
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
 }
 
 async function stockDisponibleVariante(varianteId: bigint, cantidad: number) {

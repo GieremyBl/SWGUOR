@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { ArrowLeft, FileText, Loader2, Truck, Upload, X } from 'lucide-react';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { subirActaEntrega, subirFotoEntrega } from '@/lib/helpers/despacho-upload.client';
@@ -147,8 +146,16 @@ export function PedidoEntregaForm({ pedidoId, despacho }: Props) {
           {fotos.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {fotos.map((f, i) => (
-                <div key={f.preview} className="relative w-20 h-20 rounded-lg overflow-hidden border">
-                  <Image src={f.preview} alt="" fill className="object-cover" unoptimized />
+                <div
+                  key={f.preview}
+                  className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border border-stone-200 bg-stone-100"
+                >
+                  {/* img nativo: next/image no renderiza bien blob URLs locales */}
+                  <img
+                    src={f.preview}
+                    alt={`Evidencia de entrega ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => quitarFoto(i)}

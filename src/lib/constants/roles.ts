@@ -264,7 +264,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_devoluciones_cliente', 'crear_devoluciones_cliente', 'exportar_devoluciones_cliente',
     'ver_cotizaciones', 'editar_cotizaciones', 'ver_historial_cotizaciones',
     'crear_cotizacion', 'descargar_cotizacion', 'aprobar_cotizaciones', 'exportar_cotizaciones',
-    'ver_despachos', 'crear_despachos', 'exportar_despachos',
+    'ver_despachos', 'crear_despachos', 'actualizar_estado_despachos', 'exportar_despachos',
     'ver_clientes', 'ver_detalle_cliente',
     'ver_notificaciones', 'ver_perfil', 'editar_perfil',
   ],
@@ -306,7 +306,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_productos', 'ver_variantes',
     'ver_orden_produccion', 'ver_detalle_orden_produccion', 'actualizar_etapas_produccion',
     'ver_seguimiento_confeccion', 'ver_seguimiento_produccion',
-    'ver_confecciones', 'ver_despachos',
+    'ver_confecciones', 'ver_despachos', 'actualizar_estado_despachos',
     'ver_notificaciones', 'ver_perfil', 'editar_perfil',
   ],
 

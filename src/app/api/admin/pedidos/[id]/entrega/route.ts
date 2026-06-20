@@ -2,17 +2,15 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
-import type { RolUsuario } from '@/lib/constants/roles';
+import { ROLES_LOGISTICA_DESPACHO } from '@/lib/constants/pedidos-logistica';
 import { confirmarEntregaPedido } from '@/lib/helpers/confirmar-entrega-pedido.helper';
 import { auditoriaService } from '@/lib/services/auditoria.service';
 import { AccionAuditoria } from '@prisma/client';
 
-const ROLES: RolUsuario[] = ['administrador', 'gerente'];
-
 type Params = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Params) {
-  const auth = await requireServerRole(ROLES);
+  const auth = await requireServerRole(ROLES_LOGISTICA_DESPACHO);
   if (!auth.success) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

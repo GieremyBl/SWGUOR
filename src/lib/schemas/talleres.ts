@@ -30,12 +30,15 @@ export const tallerSchema = z.object({
   estado:       z.enum(ESTADOS_TALLER).default('activo'),
 });
 
+export const tallerUpdateSchema = tallerSchema.omit({ id: true, ruc: true }).partial();
+
 export type TallerForm = z.infer<typeof tallerSchema>;
 
-export type Taller = TallerForm & {
+export type Taller = Omit<TallerForm, 'id'> & {
+  id: string | number;
   created_at: string;
   updated_at?: string;
-  _count?:     { confecciones: number };
+  _count?: { confecciones: number; ordenes_produccion?: number };
 };
 
 export type EstadoTaller = typeof ESTADOS_TALLER[number] | 'todos';

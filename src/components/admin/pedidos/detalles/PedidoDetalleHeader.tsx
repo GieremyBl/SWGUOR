@@ -81,6 +81,7 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
             </Link>
             <Link
               href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/entrega`}
+              prefetch={false}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
             >
               <Truck size={14} /> Confirmar entrega

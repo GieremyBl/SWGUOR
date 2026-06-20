@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FichasTecnicasService } from '@/lib/services/fichas-tecnicas.service';
 import { obtenerFichaTecnicaConCosto } from '@/lib/services';
+import { requireServerRole } from '@/lib/auth/server';
+import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/utils/serialize';
+import type { RolUsuario } from '@/lib/constants/roles';
+import type { EstadoFicha } from '@prisma/client';
+
+const FICHAS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'disenador', 'cortador', 'almacenero'];
+
+const ESTADOS_VALIDOS = new Set<EstadoFicha>(['borrador', 'en_revision', 'aprobada', 'obsoleta']);
 
 export const dynamic = "force-dynamic";
 export const runtime = 'nodejs';
@@ -9,13 +18,24 @@ export const runtime = 'nodejs';
 // GET - Obtener Ficha Única (por id o id_producto) O Listar con Filtros
 // ============================================================================
 export async function GET(request: NextRequest) {
+  const auth = await requireServerRole(FICHAS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     
     const id = searchParams.get("id");
     const id_producto = searchParams.get('id_producto') || searchParams.get('producto_id');
-    const estado = searchParams.get('estado') as any;
+    const estadoRaw = searchParams.get('estado');
+    const categoriaId = searchParams.get('categoria_id') || searchParams.get('categoria');
     const busqueda = searchParams.get('busqueda');
+
+    if (estadoRaw && !ESTADOS_VALIDOS.has(estadoRaw as EstadoFicha)) {
+      return NextResponse.json({ error: `estado inválido: ${estadoRaw}` }, { status: 400 });
+    }
+    const estado = estadoRaw as EstadoFicha | undefined;
 
     // CASO A: Buscar ficha específica por su ID numérico primary key (?id=12)
     if (id) {
@@ -45,12 +65,24 @@ export async function GET(request: NextRequest) {
     }
 
     // CASO C: Listado global con filtros de búsqueda y estado tal cual venía originalmente
-    const data = await FichasTecnicasService.listar({
-      estado: estado || undefined,
-      busqueda: busqueda || undefined,
-    });
+    const [data, categorias] = await Promise.all([
+      FichasTecnicasService.listar({
+        estado: estado || undefined,
+        busqueda: busqueda || undefined,
+        categoria_id: categoriaId && categoriaId !== 'all' ? categoriaId : undefined,
+      }),
+      prisma.categorias_productos.findMany({
+        where: { activo: true },
+        select: { id: true, nombre: true },
+        orderBy: { nombre: 'asc' },
+      }),
+    ]);
     
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({
+      success: true,
+      data,
+      categorias: serializeBigInt(categorias),
+    });
 
   } catch (error: any) {
     console.error('[GET /api/admin/fichas-tecnicas]', error);
@@ -65,6 +97,11 @@ export async function GET(request: NextRequest) {
 // POST - Crear una nueva Ficha Técnica en la Base de Datos
 // ============================================================================
 export async function POST(request: NextRequest) {
+  const auth = await requireServerRole(FICHAS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const body = await request.json();
 
@@ -111,6 +148,11 @@ export async function POST(request: NextRequest) {
 // PUT - Actualizar Ficha Técnica (Soporta query params e inyecciones de body)
 // ============================================================================
 export async function PUT(request: NextRequest) {
+  const auth = await requireServerRole(FICHAS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const url = new URL(request.url);
     const idParam = url.searchParams.get("id");

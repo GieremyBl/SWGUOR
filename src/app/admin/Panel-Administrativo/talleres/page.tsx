@@ -1,77 +1,64 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { usePermissions } from "@/lib/hooks/usePermissions";
+import { useTalleres } from "@/lib/hooks/useTalleres";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  FileSpreadsheet, Plus, Search, Factory, RefreshCw, 
-  AlertTriangle, CheckCircle, XCircle, ChevronLeft, ChevronRight, 
+import {
+  FileSpreadsheet, Plus, Search, Factory, RefreshCw,
+  AlertTriangle, CheckCircle, XCircle, ChevronLeft, ChevronRight,
   FileText, ShieldAlert
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { exportToExcel, exportToPDF } from "@/lib/utils/export-utils";
-import { getSupabaseBrowserClient } from "@/lib/supabase";
 import TallerFormModal from "@/components/admin/talleres/TallerFormModal";
 import { TallerDetailModal, TallerSuspendModal } from "@/components/admin/talleres/TallerModals";
 import StatCard from '@/components/admin/common/StatCard';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
+import type { Taller, TallerForm } from "@/lib/schemas/talleres";
+import type { EstadoTaller } from "@/lib/schemas/talleres";
 
-const TalleresTable      = dynamic(() => import("@/components/admin/talleres/TalleresTable"));
-const TallerSkeleton     = dynamic(() => import("@/components/admin/talleres/TallerSkeleton"));
+const TalleresTable = dynamic(() => import("@/components/admin/talleres/TalleresTable"));
+const TallerSkeleton = dynamic(() => import("@/components/admin/talleres/TallerSkeleton"));
 
 type DialogMode = "create" | "edit" | "view" | "delete" | null;
 
 export default function TalleresPage() {
   const { can, isLoading: authLoading } = usePermissions();
-  const supabase = getSupabaseBrowserClient();
-  
-  const [talleres, setTalleres]         = useState<any[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [searchTerm, setSearchTerm]     = useState("");
-  const [selectedTaller, setSelectedTaller] = useState<any | null>(null);
-  const [dialogMode, setDialogMode]     = useState<DialogMode>(null);
-  const [currentPage, setCurrentPage]   = useState(0);
-  const [statusFilter, setStatusFilter] = useState<"todos" | "activo" | "inactivo" | "suspendido">("todos");
-  
-  // Estados de carga para las exportaciones (Sincronizado con órdenes de compra)
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTaller, setSelectedTaller] = useState<Taller | null>(null);
+  const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<EstadoTaller>("todos");
+
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
 
   const pageSize = 10;
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("talleres")
-        .select("*")
-        .order("nombre", { ascending: false });
-
-      if (error) throw error;
-      setTalleres(data || []);
-    } catch (err: any) {
-      console.error("Error loading talleres:", err);
-      toast.error("Error al sincronizar con la base de datos");
-    } finally {
-      setLoading(false);
-    }
-  }, [supabase]);
-
-  useEffect(() => {
-    if (!authLoading && can('view', 'talleres')) loadData();
-  }, [authLoading, can, loadData]);
+  const {
+    talleres,
+    isLoading,
+    refetch,
+    create,
+    update,
+    suspend,
+    isCreating,
+    isUpdating,
+    isSuspending,
+  } = useTalleres();
 
   const stats = useMemo(() => ({
-    total:      talleres.length,
-    activos:    talleres.filter(t => t.estado?.toLowerCase() === 'activo').length,
-    inactivos:  talleres.filter(t => t.estado?.toLowerCase() === 'inactivo').length,
-    suspendidos: talleres.filter(t => t.estado?.toLowerCase() === 'suspendido').length,
+    total: talleres.length,
+    activos: talleres.filter((t) => t.estado === 'activo').length,
+    inactivos: talleres.filter((t) => t.estado === 'inactivo').length,
+    suspendidos: talleres.filter((t) => t.estado === 'suspendido').length,
   }), [talleres]);
 
-  // Handlers unificados
-  const openDialog = useCallback((mode: DialogMode, taller?: any) => {
+  const openDialog = useCallback((mode: DialogMode, taller?: Taller) => {
     setSelectedTaller(taller ?? null);
     setDialogMode(mode);
   }, []);
@@ -83,23 +70,32 @@ export default function TalleresPage() {
 
   const filteredTalleres = useMemo(() => {
     const search = searchTerm.toLowerCase().trim();
-    return talleres.filter((t: any) => {
+    return talleres.filter((t) => {
       const matchSearch = !search ||
         t.nombre.toLowerCase().includes(search) ||
         t.ruc.includes(search) ||
         t.contacto.toLowerCase().includes(search);
-      const matchStatus = statusFilter === "todos" || t.estado?.toLowerCase() === statusFilter;
+      const matchStatus = statusFilter === 'todos' || t.estado === statusFilter;
       return matchSearch && matchStatus;
     });
   }, [talleres, searchTerm, statusFilter]);
 
-  const totalPages = Math.ceil(filteredTalleres.length / pageSize);
+  const totalPages = Math.ceil(filteredTalleres.length / pageSize) || 1;
   const paginatedData = useMemo(() => {
     const start = currentPage * pageSize;
     return filteredTalleres.slice(start, start + pageSize);
   }, [filteredTalleres, currentPage]);
 
-  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
+  const handleSave = async (data: TallerForm) => {
+    if (dialogMode === 'edit' && selectedTaller) {
+      const { ruc: _ruc, ...rest } = data;
+      const res = await update(String(selectedTaller.id), rest);
+      return { success: res?.success === true, error: res?.error };
+    }
+    const res = await create(data);
+    return { success: res?.success === true, error: res?.error };
+  };
+
   const handleExportExcel = async () => {
     if (filteredTalleres.length === 0) {
       toast.error("No hay datos para exportar");
@@ -109,8 +105,7 @@ export default function TalleresPage() {
       setExportingExcel(true);
       await exportToExcel(filteredTalleres, { filename: "Talleres" });
       toast.success("Excel descargado correctamente");
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Error al exportar a Excel");
     } finally {
       setExportingExcel(false);
@@ -125,10 +120,17 @@ export default function TalleresPage() {
     const toastId = toast.loading("Preparando reporte PDF...");
     try {
       setExportingPDF(true);
-      await exportToPDF(filteredTalleres, [], { title: "Reporte de Talleres", filename: "Talleres_GUOR" });
+      const excelData: string[][] = filteredTalleres.map((t) => [
+        String(t.nombre || ''),
+        String(t.ruc || ''),
+        String(t.contacto || ''),
+        String(t.email || '—'),
+        String(t.estado || ''),
+      ]);
+
+      await exportToPDF(excelData, [], { title: "Reporte de Talleres", filename: "Talleres_GUOR" });
       toast.success("PDF generado correctamente", { id: toastId });
-    } catch (error) {
-      console.error(error);
+    } catch {
       toast.error("Error al generar el PDF", { id: toastId });
     } finally {
       setExportingPDF(false);
@@ -155,7 +157,7 @@ export default function TalleresPage() {
               <Button
                 variant="outline"
                 onClick={handleExportExcel}
-                disabled={exportingExcel || loading}
+                disabled={exportingExcel || isLoading}
                 className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
               >
                 <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
@@ -166,7 +168,7 @@ export default function TalleresPage() {
               <Button
                 variant="outline"
                 onClick={handleExportPDF}
-                disabled={exportingPDF || loading}
+                disabled={exportingPDF || isLoading}
                 className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
               >
                 <FileText className="w-4 h-4 mr-2 text-red-600" />
@@ -176,15 +178,13 @@ export default function TalleresPage() {
           )}
         </AdminPageHeader>
 
-        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="TOTAL"       value={stats.total}       icon={Factory}     isActive={statusFilter === "todos"}      color="pink"  onClick={() => { setStatusFilter("todos"); setCurrentPage(0); }} />
-          <StatCard title="ACTIVOS"     value={stats.activos}     icon={CheckCircle}   isActive={statusFilter === "activo"}     color="emerald" onClick={() => { setStatusFilter("activo"); setCurrentPage(0); }} />
-          <StatCard title="INACTIVOS"   value={stats.inactivos}   icon={XCircle}       isActive={statusFilter === "inactivo"}   color="slate"  onClick={() => { setStatusFilter("inactivo"); setCurrentPage(0); }} />
-          <StatCard title="SUSPENDIDOS" value={stats.suspendidos} icon={AlertTriangle} isActive={statusFilter === "suspendido"} color="amber"   onClick={() => { setStatusFilter("suspendido"); setCurrentPage(0); }} />
+          <StatCard title="TOTAL" value={stats.total} icon={Factory} isActive={statusFilter === "todos"} color="pink" onClick={() => { setStatusFilter("todos"); setCurrentPage(0); }} />
+          <StatCard title="ACTIVOS" value={stats.activos} icon={CheckCircle} isActive={statusFilter === "activo"} color="emerald" onClick={() => { setStatusFilter("activo"); setCurrentPage(0); }} />
+          <StatCard title="INACTIVOS" value={stats.inactivos} icon={XCircle} isActive={statusFilter === "inactivo"} color="slate" onClick={() => { setStatusFilter("inactivo"); setCurrentPage(0); }} />
+          <StatCard title="SUSPENDIDOS" value={stats.suspendidos} icon={AlertTriangle} isActive={statusFilter === "suspendido"} color="amber" onClick={() => { setStatusFilter("suspendido"); setCurrentPage(0); }} />
         </div>
 
-        {/* Búsqueda */}
         <div className="flex gap-4 items-center bg-white p-4 rounded-2xl border shadow-sm">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
@@ -195,17 +195,16 @@ export default function TalleresPage() {
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
             />
           </div>
-          <Button variant="outline" className="h-11 w-11 p-0 border-gray-100" onClick={loadData} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading && "animate-spin"}`} />
+          <Button variant="outline" className="h-11 w-11 p-0 border-gray-100" onClick={() => refetch()} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 ${isLoading && "animate-spin"}`} />
           </Button>
         </div>
 
-        {/* Tabla */}
-        {loading ? (
+        {isLoading ? (
           <div className="space-y-4">
             <TallerSkeleton />
             <p className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">
-              Sincronizando directorio GUOR...
+              Cargando directorio de talleres...
             </p>
           </div>
         ) : (
@@ -219,16 +218,15 @@ export default function TalleresPage() {
               onDelete={(t) => openDialog("delete", t)}
             />
 
-            {/* Paginación */}
             <div className="flex items-center justify-between bg-white p-4 rounded-2xl border shadow-sm">
               <span className="text-xs font-bold text-gray-400">
-                PÁGINA {currentPage + 1} DE {totalPages || 1}
+                PÁGINA {currentPage + 1} DE {totalPages}
               </span>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0} className="hover:bg-pink-50">
+                <Button variant="ghost" size="sm" onClick={() => setCurrentPage((p) => p - 1)} disabled={currentPage === 0} className="hover:bg-pink-50">
                   <ChevronLeft className="w-5 h-5" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage + 1 >= totalPages} className="hover:bg-pink-50">
+                <Button variant="ghost" size="sm" onClick={() => setCurrentPage((p) => p + 1)} disabled={currentPage + 1 >= totalPages} className="hover:bg-pink-50">
                   <ChevronRight className="w-5 h-5" />
                 </Button>
               </div>
@@ -237,12 +235,12 @@ export default function TalleresPage() {
         )}
       </div>
 
-      {/* ── Dialogs ── */}
       {(dialogMode === "create" || dialogMode === "edit") && (
         <TallerFormModal
           taller={dialogMode === "edit" ? selectedTaller : null}
           onClose={closeDialog}
-          onSuccess={loadData}
+          onSave={handleSave}
+          isSaving={isCreating || isUpdating}
         />
       )}
 
@@ -250,6 +248,7 @@ export default function TalleresPage() {
         <TallerDetailModal
           taller={selectedTaller}
           onClose={closeDialog}
+          canEditTarifas={can('edit', 'talleres')}
         />
       )}
 
@@ -257,14 +256,16 @@ export default function TalleresPage() {
         <TallerSuspendModal
           taller={selectedTaller}
           onClose={closeDialog}
-          onSuccess={loadData}
+          onConfirm={(id) => suspend(id).then((res) => ({
+            success: res?.success === true,
+            error: res?.error,
+          }))}
+          isSuspending={isSuspending}
         />
       )}
     </div>
   );
 }
-
-// ── Sub-componentes ──────────────────────────────────────────────
 
 function AccessDenied() {
   return (

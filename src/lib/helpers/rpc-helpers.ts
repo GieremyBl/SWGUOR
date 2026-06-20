@@ -183,11 +183,12 @@ export async function insertarMovimiento(
 
 export async function recalcularDescuentoCotizacion(cotizacionId: number): Promise<void> {
   try {
-    await prisma.$executeRaw`
-      SELECT public.fn_recalcular_descuento_cotizacion(${cotizacionId}::bigint)
-    `;
+    const { recalcularDescuentoCotizacionEnDb } = await import(
+      '@/lib/services/descuento-escala-automatico.service'
+    );
+    await recalcularDescuentoCotizacionEnDb(BigInt(cotizacionId));
   } catch (error) {
-    console.error("Error en recalcularDescuentoCotizacion RPC:", error instanceof Error ? error.message : error);
+    console.error("Error en recalcularDescuentoCotizacion:", error instanceof Error ? error.message : error);
     throw new Error("No se pudo recalcular el descuento de la cotización");
   }
 }

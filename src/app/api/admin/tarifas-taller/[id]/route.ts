@@ -1,65 +1,67 @@
 export const runtime = 'nodejs';
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { tarifaTallerBaseSchema as tarifasTallerUpdateSchema } from '@/lib/schemas/tarifa-talleres';
-import { serializeBigInt } from '@/lib/utils/serialize';
-import { ZodError } from 'zod';
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+import { NextResponse } from 'next/server';
+import { TarifasTallerService } from '@/lib/services/tarifa-talleres.service';
+import { requireServerRole } from '@/lib/auth/server';
+import { tarifaTallerUpdateSchema } from '@/lib/schemas/tarifa-talleres';
+import type { RolUsuario } from '@/lib/constants/roles';
+
+const ROLES_LECTURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller', 'almacenero'];
+const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente'];
+
+type Params = { params: Promise<{ id: string }> };
+
+export async function GET(_req: Request, { params }: Params) {
+  const auth = await requireServerRole(ROLES_LECTURA);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
-    const tarifa = await prisma.tarifas_taller.findUnique({
-      where: { id: BigInt(id) },
-      include: { talleres: true },
-    });
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
+    const tarifa = await TarifasTallerService.obtenerPorId(id);
     if (!tarifa) {
       return NextResponse.json({ error: 'Tarifa no encontrada' }, { status: 404 });
     }
-    return NextResponse.json(serializeBigInt(tarifa));
-  } catch (error: any) {
-    console.error('[GET /tarifas-taller/:id]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const validated = tarifasTallerUpdateSchema.parse(body);
-
-    const tarifa = await prisma.tarifas_taller.update({
-      where: { id: BigInt(id) },
-      data: {
-        ...(validated.tallerId ? { taller_id: BigInt(validated.tallerId) as any } : {}),
-        ...(validated.tipoServicio ? { especialidad: (validated.tipoServicio as string).toLowerCase() as any } : {}),
-        ...(validated.precioUnitario !== undefined ? { precio_unitario: validated.precioUnitario } : {}),
-        ...(validated.moneda ? { moneda: validated.moneda } : {}),
-        ...(validated.vigenciaDesde ? { vigente_desde: new Date(validated.vigenciaDesde) } : {}),
-        ...(validated.vigenciaHasta ? { vigente_hasta: new Date(validated.vigenciaHasta) } : {}),
-        ...(validated.activo !== undefined ? { activo: validated.activo } : {}),
-        ...(validated.observaciones !== undefined ? { notas: validated.observaciones } : {}),
-      },
-      include: { talleres: true },
-    });
-
-    return NextResponse.json(serializeBigInt(tarifa));
+    return NextResponse.json({ success: true, data: tarifa });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: 'Datos inválidos', details: error.issues }, { status: 400 });
-    }
-    console.error('[PUT /tarifas-taller/:id]', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: Request, { params }: Params) {
+  const auth = await requireServerRole(ROLES_ESCRITURA);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
-    await prisma.tarifas_taller.delete({ where: { id: BigInt(id) } });
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[DELETE /tarifas-taller/:id]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
+    const body = await req.json();
+    const parsed = tarifaTallerUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },
+        { status: 400 },
+      );
+    }
+
+    const data = await TarifasTallerService.actualizar(id, parsed.data);
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    const status = msg.includes('no encontrada') || msg.includes('Ya existe') ? 400 : 500;
+    return NextResponse.json({ error: msg }, { status });
   }
 }

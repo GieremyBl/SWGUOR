@@ -208,12 +208,6 @@ export const ROLES_USUARIO: Record<Rol, { label: string; color: string; bgColor:
 // ─── REGLAS DE NEGOCIO B2B ───────────────────────────────────────────────────
 export const REGLAS_NEGOCIO = {
   MOQ_GENERAL: 400,
-  ESCALAS_DESCUENTO: [
-    { min: 400, dcto: 0.00 },
-    { min: 1000, dcto: 0.05 },
-    { min: 5000, dcto: 0.12 },
-    { min: 10000, dcto: 0.18 },
-  ],
   VALIDEZ_COTIZACION_DIAS: 7,
 };
 

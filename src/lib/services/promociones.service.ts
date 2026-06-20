@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
-import type { CampanaForm } from '@/lib/schemas/promociones-ofertas';
+import type { CampanaConEscalasForm } from '@/lib/schemas/promociones-ofertas';
+import {
+  limpiarVinculosCampana,
+  obtenerReglaIdsCampana,
+  syncCampanaEscalas,
+} from '@/lib/services/campana-escalas.service';
+import { ESTADO_DESCUENTO_APLICACION } from '@/lib/constants/promociones';
 
 export interface CampanaFilters {
   activo?: boolean;
@@ -14,7 +20,11 @@ const INCLUDE_REGLAS = {
     orderBy: { prioridad: 'asc' as const },
     include: {
       reglas_descuento: {
-        include: { categorias_productos: { select: { id: true, nombre: true } } }, // ✅
+        include: {
+          descuento_aplicaciones: {
+            where: { estado: { not: ESTADO_DESCUENTO_APLICACION.REVERTIDO } },
+          },
+        },
       },
     },
   },
@@ -24,7 +34,7 @@ function toDate(value: string): Date {
   return new Date(value);
 }
 
-function mapCampanaData(input: CampanaForm) {
+function mapCampanaData(input: CampanaConEscalasForm) {
   return {
     nombre: input.nombre.trim(),
     descripcion: input.descripcion?.trim() || null,
@@ -34,20 +44,31 @@ function mapCampanaData(input: CampanaForm) {
   };
 }
 
-async function syncReglas(
+function buildSyncInput(
+  promocionId: bigint,
+  input: CampanaConEscalasForm,
+): Parameters<typeof syncCampanaEscalas>[1] {
+  return {
+    campanaTipo: 'promocion',
+    campanaId: promocionId,
+    campanaNombre: input.nombre,
+    fechaInicio: toDate(input.fecha_inicio),
+    fechaFin: input.fecha_fin ? toDate(input.fecha_fin) : null,
+    alcance: input.alcance,
+    categoriaId: input.categoria_id ? BigInt(input.categoria_id) : null,
+    productoId: input.producto_id ? BigInt(input.producto_id) : null,
+    escalas: input.escalas,
+  };
+}
+
+async function aplicarEscalas(
   tx: Prisma.TransactionClient,
   promocionId: bigint,
-  reglas: CampanaForm['reglas'],
+  input: CampanaConEscalasForm,
+  previousReglaIds: bigint[],
 ) {
-  await tx.promocion_reglas.deleteMany({ where: { promocion_id: promocionId } });
-  if (!reglas?.length) return;
-  await tx.promocion_reglas.createMany({
-    data: reglas.map((r, idx) => ({
-      promocion_id: promocionId,
-      regla_id: BigInt(r.regla_id),
-      prioridad: r.prioridad ?? idx + 1,
-    })),
-  });
+  await limpiarVinculosCampana(tx, 'promocion', promocionId);
+  await syncCampanaEscalas(tx, buildSyncInput(promocionId, input), previousReglaIds);
 }
 
 export const promocionesService = {
@@ -85,12 +106,12 @@ export const promocionesService = {
     });
   },
 
-  async crear(input: CampanaForm) {
+  async crear(input: CampanaConEscalasForm) {
     return prisma.$transaction(async (tx) => {
       const promocion = await tx.promociones.create({
         data: mapCampanaData(input),
       });
-      await syncReglas(tx, promocion.id, input.reglas);
+      await aplicarEscalas(tx, promocion.id, input, []);
       return tx.promociones.findUnique({
         where: { id: promocion.id },
         include: INCLUDE_REGLAS,
@@ -98,13 +119,14 @@ export const promocionesService = {
     });
   },
 
-  async actualizar(id: bigint, input: CampanaForm) {
+  async actualizar(id: bigint, input: CampanaConEscalasForm) {
     return prisma.$transaction(async (tx) => {
+      const previousIds = await obtenerReglaIdsCampana(tx, 'promocion', id);
       await tx.promociones.update({
         where: { id },
         data: mapCampanaData(input),
       });
-      await syncReglas(tx, id, input.reglas);
+      await aplicarEscalas(tx, id, input, previousIds);
       return tx.promociones.findUnique({
         where: { id },
         include: INCLUDE_REGLAS,

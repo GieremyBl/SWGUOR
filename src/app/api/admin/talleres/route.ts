@@ -1,40 +1,52 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { TalleresService } from '@/lib/services/talleres.service';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
 import { auditoriaService } from '@/lib/services/auditoria.service';
-import { RolUsuario } from '@/lib/constants/roles';
+import { tallerSchema } from '@/lib/schemas/talleres';
+import type { RolUsuario } from '@/lib/constants/roles';
 
-const ROLES_LECTURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller'];
+const ROLES_LECTURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller', 'almacenero'];
 const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente'];
 
-// GET /api/admin/talleres
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireServerRole(ROLES_LECTURA);
-  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   try {
-    const data = await TalleresService.listar();
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get('search') ?? undefined;
+    const estado = searchParams.get('estado') ?? undefined;
+
+    const data = await TalleresService.listar({ search, estado });
     return NextResponse.json({ success: true, data });
-  } catch (error: any) {
-    console.error('[GET /talleres]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-// POST /api/admin/talleres
 export async function POST(req: Request) {
   const auth = await requireServerRole(ROLES_ESCRITURA);
-  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   try {
     const body = await req.json();
-
-    if (!body.nombre) {
-      return NextResponse.json({ error: 'nombre requerido' }, { status: 400 });
+    const parsed = tallerSchema.omit({ id: true }).safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'Datos inválidos' },
+        { status: 400 },
+      );
     }
 
-    const taller = await TalleresService.crear(body);
+    const taller = await TalleresService.crear(parsed.data);
 
     await auditoriaService.registrar({
       usuario_id: BigInt(auth.user.id),
@@ -45,62 +57,26 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, data: taller }, { status: 201 });
-  } catch (error: any) {
-    console.error('[POST /talleres]', error);
-    if (error.code === 'P2002') {
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    const code = (error as { code?: string })?.code;
+    if (code === 'P2002') {
       return NextResponse.json({ error: 'Ya existe un taller con ese RUC o email' }, { status: 409 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
-// PUT /api/admin/talleres
-export async function PUT(req: Request) {
-  const auth = await requireServerRole(ROLES_ESCRITURA);
-  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  try {
-    const body = await req.json();
-    // incidencias se excluye: es relación de solo lectura, no se actualiza directamente
-    const { id, incidencias: _incidencias, ...data } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'id requerido' }, { status: 400 });
-    }
-    if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: 'Sin campos para actualizar' }, { status: 400 });
-    }
-
-    const taller = await TalleresService.actualizar(id, data);
-
-    await auditoriaService.registrar({
-      usuario_id: BigInt(auth.user.id),
-      accion: 'ACTUALIZAR',
-      tabla: 'talleres',
-      registro_id: BigInt(id),
-      datos_despues: taller,
-    });
-
-    return NextResponse.json({ success: true, data: taller });
-  } catch (error: any) {
-    console.error('[PUT /talleres]', error);
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: 'Taller no encontrado' }, { status: 404 });
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// DELETE /api/admin/talleres?id=xxx — soft delete
 export async function DELETE(req: Request) {
   const auth = await requireServerRole(ROLES_ESCRITURA);
-  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   try {
     const id = new URL(req.url).searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ error: 'id requerido' }, { status: 400 });
+    if (!id || !/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'id numérico requerido' }, { status: 400 });
     }
 
     const taller = await TalleresService.desactivar(id);
@@ -113,11 +89,9 @@ export async function DELETE(req: Request) {
     });
 
     return NextResponse.json({ success: true, message: 'Taller desactivado', data: taller });
-  } catch (error: any) {
-    console.error('[DELETE /talleres]', error);
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: 'Taller no encontrado' }, { status: 404 });
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error interno';
+    const status = (error as { code?: string })?.code === 'P2025' ? 404 : 500;
+    return NextResponse.json({ error: msg }, { status: status });
   }
 }

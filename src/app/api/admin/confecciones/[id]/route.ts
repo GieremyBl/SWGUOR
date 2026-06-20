@@ -1,137 +1,134 @@
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 import { ConfeccionesService } from '@/lib/services/confecciones.service';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
-import type { RolUsuario } from '@/lib/constants/roles';
-import { prisma } from '@/lib/prisma';
-import { serializeBigInt } from '@/lib/utils/serialize';
+import {
+  CONFECCIONES_ROLES_ESCRITURA,
+  CONFECCIONES_ROLES_VER,
+} from '@/lib/constants/confecciones';
+import {
+  actualizarConfeccionInputSchema,
+  cambiarEstadoConfeccionSchema,
+} from '@/lib/schemas/confecciones';
+import { ZodError } from 'zod';
 
-const ROLES: RolUsuario[] = ['administrador', 'gerente', 'representante_taller'];
+type Params = { params: Promise<{ id: string }> };
 
-// GET - Obtener una orden específica
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const auth = await requireServerRole(ROLES);
+export async function GET(_req: Request, { params }: Params) {
+  const auth = await requireServerRole(CONFECCIONES_ROLES_VER);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
     const { id } = await params;
-    
-    const confeccion = await prisma.confecciones.findUnique({
-      where: { id: Number(id) },
-      include: {
-        talleres: true,
-        seguimiento_confeccion: {
-          orderBy: { created_at: 'desc' },
-        },
-      },
-    });
-
-    if (!confeccion) {
-      return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    return NextResponse.json(serializeBigInt(confeccion));
-  } catch (error: any) {
-    console.error('[GET]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const data = await ConfeccionesService.obtenerPorId(id);
+    if (!data) {
+      return NextResponse.json({ error: 'Confección no encontrada' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-// PUT - Actualizar una orden completa
-export async function PUT(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const auth = await requireServerRole(ROLES);
+export async function PUT(req: NextRequest, { params }: Params) {
+  const auth = await requireServerRole(CONFECCIONES_ROLES_ESCRITURA);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
     const { id } = await params;
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
     const body = await req.json();
+    const validated = actualizarConfeccionInputSchema.parse(body);
 
-    const confeccion = await prisma.confecciones.update({
-      where: { id: Number(id) },
-      data: {
-        taller_id: body.taller_id ? Number(body.taller_id) : undefined,
-        prenda: body.prenda,
-        cantidad: body.cantidad,
-        costo_unitario: body.costo_unitario,
-        fecha_entrega: body.fecha_entrega ? new Date(body.fecha_entrega) : null,
-        prioridad: body.prioridad,
-        estado: body.estado,
-        updated_at: new Date(),
+    const data = await ConfeccionesService.actualizarDatos(
+      id,
+      {
+        ...validated,
+        orden_produccion_id: validated.orden_produccion_id ?? undefined,
       },
-    });
+      auth.user.id?.toString(),
+    );
 
-    return NextResponse.json(serializeBigInt(confeccion));
-  } catch (error: any) {
-    console.error('[PUT]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: 'Datos inválidos', details: error.issues },
+        { status: 400 },
+      );
+    }
+    const message = error instanceof Error ? error.message : 'Error interno';
+    const status = message.includes('no encontrada') || message.includes('No se puede') ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
-// DELETE - Eliminar una orden
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const auth = await requireServerRole(ROLES);
+export async function POST(req: NextRequest, { params }: Params) {
+  const auth = await requireServerRole(CONFECCIONES_ROLES_ESCRITURA);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
     const { id } = await params;
-
-    const existe = await prisma.confecciones.findUnique({
-      where: { id: Number(id) },
-    });
-
-    if (!existe) {
-      return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    await prisma.seguimiento_confeccion.deleteMany({
-      where: { confeccion_id: Number(id) },
-    });
-
-    await prisma.confecciones.delete({
-      where: { id: Number(id) },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[DELETE]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-// POST - Cambiar estado
-export async function POST(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const auth = await requireServerRole(ROLES);
-  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  try {
-    const { id } = await params;
     const body = await req.json();
+    const validated = cambiarEstadoConfeccionSchema.parse(body);
 
-    if (!body.estado) {
-      return NextResponse.json({ error: 'El campo estado es requerido' }, { status: 400 });
-    }
-
-    const seg = await ConfeccionesService.actualizarEstado(id, {
-      estado: body.estado,
-      notas: body.notas ?? "",
+    const data = await ConfeccionesService.actualizarEstado(id, {
+      estado: validated.estado,
+      notas: validated.notas ?? undefined,
       responsable_id: auth.user.id?.toString(),
     });
 
-    return NextResponse.json({ success: true, data: seg });
-  } catch (error: any) {
-    console.error('[POST estado]', error);
-    return NextResponse.json({ error: error.message ?? 'Error interno' }, { status: 500 });
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: 'Datos inválidos', details: error.issues },
+        { status: 400 },
+      );
+    }
+    const message = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: Params) {
+  const auth = await requireServerRole(CONFECCIONES_ROLES_ESCRITURA);
+  if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+  try {
+    const { id } = await params;
+    if (!/^\d+$/.test(id)) {
+      return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const notas = typeof body?.notas === 'string' ? body.notas : 'Cancelación administrativa';
+
+    const data = await ConfeccionesService.cancelar(
+      id,
+      { estado: 'cancelada', notas },
+      auth.user.id?.toString(),
+    );
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error interno';
+    const status = message.includes('no encontrada') || message.includes('cerrada') ? 400 : 500;
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

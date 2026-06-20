@@ -2,12 +2,21 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { FichasTecnicasService } from '@/lib/services/fichas-tecnicas.service';
+import { requireServerRole } from '@/lib/auth/server';
+import type { RolUsuario } from '@/lib/constants/roles';
+
+const FICHAS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'disenador', 'cortador', 'almacenero'];
 
 // GET /api/admin/fichas-tecnicas/[id]
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireServerRole(FICHAS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
 
@@ -34,6 +43,11 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireServerRole(FICHAS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
 
@@ -50,6 +64,7 @@ export async function PATCH(
       'sam_total',
       'costo_estimado',
       'imagen_geometral',
+      'ficha_url',
       'estado',
     ] as const;
 
@@ -84,6 +99,11 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireServerRole(FICHAS_ROLES);
+  if (!auth.success) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
   try {
     const { id } = await params;
 

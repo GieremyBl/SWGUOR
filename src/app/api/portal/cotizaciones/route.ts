@@ -8,6 +8,7 @@ import {
   resolveCartMoq,
   ORIGEN_COTIZACION_SOLICITUD,
 } from '@/lib/constants/portal-b2b';
+import { calcularDescuentosEscalaAutomaticos } from '@/lib/services/descuento-escala-automatico.service';
 
 // ─────────────────────────────────────────────────────────────
 // Helper: generar número de cotización YYMMDD-HHMMSS-{ID}
@@ -129,14 +130,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── Cálculo de totales ──────────────────────────────────
     const costoEnvio = Number(costo_envio ?? 0);
-    const totales = calcularTotalesCotizacion(
-      items.map((i: any) => ({
-        precioBase: Number(i.precio_unitario),
+    const totales = await calcularDescuentosEscalaAutomaticos(
+      items.map((i: { producto_id: number | string; precio_unitario: number; cantidad: number }) => ({
+        producto_id: i.producto_id,
+        precio_unitario: Number(i.precio_unitario),
         cantidad: Number(i.cantidad),
       })),
-      costoEnvio,
+      { costoEnvio, moq: resolveCartMoq(items) },
     );
 
     if (!esSolicitudConsulta && !totales.cumpleMOQ) {
@@ -216,44 +217,19 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       data: serializeBigInt(cotizacion),
-      calculo: totales,
+      calculo: {
+        subtotalBruto: totales.subtotalBruto,
+        cantidadTotal: totales.cantidadTotal,
+        montoDescuento: totales.montoDescuento,
+        costoEnvio: totales.costoEnvio,
+        total: totales.total,
+        igv: totales.igv,
+        cumpleMOQ: totales.cumpleMOQ,
+      },
     }, { status: 201 });
 
   } catch (error: any) {
     console.error('[Portal] Error al crear cotización:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Lógica de negocio — Calculadora B2B
-// ─────────────────────────────────────────────────────────────
-const ESCALAS_DESCUENTO = [
-  { min: 400, dcto: 0.00 },
-  { min: 1000, dcto: 0.05 },
-  { min: 5000, dcto: 0.12 },
-  { min: 10000, dcto: 0.18 },
-];
-const MOQ_GENERAL = resolveCartMoq;
-
-function calcularTotalesCotizacion(
-  items: { precioBase: number; cantidad: number }[],
-  costoEnvio: number,
-) {
-  const subtotalBruto = items.reduce((acc, i) => acc + i.precioBase * i.cantidad, 0);
-  const cantidadTotal = items.reduce((acc, i) => acc + i.cantidad, 0);
-  const escala = [...ESCALAS_DESCUENTO].reverse().find(r => cantidadTotal >= r.min);
-  const montoDescuento = subtotalBruto * (escala?.dcto ?? 0);
-  const subtotalNeto = subtotalBruto - montoDescuento;
-  const igv = subtotalNeto * 0.18;
-
-  return {
-    subtotalBruto,
-    cantidadTotal,
-    montoDescuento,
-    costoEnvio,
-    total: subtotalNeto + igv + costoEnvio,
-    igv,
-    cumpleMOQ: cantidadTotal >= resolveCartMoq(items),
-  };
 }

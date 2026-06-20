@@ -11,6 +11,8 @@ export interface Pedido {
   id: number; total: number; estado: EstadoPedido;
   estado_pago: EstadoPago; created_at: string;
   total_unidades: number; moneda: string;
+  monto_pagado?: number;
+  saldo_pendiente?: number;
 }
 
 const ESTADO_META = {

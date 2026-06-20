@@ -1,109 +1,87 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { CrearPagoTaller, PagoTaller } from '@/lib/schemas/pagos-talleres';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  actualizarPagoTaller,
+  anularPagoTaller,
+  crearPagoTaller,
+  fetchPagoTallerById,
+  fetchPagosTaller,
+  PAGOS_TALLER_KEY,
+  registrarPagoTaller,
+  type ListarPagosTallerParams,
+} from '@/lib/helpers/pagos-taller-helpers';
+import type {
+  ActualizarPagoTallerInput,
+  AnularPagoTallerInput,
+  CrearPagoTallerInput,
+  RegistrarPagoTallerInput,
+} from '@/lib/schemas/pagos-talleres';
 
-// Interfaz para definir de forma estricta los filtros aceptados por la URL
-export type FiltrosPagoTaller = Record<string, string | number | boolean>;
+export { PAGOS_TALLER_KEY };
 
-// Interfaz estricta para el payload del registro de transacciones monetarias
-export interface RegistrarPagoInput {
-  monto:              number;
-  fecha:              Date | string;
-  metodoPago:         string;
-  numeroComprobante?: string;
-}
+export function usePagosTalleres(params?: ListarPagosTallerParams) {
+  const queryClient = useQueryClient();
 
-export function usePagosTalleres() {
-  const [pagos, setPagos]     = useState<PagoTaller[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError]     = useState<string | null>(null);
+  const listQuery = useQuery({
+    queryKey: [PAGOS_TALLER_KEY, params],
+    queryFn: () => fetchPagosTaller(params),
+    refetchOnWindowFocus: false,
+  });
 
-  // FIX: Reemplazado 'any' por la interfaz FiltrosPagoTaller estructurada
-  const obtenerPagos = useCallback(async (filtros?: FiltrosPagoTaller) => {
-    setLoading(true);
-    setError(null);
-    try {
-      // FIX: Convertimos todos los valores a string de forma segura para satisfacer a URLSearchParams
-      const queryObj: Record<string, string> = {};
-      if (filtros) {
-        Object.entries(filtros).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            queryObj[key] = String(value);
-          }
-        });
-      }
+  const createMutation = useMutation({
+    mutationFn: (payload: CrearPagoTallerInput) => crearPagoTaller(payload),
+    onSuccess: () => {
+      toast.success('Pago registrado');
+      queryClient.invalidateQueries({ queryKey: [PAGOS_TALLER_KEY] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
-      const params = new URLSearchParams(queryObj);
-      const response = await fetch(`/api/pagos-talleres?${params}`);
-      if (!response.ok) throw new Error('Error al obtener pagos');
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string | number; data: ActualizarPagoTallerInput }) =>
+      actualizarPagoTaller(id, data),
+    onSuccess: () => {
+      toast.success('Pago actualizado');
+      queryClient.invalidateQueries({ queryKey: [PAGOS_TALLER_KEY] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
-      const data: PagoTaller[] = await response.json();
-      setPagos(data);
-      return data;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido';
-      setError(msg);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const registrarMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string | number; data: RegistrarPagoTallerInput }) =>
+      registrarPagoTaller(id, data),
+    onSuccess: () => {
+      toast.success('Pago confirmado como pagado');
+      queryClient.invalidateQueries({ queryKey: [PAGOS_TALLER_KEY] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
-  const crearPago = useCallback(async (datos: CrearPagoTaller) => {
-    setError(null);
-    try {
-      const response = await fetch('/api/pagos-talleres', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datos),
-      });
-      if (!response.ok) throw new Error('Error al crear pago');
-
-      const nuevoPago: PagoTaller = await response.json();
-      setPagos(prev => [...prev, nuevoPago]);
-      return nuevoPago;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido';
-      setError(msg);
-      throw err;
-    }
-  }, []);
-
-  // FIX: Se tiparon los argumentos en un contrato estricto e independiente, y se acepta string o number en el ID
-  const registrarPago = useCallback(async (
-    pagoId: string | number, 
-    datosRegistro: RegistrarPagoInput
-  ) => {
-    setError(null);
-    try {
-      const response = await fetch(`/api/pagos-talleres/${pagoId}/registrar`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datosRegistro),
-      });
-      if (!response.ok) throw new Error('Error al registrar pago');
-
-      const pagoActualizado: PagoTaller = await response.json();
-      
-      // FIX: Comparación segura e inmune a si tu BD usa IDs numéricos o UUID strings
-      setPagos(prev => 
-        prev.map(p => String(p.id) === String(pagoId) ? pagoActualizado : p)
-      );
-      return pagoActualizado;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const anularMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string | number; data?: AnularPagoTallerInput }) =>
+      anularPagoTaller(id, data),
+    onSuccess: () => {
+      toast.success('Pago anulado');
+      queryClient.invalidateQueries({ queryKey: [PAGOS_TALLER_KEY] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
 
   return {
-    pagos,
-    loading,
-    error,
-    obtenerPagos,
-    crearPago,
-    registrarPago,
+    pagos: listQuery.data?.data ?? [],
+    meta: listQuery.data?.meta,
+    isLoading: listQuery.isLoading,
+    refetch: listQuery.refetch,
+    obtenerPorId: fetchPagoTallerById,
+    crear: createMutation.mutateAsync,
+    actualizar: updateMutation.mutateAsync,
+    registrar: registrarMutation.mutateAsync,
+    anular: anularMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isRegistering: registrarMutation.isPending,
+    isAnulling: anularMutation.isPending,
   };
 }

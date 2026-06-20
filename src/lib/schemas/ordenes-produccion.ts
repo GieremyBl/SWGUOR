@@ -25,7 +25,7 @@ export const ordenProduccionSchema = z.object({
   producto_id: z.number().min(1, "Producto requerido"),
   taller_id: z.number().min(1, "Taller requerido"),
   ficha_id: z.number().min(1, "Ficha técnica requerida"),
-  pedido_id: z.number().min(1, "Pedido requerido"),
+  pedido_id: z.number().min(1, "Pedido inválido").optional(),
   cantidad_solicitada: z.number().min(1, "Mínimo 1 unidad"),
   fecha_entrega: z.string().optional(),
   notas: z.string().optional(),

@@ -15,8 +15,11 @@ import {
 } from 'lucide-react';
 import { PedidoTracker } from '@/components/pedidos/PedidoTracker';
 import { PedidoCambiarEstado } from './PedidoCambiarEstado';
+import { PedidoNotasLogisticaSection } from './PedidoNotasLogisticaSection';
+import { PedidoDocumentosSection } from './PedidoDocumentosSection';
 import { Badge, SectionCard, FinRow } from './PedidoDetalleUI';
 import { TabPagos } from './TabPagos';
+import { especificacionesParaTabla } from '@/lib/helpers/pedido-items-display.helper';
 import {
   ESTADO_CONFIG,
   PRIORIDAD_CONFIG,
@@ -244,6 +247,11 @@ export function PedidoDetalleSecciones({
         </SectionCard>
       )}
 
+      <PedidoNotasLogisticaSection
+        notasCliente={pedido.notas_cliente}
+        notasPedido={pedido.notas_pedido}
+      />
+
       {/* SECCIÓN C — Ítems */}
       <SectionCard title="Ítems del pedido">
         {(pedido.pedido_items ?? []).length === 0 ? (
@@ -261,7 +269,9 @@ export function PedidoDetalleSecciones({
                     'Color',
                     'Talla',
                     'Cantidad',
-                    'Especificaciones',
+                    'P. unit.',
+                    'Subtotal',
+                    'Detalle',
                   ].map((h) => (
                     <th
                       key={h}
@@ -274,14 +284,25 @@ export function PedidoDetalleSecciones({
               </thead>
               <tbody>
                 {pedido.pedido_items.map((item) => {
-                  const espec = item.especificaciones as Record<
+                  const especRaw = item.especificaciones as Record<
                     string,
                     unknown
                   > | null;
+                  const espec = especificacionesParaTabla(especRaw);
                   const sku =
                     item.variantes_producto?.sku ??
                     item.productos?.sku ??
                     '—';
+                  const color =
+                    item.variantes_producto?.color ??
+                    (typeof especRaw?.color_snapshot === 'string'
+                      ? especRaw.color_snapshot
+                      : '—');
+                  const talla =
+                    item.variantes_producto?.talla ??
+                    (typeof especRaw?.talla_snapshot === 'string'
+                      ? especRaw.talla_snapshot
+                      : '—');
                   return (
                     <tr
                       key={item.id}
@@ -293,16 +314,24 @@ export function PedidoDetalleSecciones({
                       <td className="py-3 px-2 text-stone-600 font-mono text-xs">
                         {sku}
                       </td>
-                      <td className="py-3 px-2 text-stone-700">
-                        {item.variantes_producto?.color ?? '—'}
-                      </td>
-                      <td className="py-3 px-2 text-stone-700">
-                        {item.variantes_producto?.talla ?? '—'}
-                      </td>
+                      <td className="py-3 px-2 text-stone-700">{color}</td>
+                      <td className="py-3 px-2 text-stone-700">{talla}</td>
                       <td className="py-3 px-2 font-bold text-stone-900 text-center">
                         {item.cantidad}
                       </td>
-                      <td className="py-3 px-2 max-w-[200px]">
+                      <td className="py-3 px-2 text-stone-700 tabular-nums">
+                        {item.precio_unitario != null
+                          ? fmt(item.precio_unitario, pedido.moneda)
+                          : '—'}
+                      </td>
+                      <td className="py-3 px-2 text-stone-900 font-semibold tabular-nums">
+                        {item.subtotal != null
+                          ? fmt(item.subtotal, pedido.moneda)
+                          : item.precio_unitario != null
+                            ? fmt(item.precio_unitario * item.cantidad, pedido.moneda)
+                            : '—'}
+                      </td>
+                      <td className="py-3 px-2 max-w-[160px]">
                         <EspecificacionesLista espec={espec} />
                       </td>
                     </tr>
@@ -312,6 +341,10 @@ export function PedidoDetalleSecciones({
             </table>
           </div>
         )}
+      </SectionCard>
+
+      <SectionCard title="Documentos y facturas">
+        <PedidoDocumentosSection documentos={pedido.documentos ?? []} />
       </SectionCard>
 
       {/* SECCIÓN D — Seguimiento */}

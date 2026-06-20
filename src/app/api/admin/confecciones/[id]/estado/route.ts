@@ -2,15 +2,15 @@ export const runtime = 'nodejs';
 import { ConfeccionesService } from '@/lib/services/confecciones.service';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
-import type { RolUsuario } from '@/lib/constants/roles';
-
-const ROLES: RolUsuario[] = ['administrador', 'gerente', 'representante_taller'];
+import { CONFECCIONES_ROLES_ESCRITURA } from '@/lib/constants/confecciones';
+import { cambiarEstadoConfeccionSchema } from '@/lib/schemas/confecciones';
+import { ZodError } from 'zod';
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireServerRole(ROLES);
+  const auth = await requireServerRole(CONFECCIONES_ROLES_ESCRITURA);
   if (!auth.success) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -18,23 +18,24 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await req.json();
+    const validated = cambiarEstadoConfeccionSchema.parse(body);
 
-    if (!body.estado) {
-      return NextResponse.json(
-        { error: 'El campo estado es requerido' },
-        { status: 400 }
-      );
-    }
-
-    const seg = await ConfeccionesService.actualizarEstado(id, {
-      estado: body.estado,
-      notas: body.notas ?? "",
+    const data = await ConfeccionesService.actualizarEstado(id, {
+      estado: validated.estado,
+      notas: validated.notas ?? undefined,
       responsable_id: auth.user.id?.toString(),
     });
 
-    return NextResponse.json({ success: true, data: seg });
-  } catch (error: any) {
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: 'Datos inválidos', details: error.issues },
+        { status: 400 },
+      );
+    }
     console.error('[POST /api/admin/confecciones/[id]/estado]', error);
-    return NextResponse.json({ error: error.message ?? 'Error interno' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Error interno';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

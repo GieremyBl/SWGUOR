@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -82,13 +77,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "almacen_stock_insumo_id_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "almacen_stock_material_id_fkey"
             columns: ["material_id"]
             isOneToOne: false
@@ -152,6 +140,13 @@ export type Database = {
             referencedColumns: ["producto_id"]
           },
           {
+            foreignKeyName: "almacen_stock_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
             foreignKeyName: "almacen_stock_zona_id_fkey"
             columns: ["zona_id"]
             isOneToOne: false
@@ -162,6 +157,7 @@ export type Database = {
       }
       almacen_zonas: {
         Row: {
+          activo: boolean
           almacen_id: number
           created_at: string
           descripcion: string | null
@@ -169,6 +165,7 @@ export type Database = {
           nombre: string
         }
         Insert: {
+          activo?: boolean
           almacen_id: number
           created_at?: string
           descripcion?: string | null
@@ -176,6 +173,7 @@ export type Database = {
           nombre: string
         }
         Update: {
+          activo?: boolean
           almacen_id?: number
           created_at?: string
           descripcion?: string | null
@@ -199,7 +197,7 @@ export type Database = {
           descripcion: string | null
           direccion: string | null
           email: string | null
-          estado: string
+          estado: boolean
           id: number
           nombre: string
           responsable_id: number | null
@@ -213,7 +211,7 @@ export type Database = {
           descripcion?: string | null
           direccion?: string | null
           email?: string | null
-          estado?: string
+          estado: boolean
           id?: never
           nombre: string
           responsable_id?: number | null
@@ -227,7 +225,7 @@ export type Database = {
           descripcion?: string | null
           direccion?: string | null
           email?: string | null
-          estado?: string
+          estado?: boolean
           id?: never
           nombre?: string
           responsable_id?: number | null
@@ -327,6 +325,7 @@ export type Database = {
           datos_antes: Json | null
           datos_despues: Json | null
           id: number
+          ids: Json | null
           ip_address: unknown
           registro_id: number
           tabla: string
@@ -339,6 +338,7 @@ export type Database = {
           datos_antes?: Json | null
           datos_despues?: Json | null
           id?: number
+          ids?: Json | null
           ip_address?: unknown
           registro_id: number
           tabla: string
@@ -351,6 +351,7 @@ export type Database = {
           datos_antes?: Json | null
           datos_despues?: Json | null
           id?: number
+          ids?: Json | null
           ip_address?: unknown
           registro_id?: number
           tabla?: string
@@ -374,7 +375,34 @@ export type Database = {
           },
         ]
       }
-      categorias: {
+      categoria_insumo: {
+        Row: {
+          activo: boolean | null
+          created_at: string
+          descripcion: string | null
+          id: number
+          nombre: string
+          updated_at: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string
+          descripcion?: string | null
+          id?: number
+          nombre: string
+          updated_at?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string
+          descripcion?: string | null
+          id?: number
+          nombre?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      categorias_productos: {
         Row: {
           activo: boolean | null
           created_at: string
@@ -409,10 +437,10 @@ export type Database = {
       }
       clientes: {
         Row: {
-          activo: Database["public"]["Enums"]["EstadoCliente"] | null
           created_at: string
           direccion_fiscal: string | null
           email: string | null
+          estado: Database["public"]["Enums"]["EstadoCliente"] | null
           id: number
           nombre_comercial: string | null
           razon_social: string | null
@@ -423,10 +451,10 @@ export type Database = {
           usuario_id: number | null
         }
         Insert: {
-          activo?: Database["public"]["Enums"]["EstadoCliente"] | null
           created_at?: string
           direccion_fiscal?: string | null
           email?: string | null
+          estado?: Database["public"]["Enums"]["EstadoCliente"] | null
           id?: number
           nombre_comercial?: string | null
           razon_social?: string | null
@@ -437,10 +465,10 @@ export type Database = {
           usuario_id?: number | null
         }
         Update: {
-          activo?: Database["public"]["Enums"]["EstadoCliente"] | null
           created_at?: string
           direccion_fiscal?: string | null
           email?: string | null
+          estado?: Database["public"]["Enums"]["EstadoCliente"] | null
           id?: number
           nombre_comercial?: string | null
           razon_social?: string | null
@@ -472,6 +500,8 @@ export type Database = {
           cdr_url: string | null
           correlativo: string
           created_at: string
+          enviado_sunat_at: string | null
+          estado_sunat: Database["public"]["Enums"]["EstadoComprobante"]
           fecha_emision: string
           hash_cpe: string | null
           id_uuid: string
@@ -481,6 +511,7 @@ export type Database = {
           pago_id: string | null
           pdf_url: string | null
           pedido_id: number | null
+          respuesta_sunat: string | null
           ruc_emisor: string
           serie: string
           subtotal: number
@@ -493,6 +524,8 @@ export type Database = {
           cdr_url?: string | null
           correlativo: string
           created_at?: string
+          enviado_sunat_at?: string | null
+          estado_sunat?: Database["public"]["Enums"]["EstadoComprobante"]
           fecha_emision?: string
           hash_cpe?: string | null
           id_uuid: string
@@ -502,6 +535,7 @@ export type Database = {
           pago_id?: string | null
           pdf_url?: string | null
           pedido_id?: number | null
+          respuesta_sunat?: string | null
           ruc_emisor: string
           serie: string
           subtotal?: number
@@ -514,6 +548,8 @@ export type Database = {
           cdr_url?: string | null
           correlativo?: string
           created_at?: string
+          enviado_sunat_at?: string | null
+          estado_sunat?: Database["public"]["Enums"]["EstadoComprobante"]
           fecha_emision?: string
           hash_cpe?: string | null
           id_uuid?: string
@@ -523,6 +559,7 @@ export type Database = {
           pago_id?: string | null
           pdf_url?: string | null
           pedido_id?: number | null
+          respuesta_sunat?: string | null
           ruc_emisor?: string
           serie?: string
           subtotal?: number
@@ -561,7 +598,6 @@ export type Database = {
           notas: string | null
           observaciones: string | null
           orden_produccion_id: number | null
-          pedido_id: number
           prenda: string
           prioridad: string
           responsable_id: number | null
@@ -580,7 +616,6 @@ export type Database = {
           notas?: string | null
           observaciones?: string | null
           orden_produccion_id?: number | null
-          pedido_id: number
           prenda?: string
           prioridad?: string
           responsable_id?: number | null
@@ -599,7 +634,6 @@ export type Database = {
           notas?: string | null
           observaciones?: string | null
           orden_produccion_id?: number | null
-          pedido_id?: number
           prenda?: string
           prioridad?: string
           responsable_id?: number | null
@@ -608,10 +642,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "confecciones_pedido_id_fkey"
-            columns: ["pedido_id"]
+            foreignKeyName: "confecciones_orden_produccion_id_fkey"
+            columns: ["orden_produccion_id"]
             isOneToOne: false
-            referencedRelation: "pedidos"
+            referencedRelation: "ordenes_produccion"
             referencedColumns: ["id"]
           },
           {
@@ -746,6 +780,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_cotizaciones_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_cotizacion_items_producto_id"
             columns: ["producto_id"]
             isOneToOne: false
@@ -799,6 +840,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "v_producto_stock_resumen"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "fk_cotizacion_items_producto_id"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
             referencedColumns: ["producto_id"]
           },
           {
@@ -1019,13 +1067,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cotizaciones_proveedor_items_insumo_id_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "cotizaciones_proveedor_items_material_id_fkey"
             columns: ["material_id"]
             isOneToOne: false
@@ -1135,22 +1176,28 @@ export type Database = {
         Row: {
           created_at: string
           despacho_id: number
+          estado_entrega: Database["public"]["Enums"]["EstadoEntrega"] | null
           grupo_despacho_id: number
           id: number
+          numero_parada: number | null
           pedido_id: number
         }
         Insert: {
           created_at?: string
           despacho_id: number
+          estado_entrega?: Database["public"]["Enums"]["EstadoEntrega"] | null
           grupo_despacho_id: number
           id?: number
+          numero_parada?: number | null
           pedido_id: number
         }
         Update: {
           created_at?: string
           despacho_id?: number
+          estado_entrega?: Database["public"]["Enums"]["EstadoEntrega"] | null
           grupo_despacho_id?: number
           id?: number
+          numero_parada?: number | null
           pedido_id?: number
         }
         Relationships: [
@@ -1186,6 +1233,7 @@ export type Database = {
           fecha_despacho: string
           fecha_entrega: string | null
           id: number
+          repartidor_id: number | null
           updated_at: string
         }
         Insert: {
@@ -1196,6 +1244,7 @@ export type Database = {
           fecha_despacho: string
           fecha_entrega?: string | null
           id?: number
+          repartidor_id?: number | null
           updated_at?: string
         }
         Update: {
@@ -1206,48 +1255,15 @@ export type Database = {
           fecha_despacho?: string
           fecha_entrega?: string | null
           id?: number
+          repartidor_id?: number | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      detalle_ficha_insumos: {
-        Row: {
-          consumo_unitario: number | null
-          created_at: string
-          id: number
-          id_ficha: number | null
-          id_insumo: number | null
-          merma_permitida: number | null
-        }
-        Insert: {
-          consumo_unitario?: number | null
-          created_at?: string
-          id?: number
-          id_ficha?: number | null
-          id_insumo?: number | null
-          merma_permitida?: number | null
-        }
-        Update: {
-          consumo_unitario?: number | null
-          created_at?: string
-          id?: number
-          id_ficha?: number | null
-          id_insumo?: number | null
-          merma_permitida?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "fk_detalle_ficha_insumos_id_ficha"
-            columns: ["id_ficha"]
+            foreignKeyName: "despachos_grupos_repartidor_id_fkey"
+            columns: ["repartidor_id"]
             isOneToOne: false
-            referencedRelation: "fichas_tecnicas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_detalle_ficha_insumos_id_insumo"
-            columns: ["id_insumo"]
-            isOneToOne: false
-            referencedRelation: "insumo"
+            referencedRelation: "repartidores"
             referencedColumns: ["id"]
           },
         ]
@@ -1388,6 +1404,13 @@ export type Database = {
             referencedColumns: ["producto_id"]
           },
           {
+            foreignKeyName: "devoluciones_producto_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
             foreignKeyName: "devoluciones_usuario_fkey"
             columns: ["procesado_por"]
             isOneToOne: false
@@ -1473,13 +1496,6 @@ export type Database = {
           usuario_id?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "dev_prov_insumo_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "dev_prov_proveedor_fkey"
             columns: ["proveedor_id"]
@@ -1771,6 +1787,13 @@ export type Database = {
             referencedRelation: "v_producto_stock_resumen"
             referencedColumns: ["producto_id"]
           },
+          {
+            foreignKeyName: "fk_fichas_tecnicas_id_producto"
+            columns: ["id_producto"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
         ]
       }
       fichas_tecnicas_detalle: {
@@ -1807,13 +1830,6 @@ export type Database = {
             columns: ["ficha_id"]
             isOneToOne: false
             referencedRelation: "fichas_tecnicas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_insumo_rel"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
             referencedColumns: ["id"]
           },
           {
@@ -1987,13 +2003,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "guias_remision_items_insumo_id_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "guias_remision_items_material_id_fkey"
             columns: ["material_id"]
             isOneToOne: false
@@ -2056,6 +2065,13 @@ export type Database = {
             referencedRelation: "v_producto_stock_resumen"
             referencedColumns: ["producto_id"]
           },
+          {
+            foreignKeyName: "guias_remision_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
         ]
       }
       incidencias_cliente: {
@@ -2067,7 +2083,7 @@ export type Database = {
           evidencia_url: string[] | null
           id: number
           pedido_id: number | null
-          tipo: Database["public"]["Enums"]["tipo_incidencia_cliente"] | null
+          tipo: Database["public"]["Enums"]["TipoIncidenciaCliente"] | null
           updated_at: string | null
         }
         Insert: {
@@ -2078,7 +2094,7 @@ export type Database = {
           evidencia_url?: string[] | null
           id?: never
           pedido_id?: number | null
-          tipo?: Database["public"]["Enums"]["tipo_incidencia_cliente"] | null
+          tipo?: Database["public"]["Enums"]["TipoIncidenciaCliente"] | null
           updated_at?: string | null
         }
         Update: {
@@ -2089,7 +2105,7 @@ export type Database = {
           evidencia_url?: string[] | null
           id?: never
           pedido_id?: number | null
-          tipo?: Database["public"]["Enums"]["tipo_incidencia_cliente"] | null
+          tipo?: Database["public"]["Enums"]["TipoIncidenciaCliente"] | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2212,9 +2228,9 @@ export type Database = {
       insumo: {
         Row: {
           alerta_bajo_stock: boolean | null
-          almacen_id: number | null
-          categoria_insumo: Database["public"]["Enums"]["CategoriaInsumo"]
+          categoria_id: number
           created_at: string
+          descripcion: string | null
           id: number
           nombre: string
           precio_unitario: number | null
@@ -2229,9 +2245,9 @@ export type Database = {
         }
         Insert: {
           alerta_bajo_stock?: boolean | null
-          almacen_id?: number | null
-          categoria_insumo?: Database["public"]["Enums"]["CategoriaInsumo"]
+          categoria_id: number
           created_at?: string
+          descripcion?: string | null
           id?: number
           nombre: string
           precio_unitario?: number | null
@@ -2246,9 +2262,9 @@ export type Database = {
         }
         Update: {
           alerta_bajo_stock?: boolean | null
-          almacen_id?: number | null
-          categoria_insumo?: Database["public"]["Enums"]["CategoriaInsumo"]
+          categoria_id?: number
           created_at?: string
+          descripcion?: string | null
           id?: number
           nombre?: string
           precio_unitario?: number | null
@@ -2263,10 +2279,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "insumo_almacen_id_fkey"
-            columns: ["almacen_id"]
+            foreignKeyName: "fk_categoria"
+            columns: ["categoria_id"]
             isOneToOne: false
-            referencedRelation: "almacenes"
+            referencedRelation: "categoria_insumo"
             referencedColumns: ["id"]
           },
           {
@@ -2281,7 +2297,6 @@ export type Database = {
       materiales: {
         Row: {
           alerta_bajo_stock: boolean | null
-          almacen_id: number | null
           ancho_total: number | null
           ancho_util: number | null
           codigo_color: string | null
@@ -2297,13 +2312,11 @@ export type Database = {
           stock_actual: number
           stock_minimo: number
           tipo: Database["public"]["Enums"]["TipoMaterial"]
-          ubicacion_almacen: string | null
           unidad_medida: Database["public"]["Enums"]["UnidadMedida"]
           updated_at: string | null
         }
         Insert: {
           alerta_bajo_stock?: boolean | null
-          almacen_id?: number | null
           ancho_total?: number | null
           ancho_util?: number | null
           codigo_color?: string | null
@@ -2319,13 +2332,11 @@ export type Database = {
           stock_actual?: number
           stock_minimo?: number
           tipo?: Database["public"]["Enums"]["TipoMaterial"]
-          ubicacion_almacen?: string | null
           unidad_medida?: Database["public"]["Enums"]["UnidadMedida"]
           updated_at?: string | null
         }
         Update: {
           alerta_bajo_stock?: boolean | null
-          almacen_id?: number | null
           ancho_total?: number | null
           ancho_util?: number | null
           codigo_color?: string | null
@@ -2341,7 +2352,6 @@ export type Database = {
           stock_actual?: number
           stock_minimo?: number
           tipo?: Database["public"]["Enums"]["TipoMaterial"]
-          ubicacion_almacen?: string | null
           unidad_medida?: Database["public"]["Enums"]["UnidadMedida"]
           updated_at?: string | null
         }
@@ -2353,72 +2363,52 @@ export type Database = {
             referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "materiales_almacen_id_fkey"
-            columns: ["almacen_id"]
-            isOneToOne: false
-            referencedRelation: "almacenes"
-            referencedColumns: ["id"]
-          },
         ]
       }
       movimientos_inventario: {
         Row: {
           almacen_id: number | null
-          cantidad: number | null
+          cantidad: number
           created_at: string
           id: number
           insumo_id: number | null
           material_id: number | null
-          motivo: string | null
+          motivo: string
           producto_id: number | null
-          referencia_tipo:
-          | Database["public"]["Enums"]["ReferenciaMovimiento"]
-          | null
-          tipo_movimiento: Database["public"]["Enums"]["TipoMovimiento"] | null
+          referencia_tipo: Database["public"]["Enums"]["ReferenciaMovimiento"]
+          tipo_movimiento: Database["public"]["Enums"]["TipoMovimiento"]
           updated_at: string | null
           usuario_id: number | null
         }
         Insert: {
           almacen_id?: number | null
-          cantidad?: number | null
+          cantidad: number
           created_at?: string
           id?: number
           insumo_id?: number | null
           material_id?: number | null
-          motivo?: string | null
+          motivo: string
           producto_id?: number | null
-          referencia_tipo?:
-          | Database["public"]["Enums"]["ReferenciaMovimiento"]
-          | null
-          tipo_movimiento?: Database["public"]["Enums"]["TipoMovimiento"] | null
+          referencia_tipo: Database["public"]["Enums"]["ReferenciaMovimiento"]
+          tipo_movimiento: Database["public"]["Enums"]["TipoMovimiento"]
           updated_at?: string | null
           usuario_id?: number | null
         }
         Update: {
           almacen_id?: number | null
-          cantidad?: number | null
+          cantidad?: number
           created_at?: string
           id?: number
           insumo_id?: number | null
           material_id?: number | null
-          motivo?: string | null
+          motivo?: string
           producto_id?: number | null
-          referencia_tipo?:
-          | Database["public"]["Enums"]["ReferenciaMovimiento"]
-          | null
-          tipo_movimiento?: Database["public"]["Enums"]["TipoMovimiento"] | null
+          referencia_tipo?: Database["public"]["Enums"]["ReferenciaMovimiento"]
+          tipo_movimiento?: Database["public"]["Enums"]["TipoMovimiento"]
           updated_at?: string | null
           usuario_id?: number | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_movimientos_inventario_insumo_id"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "fk_movimientos_inventario_material_id"
             columns: ["material_id"]
@@ -2483,6 +2473,13 @@ export type Database = {
             referencedColumns: ["producto_id"]
           },
           {
+            foreignKeyName: "fk_movimientos_inventario_producto_id"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
             foreignKeyName: "fk_movimientos_inventario_usuario_id"
             columns: ["usuario_id"]
             isOneToOne: false
@@ -2513,7 +2510,9 @@ export type Database = {
           leido_at: string | null
           mensaje: string
           referencia_id: number | null
-          referencia_tipo: string | null
+          referencia_tipo:
+          | Database["public"]["Enums"]["ReferenciaNotificacion"]
+          | null
           tipo: Database["public"]["Enums"]["TipoNotificacion"]
           titulo: string
           url_destino: string | null
@@ -2526,7 +2525,9 @@ export type Database = {
           leido_at?: string | null
           mensaje: string
           referencia_id?: number | null
-          referencia_tipo?: string | null
+          referencia_tipo?:
+          | Database["public"]["Enums"]["ReferenciaNotificacion"]
+          | null
           tipo: Database["public"]["Enums"]["TipoNotificacion"]
           titulo: string
           url_destino?: string | null
@@ -2539,7 +2540,9 @@ export type Database = {
           leido_at?: string | null
           mensaje?: string
           referencia_id?: number | null
-          referencia_tipo?: string | null
+          referencia_tipo?:
+          | Database["public"]["Enums"]["ReferenciaNotificacion"]
+          | null
           tipo?: Database["public"]["Enums"]["TipoNotificacion"]
           titulo?: string
           url_destino?: string | null
@@ -2724,13 +2727,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "ordenes_compra_items_insumo_id_fkey"
-            columns: ["insumo_id"]
-            isOneToOne: false
-            referencedRelation: "insumo"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "ordenes_compra_items_material_id_fkey"
             columns: ["material_id"]
             isOneToOne: false
@@ -2753,6 +2749,7 @@ export type Database = {
           created_at: string | null
           email_enviado_at: string | null
           estado: Database["public"]["Enums"]["EstadoOrdenProduccion"]
+          etapa: Database["public"]["Enums"]["EtapaProduccion"] | null
           fecha_entrega: string | null
           ficha_id: number
           id: number
@@ -2769,6 +2766,7 @@ export type Database = {
           created_at?: string | null
           email_enviado_at?: string | null
           estado?: Database["public"]["Enums"]["EstadoOrdenProduccion"]
+          etapa?: Database["public"]["Enums"]["EtapaProduccion"] | null
           fecha_entrega?: string | null
           ficha_id: number
           id?: number
@@ -2785,6 +2783,7 @@ export type Database = {
           created_at?: string | null
           email_enviado_at?: string | null
           estado?: Database["public"]["Enums"]["EstadoOrdenProduccion"]
+          etapa?: Database["public"]["Enums"]["EtapaProduccion"] | null
           fecha_entrega?: string | null
           ficha_id?: number
           id?: number
@@ -2867,6 +2866,13 @@ export type Database = {
             referencedColumns: ["producto_id"]
           },
           {
+            foreignKeyName: "fk_ordenes_produccion_producto_id"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
             foreignKeyName: "fk_ordenes_produccion_taller_id"
             columns: ["taller_id"]
             isOneToOne: false
@@ -2921,7 +2927,111 @@ export type Database = {
             referencedRelation: "pedido_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones_cliente_por_mes_y_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_bajo_stock_o_agotados"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_mas_stock_vs_vendidos"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_mas_vendidos_acumulados_por_mes"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "rotacion_inventario_aprox_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "tasa_devoluciones_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_producto_stock_resumen"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_variante_id_fkey"
+            columns: ["variante_id"]
+            isOneToOne: false
+            referencedRelation: "v_variante_stock_resumen"
+            referencedColumns: ["variante_id"]
+          },
+          {
+            foreignKeyName: "ordenes_produccion_items_variante_id_fkey"
+            columns: ["variante_id"]
+            isOneToOne: false
+            referencedRelation: "variantes_producto"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      otp_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: number
+          otp: string
+          used: boolean
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: number
+          otp: string
+          used?: boolean
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: number
+          otp?: string
+          used?: boolean
+        }
+        Relationships: []
       }
       pagos: {
         Row: {
@@ -3190,6 +3300,13 @@ export type Database = {
             referencedColumns: ["producto_id"]
           },
           {
+            foreignKeyName: "pedido_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
+          {
             foreignKeyName: "pedido_items_variante_id_fkey"
             columns: ["variante_id"]
             isOneToOne: false
@@ -3300,6 +3417,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pedidos_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_cotizaciones_dashboard"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pedidos_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -3378,7 +3502,6 @@ export type Database = {
       }
       productos: {
         Row: {
-          almacen_id: number | null
           categoria_id: number | null
           colores_disponibles: Json | null
           created_at: string
@@ -3397,7 +3520,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          almacen_id?: number | null
           categoria_id?: number | null
           colores_disponibles?: Json | null
           created_at?: string
@@ -3416,7 +3538,6 @@ export type Database = {
           updated_at: string
         }
         Update: {
-          almacen_id?: number | null
           categoria_id?: number | null
           colores_disponibles?: Json | null
           created_at?: string
@@ -3436,17 +3557,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "productos_almacen_id_fkey"
-            columns: ["almacen_id"]
-            isOneToOne: false
-            referencedRelation: "almacenes"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "productos_categoria_id_fkey"
             columns: ["categoria_id"]
             isOneToOne: false
-            referencedRelation: "categorias"
+            referencedRelation: "categorias_productos"
             referencedColumns: ["id"]
           },
         ]
@@ -3487,6 +3601,7 @@ export type Database = {
       promociones: {
         Row: {
           activo: boolean
+          cupones: string | null
           descripcion: string | null
           fecha_fin: string | null
           fecha_inicio: string
@@ -3495,6 +3610,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          cupones?: string | null
           descripcion?: string | null
           fecha_fin?: string | null
           fecha_inicio?: string
@@ -3503,6 +3619,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          cupones?: string | null
           descripcion?: string | null
           fecha_fin?: string | null
           fecha_inicio?: string
@@ -3557,11 +3674,9 @@ export type Database = {
         Row: {
           activo: boolean | null
           cantidad_min: number
-          categoria_id: number | null
           fecha_fin: string
           fecha_inicio: string
           id: number
-          monto_min_compra: number | null
           nombre: string
           tipo_beneficio: Database["public"]["Enums"]["TipoBeneficio"]
           tipo_conteo: Database["public"]["Enums"]["TipoConteo"] | null
@@ -3570,11 +3685,9 @@ export type Database = {
         Insert: {
           activo?: boolean | null
           cantidad_min?: number
-          categoria_id?: number | null
           fecha_fin: string
           fecha_inicio: string
           id?: number
-          monto_min_compra?: number | null
           nombre: string
           tipo_beneficio: Database["public"]["Enums"]["TipoBeneficio"]
           tipo_conteo?: Database["public"]["Enums"]["TipoConteo"] | null
@@ -3583,25 +3696,42 @@ export type Database = {
         Update: {
           activo?: boolean | null
           cantidad_min?: number
-          categoria_id?: number | null
           fecha_fin?: string
           fecha_inicio?: string
           id?: number
-          monto_min_compra?: number | null
           nombre?: string
           tipo_beneficio?: Database["public"]["Enums"]["TipoBeneficio"]
           tipo_conteo?: Database["public"]["Enums"]["TipoConteo"] | null
           valor_descuento?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_reglas_descuento_categoria_id"
-            columns: ["categoria_id"]
-            isOneToOne: false
-            referencedRelation: "categorias"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      repartidores: {
+        Row: {
+          activo: boolean
+          created_at: string
+          id: number
+          nombre: string
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          id?: number
+          nombre: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          id?: number
+          nombre?: string
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       reservas_stock: {
         Row: {
@@ -3658,6 +3788,13 @@ export type Database = {
             columns: ["cotizacion_id"]
             isOneToOne: false
             referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservas_stock_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_cotizaciones_dashboard"
             referencedColumns: ["id"]
           },
         ]
@@ -3960,6 +4097,56 @@ export type Database = {
           },
         ]
       }
+      tarifas_talleres: {
+        Row: {
+          costo_unitario: number
+          created_at: string | null
+          estado: string | null
+          id: number
+          moneda: string | null
+          proceso: string
+          rango_desde: number
+          rango_hasta: number
+          taller_id: number
+          tipo_prenda: string
+          updated_at: string | null
+        }
+        Insert: {
+          costo_unitario: number
+          created_at?: string | null
+          estado?: string | null
+          id?: never
+          moneda?: string | null
+          proceso: string
+          rango_desde: number
+          rango_hasta: number
+          taller_id: number
+          tipo_prenda: string
+          updated_at?: string | null
+        }
+        Update: {
+          costo_unitario?: number
+          created_at?: string | null
+          estado?: string | null
+          id?: never
+          moneda?: string | null
+          proceso?: string
+          rango_desde?: number
+          rango_hasta?: number
+          taller_id?: number
+          tipo_prenda?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarifas_talleres_taller_id_fkey"
+            columns: ["taller_id"]
+            isOneToOne: false
+            referencedRelation: "talleres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usuarios: {
         Row: {
           auth_id: string | null
@@ -4096,6 +4283,13 @@ export type Database = {
             referencedRelation: "v_producto_stock_resumen"
             referencedColumns: ["producto_id"]
           },
+          {
+            foreignKeyName: "fk_variantes_producto_producto_id"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
         ]
       }
     }
@@ -4226,11 +4420,71 @@ export type Database = {
         }
         Relationships: []
       }
+      v_cotizaciones_dashboard: {
+        Row: {
+          aprobacion_automatica: boolean | null
+          aprobado_at: string | null
+          cliente_id: number | null
+          cliente_razon_social: string | null
+          cliente_ruc: string | null
+          costo_envio: number | null
+          costo_total_estimado: number | null
+          created_at: string | null
+          direccion_despacho: string | null
+          estado: Database["public"]["Enums"]["EstadoCotizacion"] | null
+          expira_at: string | null
+          id: number | null
+          id_regla_descuento: number | null
+          igv: number | null
+          moneda: string | null
+          monto_descuento: number | null
+          notas_internas: string | null
+          numero: string | null
+          origen: string | null
+          subtotal: number | null
+          total: number | null
+          updated_at: string | null
+          valida_hasta: string | null
+          zona_envio_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_zona_envio_id_fkey"
+            columns: ["zona_envio_id"]
+            isOneToOne: false
+            referencedRelation: "costo_envio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_cotizaciones_id_regla_descuento"
+            columns: ["id_regla_descuento"]
+            isOneToOne: false
+            referencedRelation: "reglas_descuento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_producto_stock_resumen: {
         Row: {
           producto_id: number | null
           producto_nombre: string | null
           stock_total_adicional: number | null
+        }
+        Relationships: []
+      }
+      v_stock_disponible_por_producto: {
+        Row: {
+          producto_id: number | null
+          reservado_total: number | null
+          stock_disponible: number | null
+          stock_variantes: number | null
         }
         Relationships: []
       }
@@ -4300,6 +4554,13 @@ export type Database = {
             referencedRelation: "v_producto_stock_resumen"
             referencedColumns: ["producto_id"]
           },
+          {
+            foreignKeyName: "fk_variantes_producto_producto_id"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_disponible_por_producto"
+            referencedColumns: ["producto_id"]
+          },
         ]
       }
       ventas_mensuales: {
@@ -4361,23 +4622,29 @@ export type Database = {
         }
         Relationships: []
       }
-      vista_almacen_stock: {
+      vw_incidencias_mensuales: {
         Row: {
-          almacen: string | null
-          codigo: string | null
-          estado_stock: string | null
-          item: string | null
-          stock_actual: number | null
-          stock_minimo: number | null
-          tipo_item: string | null
-          ultima_actualizacion: string | null
-          zona: string | null
+          anio: number | null
+          mes: string | null
+          nombre_mes: string | null
+          promedio_impacto_horas: number | null
+          severidad: Database["public"]["Enums"]["SeveridadIncidencia"] | null
+          tipo: Database["public"]["Enums"]["TipoIncidencia"] | null
+          total_incidencias: number | null
         }
         Relationships: []
       }
     }
     Functions: {
+      auth_user_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["Rol"]
+      }
       calcular_costo_ficha: { Args: { p_ficha_id: number }; Returns: number }
+      current_user_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["Rol"]
+      }
       fn_actualizar_precio_con_historico: {
         Args: {
           p_moneda: Database["public"]["Enums"]["Moneda"]
@@ -4418,6 +4685,16 @@ export type Database = {
         Args: { p_cotizacion_id: number }
         Returns: undefined
       }
+      fn_usuario_id_desde_cliente: {
+        Args: { p_cliente_id: number }
+        Returns: number
+      }
+      get_admin_users: {
+        Args: never
+        Returns: {
+          usuario_id: number
+        }[]
+      }
       random_9_digit_phone: { Args: never; Returns: number }
       rpc_crud_categorias_create: {
         Args: {
@@ -4444,23 +4721,10 @@ export type Database = {
         }
         SetofOptions: {
           from: "*"
-          to: "categorias"
+          to: "categorias_productos"
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      rpc_crud_categorias_list: {
-        Args: { p_limit?: number; p_offset?: number }
-        Returns: {
-          activo: boolean
-          created_at: string
-          descripcion: string
-          id: number
-          imagen: string
-          nombre: string
-          orden: number
-          updated_at: string
-        }[]
       }
       rpc_crud_categorias_update: {
         Args: {
@@ -4491,10 +4755,10 @@ export type Database = {
       rpc_crud_clientes_get: {
         Args: { p_id: number }
         Returns: {
-          activo: Database["public"]["Enums"]["EstadoCliente"] | null
           created_at: string
           direccion_fiscal: string | null
           email: string | null
+          estado: Database["public"]["Enums"]["EstadoCliente"] | null
           id: number
           nombre_comercial: string | null
           razon_social: string | null
@@ -4661,84 +4925,7 @@ export type Database = {
         }
         Returns: number
       }
-      rpc_crud_insumo_create: {
-        Args: {
-          p_alerta_bajo_stock?: boolean
-          p_almacen_id?: number
-          p_categoria_insumo?: Database["public"]["Enums"]["CategoriaInsumo"]
-          p_nombre: string
-          p_precio_unitario?: number
-          p_proveedor_id?: number
-          p_stock_actual?: number
-          p_stock_maximo?: number
-          p_stock_minimo?: number
-          p_tipo?: Database["public"]["Enums"]["TipoInsumo"]
-          p_ubicacion_almacen?: string
-          p_unidad_medida?: Database["public"]["Enums"]["UnidadMedida"]
-        }
-        Returns: number
-      }
       rpc_crud_insumo_delete: { Args: { p_id: number }; Returns: boolean }
-      rpc_crud_insumo_get: {
-        Args: { p_id: number }
-        Returns: {
-          alerta_bajo_stock: boolean | null
-          almacen_id: number | null
-          categoria_insumo: Database["public"]["Enums"]["CategoriaInsumo"]
-          created_at: string
-          id: number
-          nombre: string
-          precio_unitario: number | null
-          proveedor_id: number | null
-          stock_actual: number
-          stock_maximo: number | null
-          stock_minimo: number
-          tipo: Database["public"]["Enums"]["TipoInsumo"]
-          ubicacion_almacen: string | null
-          unidad_medida: Database["public"]["Enums"]["UnidadMedida"]
-          updated_at: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "insumo"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      rpc_crud_insumo_list: {
-        Args: { p_limit?: number; p_offset?: number }
-        Returns: {
-          almacen_id: number
-          categoria_insumo: Database["public"]["Enums"]["CategoriaInsumo"]
-          id: number
-          nombre: string
-          precio_unitario: number
-          proveedor_id: number
-          stock_actual: number
-          stock_minimo: number
-          tipo: Database["public"]["Enums"]["TipoInsumo"]
-          unidad_medida: Database["public"]["Enums"]["UnidadMedida"]
-          updated_at: string
-        }[]
-      }
-      rpc_crud_insumo_update: {
-        Args: {
-          p_alerta_bajo_stock?: boolean
-          p_almacen_id?: number
-          p_categoria_insumo?: Database["public"]["Enums"]["CategoriaInsumo"]
-          p_id: number
-          p_nombre?: string
-          p_precio_unitario?: number
-          p_proveedor_id?: number
-          p_stock_actual?: number
-          p_stock_maximo?: number
-          p_stock_minimo?: number
-          p_tipo?: Database["public"]["Enums"]["TipoInsumo"]
-          p_ubicacion_almacen?: string
-          p_unidad_medida?: Database["public"]["Enums"]["UnidadMedida"]
-        }
-        Returns: number
-      }
       rpc_crud_materiales_create: {
         Args: {
           p_alerta_bajo_stock?: boolean
@@ -4766,7 +4953,6 @@ export type Database = {
         Args: { p_id: number }
         Returns: {
           alerta_bajo_stock: boolean | null
-          almacen_id: number | null
           ancho_total: number | null
           ancho_util: number | null
           codigo_color: string | null
@@ -4782,7 +4968,6 @@ export type Database = {
           stock_actual: number
           stock_minimo: number
           tipo: Database["public"]["Enums"]["TipoMaterial"]
-          ubicacion_almacen: string | null
           unidad_medida: Database["public"]["Enums"]["UnidadMedida"]
           updated_at: string | null
         }
@@ -4916,7 +5101,6 @@ export type Database = {
       rpc_crud_productos_get: {
         Args: { p_id: number }
         Returns: {
-          almacen_id: number | null
           categoria_id: number | null
           colores_disponibles: Json | null
           created_at: string
@@ -5254,15 +5438,7 @@ export type Database = {
       | "ayudante"
       | "representante_taller"
       | "gerente"
-      CategoriaInsumo:
-      | "tela"
-      | "avios"
-      | "empaque"
-      | "hilo"
-      | "etiquetas"
-      | "forro"
-      | "otro"
-      | "accesorios"
+      | "almacenero"
       ColorPrenda:
       | "animal_print"
       | "azul"
@@ -5341,6 +5517,9 @@ export type Database = {
       | "entregado"
       | "preparando"
       | "incidencia"
+      | "en_almacen"
+      | "devuelto"
+      | "cancelado"
       EstadoDevolucion:
       | "pendiente"
       | "en_revision"
@@ -5354,6 +5533,12 @@ export type Database = {
       | "aceptado_proveedor"
       | "rechazado_proveedor"
       | "completado"
+      EstadoEntrega:
+      | "en_espera"
+      | "siguiente"
+      | "entregado"
+      | "reprogramado"
+      | "incidencia"
       EstadoFeedback: "pendiente" | "revisado"
       EstadoFicha: "borrador" | "en_revision" | "aprobada" | "obsoleta"
       EstadoGuiaRemision:
@@ -5375,7 +5560,7 @@ export type Database = {
       | "pausada"
       | "completada"
       | "cancelada"
-      EstadoPago: "pendiente" | "verificado" | "rechazado"
+      EstadoPago: "pendiente" | "pagado" | "pago_parcial" | "anulado"
       EstadoPagoOrdenCompra: "pendiente" | "parcial" | "pagado"
       EstadoPagoTaller: "pendiente" | "pagado" | "anulado"
       EstadoPedido:
@@ -5427,7 +5612,28 @@ export type Database = {
       | "vencimiento"
       | "otros"
       PrioridadPedido: "baja" | "normal" | "alta" | "urgente"
-      ReferenciaMovimiento: "ORDEN" | "COMPRA" | "VENTA" | "AJUSTE"
+      ReferenciaMovimiento:
+      | "ORDEN_COMPRA"
+      | "PEDIDO_CLIENTE"
+      | "ORDEN_PRODUCCION"
+      | "AJUSTE_MANUAL"
+      | "MERMA_INCIDENCIA"
+      | "DEVOLUCION"
+      | "TRANSFERENCIA"
+      | "INVENTARIO_INICIAL"
+      ReferenciaNotificacion:
+      | "PRODUCTO"
+      | "COTIZACION"
+      | "ORDEN_PRODUCCION"
+      | "PAGO"
+      | "PEDIDO"
+      | "SISTEMA"
+      | "DEVOLUCION"
+      | "DESPACHO"
+      | "CONFECCION"
+      | "CLIENTE"
+      | "INVENTARIO"
+      | "COMPROBANTE"
       Rol:
       | "administrador"
       | "cortador"
@@ -5450,17 +5656,9 @@ export type Database = {
       | "30"
       | "32"
       | "34"
-      tipo_incidencia_cliente:
-      | "defecto_confeccion"
-      | "pedido_equivocado"
-      | "talla_incorrecta"
-      | "cantidad_incorrecta"
-      | "dano_en_transporte"
-      | "empaque_defectuoso"
-      | "otro"
       TipoAsiento: "debe" | "haber"
       TipoBeneficio: "porcentaje_subtotal"
-      TipoCliente: "corporativo" | "minorista" | "distribuidor"
+      TipoCliente: "corporativo" | "minorista" | "distribuidor" | "mayorista"
       TipoComprobante: "factura" | "boleta" | "nota_credito" | "nota_debito"
       TipoConteo: "modelos_distintos"
       TipoGuiaRemision:
@@ -5477,19 +5675,15 @@ export type Database = {
       | "defecto_confeccion"
       | "retraso"
       | "otro"
-      TipoInsumo:
-      | "tela"
-      | "hilo"
-      | "avio"
-      | "boton"
-      | "cierre"
-      | "empaque"
+      TipoIncidenciaCliente:
+      | "defecto_confeccion"
+      | "pedido_equivocado"
+      | "talla_incorrecta"
+      | "cantidad_incorrecta"
+      | "dano_en_transporte"
+      | "empaque_defectuoso"
       | "otro"
-      | "etiqueta"
-      | "cinta"
-      | "elastico"
-      | "forro"
-      | "accesorio"
+      TipoInsumo: "materia_prima" | "avio" | "empaque" | "suministro"
       TipoMaterial: "punto" | "plano" | "no_tejido" | "especial"
       TipoMovimiento:
       | "entrada"
@@ -5504,6 +5698,9 @@ export type Database = {
       | "incidencia_taller"
       | "devolucion_a_cliente"
       | "recepcion_devolucion_cliente"
+      | "transferencia_entrada"
+      | "transferencia_salida"
+      | "inventario_inicial"
       TipoNotificacion:
       | "stock_bajo"
       | "pedido_vencido"
@@ -5513,6 +5710,48 @@ export type Database = {
       | "confeccion_completada"
       | "devolucion_solicitada"
       | "sistema"
+      | "cotizacion_aprobada"
+      | "cotizacion_rechazada"
+      | "pedido_confirmado"
+      | "pedido_listo"
+      | "pago_verificado"
+      | "pago_rechazado"
+      | "despacho_en_camino"
+      | "cotizacion_creada"
+      | "cotizacion_modificada"
+      | "pedido_en_revision"
+      | "pedido_modificado"
+      | "pedido_cancelado"
+      | "pedido_parcial"
+      | "pago_parcial"
+      | "nota_credito_emitida"
+      | "orden_produccion_aprobada"
+      | "orden_produccion_iniciada"
+      | "orden_produccion_pausada"
+      | "orden_produccion_cancelada"
+      | "confeccion_iniciada"
+      | "confeccion_en_proceso"
+      | "confeccion_con_retraso"
+      | "confeccion_observacion"
+      | "stock_agotado"
+      | "stock_repuesto"
+      | "ingreso_tela"
+      | "merma_registrada"
+      | "ajuste_inventario"
+      | "despacho_programado"
+      | "despacho_preparando"
+      | "despacho_entregado"
+      | "despacho_fallido"
+      | "despacho_devuelto"
+      | "devolucion_aprobada"
+      | "devolucion_rechazada"
+      | "devolucion_recibida"
+      | "cambio_solicitado"
+      | "cambio_completado"
+      | "cliente_nuevo"
+      | "cuenta_bloqueada"
+      | "cuenta_reactivada"
+      | "documento_requerido"
       TipoPago: "adelanto" | "cuota" | "saldo_final" | "pago_completo"
       UnidadMedida:
       | "metros"
@@ -5669,16 +5908,7 @@ export const Constants = {
         "ayudante",
         "representante_taller",
         "gerente",
-      ],
-      CategoriaInsumo: [
-        "tela",
-        "avios",
-        "empaque",
-        "hilo",
-        "etiquetas",
-        "forro",
-        "otro",
-        "accesorios",
+        "almacenero",
       ],
       ColorPrenda: [
         "animal_print",
@@ -5764,6 +5994,9 @@ export const Constants = {
         "entregado",
         "preparando",
         "incidencia",
+        "en_almacen",
+        "devuelto",
+        "cancelado",
       ],
       EstadoDevolucion: [
         "pendiente",
@@ -5779,6 +6012,13 @@ export const Constants = {
         "aceptado_proveedor",
         "rechazado_proveedor",
         "completado",
+      ],
+      EstadoEntrega: [
+        "en_espera",
+        "siguiente",
+        "entregado",
+        "reprogramado",
+        "incidencia",
       ],
       EstadoFeedback: ["pendiente", "revisado"],
       EstadoFicha: ["borrador", "en_revision", "aprobada", "obsoleta"],
@@ -5804,7 +6044,7 @@ export const Constants = {
         "completada",
         "cancelada",
       ],
-      EstadoPago: ["pendiente", "verificado", "rechazado"],
+      EstadoPago: ["pendiente", "pagado", "pago_parcial", "anulado"],
       EstadoPagoOrdenCompra: ["pendiente", "parcial", "pagado"],
       EstadoPagoTaller: ["pendiente", "pagado", "anulado"],
       EstadoPedido: [
@@ -5862,7 +6102,30 @@ export const Constants = {
         "otros",
       ],
       PrioridadPedido: ["baja", "normal", "alta", "urgente"],
-      ReferenciaMovimiento: ["ORDEN", "COMPRA", "VENTA", "AJUSTE"],
+      ReferenciaMovimiento: [
+        "ORDEN_COMPRA",
+        "PEDIDO_CLIENTE",
+        "ORDEN_PRODUCCION",
+        "AJUSTE_MANUAL",
+        "MERMA_INCIDENCIA",
+        "DEVOLUCION",
+        "TRANSFERENCIA",
+        "INVENTARIO_INICIAL",
+      ],
+      ReferenciaNotificacion: [
+        "PRODUCTO",
+        "COTIZACION",
+        "ORDEN_PRODUCCION",
+        "PAGO",
+        "PEDIDO",
+        "SISTEMA",
+        "DEVOLUCION",
+        "DESPACHO",
+        "CONFECCION",
+        "CLIENTE",
+        "INVENTARIO",
+        "COMPROBANTE",
+      ],
       Rol: [
         "administrador",
         "cortador",
@@ -5887,18 +6150,9 @@ export const Constants = {
         "32",
         "34",
       ],
-      tipo_incidencia_cliente: [
-        "defecto_confeccion",
-        "pedido_equivocado",
-        "talla_incorrecta",
-        "cantidad_incorrecta",
-        "dano_en_transporte",
-        "empaque_defectuoso",
-        "otro",
-      ],
       TipoAsiento: ["debe", "haber"],
       TipoBeneficio: ["porcentaje_subtotal"],
-      TipoCliente: ["corporativo", "minorista", "distribuidor"],
+      TipoCliente: ["corporativo", "minorista", "distribuidor", "mayorista"],
       TipoComprobante: ["factura", "boleta", "nota_credito", "nota_debito"],
       TipoConteo: ["modelos_distintos"],
       TipoGuiaRemision: [
@@ -5917,20 +6171,16 @@ export const Constants = {
         "retraso",
         "otro",
       ],
-      TipoInsumo: [
-        "tela",
-        "hilo",
-        "avio",
-        "boton",
-        "cierre",
-        "empaque",
+      TipoIncidenciaCliente: [
+        "defecto_confeccion",
+        "pedido_equivocado",
+        "talla_incorrecta",
+        "cantidad_incorrecta",
+        "dano_en_transporte",
+        "empaque_defectuoso",
         "otro",
-        "etiqueta",
-        "cinta",
-        "elastico",
-        "forro",
-        "accesorio",
       ],
+      TipoInsumo: ["materia_prima", "avio", "empaque", "suministro"],
       TipoMaterial: ["punto", "plano", "no_tejido", "especial"],
       TipoMovimiento: [
         "entrada",
@@ -5945,6 +6195,9 @@ export const Constants = {
         "incidencia_taller",
         "devolucion_a_cliente",
         "recepcion_devolucion_cliente",
+        "transferencia_entrada",
+        "transferencia_salida",
+        "inventario_inicial",
       ],
       TipoNotificacion: [
         "stock_bajo",
@@ -5955,6 +6208,48 @@ export const Constants = {
         "confeccion_completada",
         "devolucion_solicitada",
         "sistema",
+        "cotizacion_aprobada",
+        "cotizacion_rechazada",
+        "pedido_confirmado",
+        "pedido_listo",
+        "pago_verificado",
+        "pago_rechazado",
+        "despacho_en_camino",
+        "cotizacion_creada",
+        "cotizacion_modificada",
+        "pedido_en_revision",
+        "pedido_modificado",
+        "pedido_cancelado",
+        "pedido_parcial",
+        "pago_parcial",
+        "nota_credito_emitida",
+        "orden_produccion_aprobada",
+        "orden_produccion_iniciada",
+        "orden_produccion_pausada",
+        "orden_produccion_cancelada",
+        "confeccion_iniciada",
+        "confeccion_en_proceso",
+        "confeccion_con_retraso",
+        "confeccion_observacion",
+        "stock_agotado",
+        "stock_repuesto",
+        "ingreso_tela",
+        "merma_registrada",
+        "ajuste_inventario",
+        "despacho_programado",
+        "despacho_preparando",
+        "despacho_entregado",
+        "despacho_fallido",
+        "despacho_devuelto",
+        "devolucion_aprobada",
+        "devolucion_rechazada",
+        "devolucion_recibida",
+        "cambio_solicitado",
+        "cambio_completado",
+        "cliente_nuevo",
+        "cuenta_bloqueada",
+        "cuenta_reactivada",
+        "documento_requerido",
       ],
       TipoPago: ["adelanto", "cuota", "saldo_final", "pago_completo"],
       UnidadMedida: [
@@ -5970,3 +6265,4 @@ export const Constants = {
     },
   },
 } as const
+

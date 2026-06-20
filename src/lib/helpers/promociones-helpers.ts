@@ -1,7 +1,7 @@
 import type {
   ApiItemResponse,
   ApiListResponse,
-  CampanaForm,
+  CampanaConEscalasForm,
   CampanaRow,
   ReglaDescuentoForm,
   ReglaDescuentoRow,
@@ -92,7 +92,7 @@ export async function fetchPromocionDetalle(
 }
 
 export async function savePromocion(
-  data: CampanaForm,
+  data: CampanaConEscalasForm,
 ): Promise<ApiItemResponse<CampanaRow>> {
   const isEdit = Boolean(data.id);
   const url = isEdit ? `${PROMOS_API}/${data.id}` : PROMOS_API;
@@ -139,7 +139,7 @@ export async function fetchOfertaDetalle(
 }
 
 export async function saveOferta(
-  data: CampanaForm,
+  data: CampanaConEscalasForm,
 ): Promise<ApiItemResponse<CampanaRow>> {
   const isEdit = Boolean(data.id);
   const url = isEdit ? `${OFERTAS_API}/${data.id}` : OFERTAS_API;

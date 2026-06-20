@@ -1,4 +1,48 @@
+import type { DespachoPortal, HitoSeguimientoDespacho } from '@/components/portal/_contexts/PortalContext';
 import type { DespachoGrupo, DespachoFlat, SeguimientoDespacho } from '@/lib/services/despachos.service';
+
+/** Normaliza la respuesta de Prisma → modelo usado en el portal cliente. */
+export function mapGrupoDespachoToPortal(grupo: Record<string, unknown>): DespachoPortal {
+  const pedidosGrupo = (grupo.despachos_grupo_pedidos as Array<{ pedido_id?: number | string }> | undefined) ?? [];
+  const seguimientos = [...((grupo.seguimiento_despachos as HitoSeguimientoDespacho[] | undefined) ?? [])].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  const pedidoId = pedidosGrupo[0]?.pedido_id;
+
+  return {
+    id: Number(grupo.id),
+    pedido_id: pedidoId != null ? Number(pedidoId) : 0,
+    fecha_despacho: String(grupo.fecha_despacho ?? ''),
+    direccion_entrega: String(grupo.direccion_entrega ?? ''),
+    fecha_entrega: grupo.fecha_entrega != null ? String(grupo.fecha_entrega) : null,
+    estado: String(grupo.estado ?? 'pendiente'),
+    created_at: String(grupo.created_at ?? ''),
+    updated_at: String(grupo.updated_at ?? ''),
+    historial_grupo: seguimientos.map((h) => ({
+      id: Number(h.id),
+      grupo_despacho_id: Number(h.grupo_despacho_id),
+      status: String(h.status),
+      notas: h.notas ?? null,
+      created_at: String(h.created_at),
+    })),
+  };
+}
+
+export async function fetchDespachosPortal(): Promise<DespachoPortal[]> {
+  const res = await fetch('/api/portal/despachos', { cache: 'no-store' });
+  const json = await res.json();
+
+  if (!res.ok) {
+    throw new Error(typeof json?.error === 'string' ? json.error : `Error ${res.status}`);
+  }
+
+  if (!Array.isArray(json)) {
+    return [];
+  }
+
+  return json.map((item) => mapGrupoDespachoToPortal(item as Record<string, unknown>));
+}
 
 // ─── Formateo de fechas ───────────────────────────────────────────────────────
 export function formatFecha(fecha: string | null | undefined): string {

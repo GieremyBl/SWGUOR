@@ -1,11 +1,12 @@
 'use client';
 
-import { ShoppingBag, Clock, Factory } from 'lucide-react';
+import { ShoppingBag, Clock, Factory, MessageCircle } from 'lucide-react';
 
 const TABS = [
   { id: 'items',       label: 'Items',       icon: ShoppingBag },
   { id: 'seguimiento', label: 'Seguimiento', icon: Clock       },
   { id: 'produccion',  label: 'Producción',  icon: Factory     },
+  { id: 'asistencia',  label: 'Asistencia',  icon: MessageCircle },
 ] as const;
 
 export type TabId = typeof TABS[number]['id'];
@@ -13,10 +14,16 @@ export type TabId = typeof TABS[number]['id'];
 interface PedidoDetalleTabsProps {
   activeTab:    TabId;
   totalOrdenes: number;
+  chatPendiente?: boolean;
   onTabChange:  (tab: TabId) => void;
 }
 
-export function PedidoDetalleTabs({ activeTab, totalOrdenes, onTabChange }: PedidoDetalleTabsProps) {
+export function PedidoDetalleTabs({
+  activeTab,
+  totalOrdenes,
+  chatPendiente = false,
+  onTabChange,
+}: PedidoDetalleTabsProps) {
   return (
     <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 shadow-sm w-fit">
       {TABS.map(({ id, label, icon: Icon }) => (
@@ -38,6 +45,12 @@ export function PedidoDetalleTabs({ activeTab, totalOrdenes, onTabChange }: Pedi
             }`}>
               {totalOrdenes}
             </span>
+          )}
+          {id === 'asistencia' && chatPendiente && (
+            <span
+              className="w-2 h-2 rounded-full bg-red-500 shrink-0"
+              aria-label="Atención pendiente"
+            />
           )}
         </button>
       ))}

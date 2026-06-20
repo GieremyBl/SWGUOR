@@ -1,7 +1,22 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { GUIAS_REMISION_API } from '@/lib/constants/guias-remision-ui';
 import type { CrearGuiaRemision, GuiaRemision } from '@/lib/schemas/guias-remision';
+
+export interface GuiaRemisionDetalle extends GuiaRemision {
+  guias_remision_items?: Array<{
+    id: number | string;
+    descripcion: string;
+    cantidad: number | string;
+    unidad: string;
+    producto_id?: number | string | null;
+    insumo_id?: number | string | null;
+    material_id?: number | string | null;
+    observaciones?: string | null;
+  }>;
+  pedidos?: { id: number | string; estado?: string | null } | null;
+}
 
 // Interfaz para controlar estrictamente los parámetros de filtrado en listados logísticos
 export type FiltrosGuiaRemision = Record<string, string | number | boolean>;
@@ -32,10 +47,11 @@ export function useGuiasRemision() {
       }
 
       const params = new URLSearchParams(queryObj);
-      const response = await fetch(`/api/guias-remision?${params}`);
+      const response = await fetch(`${GUIAS_REMISION_API}?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Error al obtener guías');
 
-      const data: GuiaRemision[] = await response.json();
+      const json = await response.json();
+      const data: GuiaRemision[] = Array.isArray(json) ? json : (json.data ?? []);
       setGuias(data);
       return data;
     } catch (err) {
@@ -51,7 +67,7 @@ export function useGuiasRemision() {
   const crearGuia = useCallback(async (datos: CrearGuiaRemision) => {
     setError(null);
     try {
-      const response = await fetch('/api/guias-remision', {
+      const response = await fetch(GUIAS_REMISION_API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datos),
@@ -68,11 +84,28 @@ export function useGuiasRemision() {
     }
   }, []);
 
+  const obtenerGuiaPorId = useCallback(async (guiaId: string | number): Promise<GuiaRemisionDetalle> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${GUIAS_REMISION_API}/${guiaId}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Guía no encontrada');
+      const data: GuiaRemisionDetalle = await response.json();
+      return data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // PUT: Finalizar traslado cambiando el estado a entregado adjuntando la firma
   const entregarGuia = useCallback(async (guiaId: string | number, datos: EntregarGuiaInput) => {
     setError(null);
     try {
-      const response = await fetch(`/api/guias-remision/${guiaId}/entregar`, {
+      const response = await fetch(`${GUIAS_REMISION_API}/${guiaId}/entregar`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(datos),
@@ -96,6 +129,7 @@ export function useGuiasRemision() {
     loading,
     error,
     obtenerGuias,
+    obtenerGuiaPorId,
     crearGuia,
     entregarGuia,
   };
