@@ -1,14 +1,15 @@
 'use client';
 
-import { useProductos } from "@/lib/hooks/useProductos";
-
 export default function ReporteStockPage() {
 
-  const { productos, isLoading } = useProductos({});
-
-  if (isLoading) {
-    return <p className="p-6">Cargando productos...</p>;
-  }
+  // placeholder
+  const productos = [
+    { id: 1, nombre: 'Polo Oversize' },
+    { id: 2, nombre: 'Polera Básica' },
+    { id: 3, nombre: 'Casaca Denim' },
+    { id: 4, nombre: 'Jogger Urbano' },
+    { id: 5, nombre: 'Camisa Formal' },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -29,21 +30,13 @@ export default function ReporteStockPage() {
         </thead>
 
         <tbody>
-          {productos.map((p: any) => {
+          {productos.map((p) => {
 
-            const variantes =
-              p.variantes ?? p.variantes_producto ?? [];
-            //stock
-            const stockActual = variantes.reduce(
-              (acc: number, v: any) => acc + (v.stock ?? 0),
-              0
-            );
+            //placeholder
+            const stockActual = 400;
+            const stockReservado = 0;
+            const disponible = true;
 
-            const stockReservado = p.stock_reservado ?? 0;
-            const disponibleCantidad = stockActual - stockReservado;
-            const disponible = disponibleCantidad > 0;
-
-            // estado
             let estado = '';
             let color = '';
 
