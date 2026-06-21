@@ -1,12 +1,10 @@
 'use client';
 
 import { useProductos } from "@/lib/hooks/useProductos";
-import { useProductoStockResumen } from "@/lib/hooks/useStockResumen";
 
 export default function ReporteStockPage() {
 
   const { productos, isLoading } = useProductos({});
-  const { data: stockResumen } = useProductoStockResumen();
 
   if (isLoading) {
     return <p className="p-6">Cargando productos...</p>;
@@ -26,7 +24,6 @@ export default function ReporteStockPage() {
             <th className="p-2 text-center">Stock Actual</th>
             <th className="p-2 text-center">Reservado</th>
             <th className="p-2 text-center">Disponible</th>
-            <th className="p-2 text-center">Stock Mínimo</th>
             <th className="p-2 text-center">Estado</th>
           </tr>
         </thead>
@@ -34,25 +31,38 @@ export default function ReporteStockPage() {
         <tbody>
           {productos.map((p: any) => {
 
+            const variantes =
+              p.variantes ?? p.variantes_producto ?? [];
             //stock
-            const stockActual =
-              stockResumen?.find((s: any) => s.producto_id === Number(p.id))
-                ?.stock_total_adicional ?? p.stock ?? 0;
+            const stockActual = variantes.reduce(
+              (acc: number, v: any) => acc + (v.stock ?? 0),
+              0
+            );
 
-            //reservado
             const stockReservado = p.stock_reservado ?? 0;
+            const disponibleCantidad = stockActual - stockReservado;
+            const disponible = disponibleCantidad > 0;
 
-            // mínimo 
-            const stockMinimo = p.stock_minimo ?? 10;
+            // estado
+            let estado = '';
+            let color = '';
 
-            const disponible = stockActual - stockReservado;
-            const enRiesgo = disponible <= stockMinimo;
+            if (stockActual <= 400) {
+              estado = 'CRÍTICO';
+              color = 'text-red-600';
+            } else if (stockActual <= 800) {
+              estado = 'PRECAUCIÓN';
+              color = 'text-yellow-600';
+            } else {
+              estado = 'ESTABLE';
+              color = 'text-green-600';
+            }
 
             return (
               <tr key={p.id}>
                 <td className="p-2">{p.nombre}</td>
 
-                <td className="p-2 text-center">
+                <td className="p-2 text-center font-bold">
                   {stockActual}
                 </td>
 
@@ -60,18 +70,14 @@ export default function ReporteStockPage() {
                   {stockReservado}
                 </td>
 
-                <td className="p-2 text-center font-bold">
-                  {disponible}
-                </td>
-
-                <td className="p-2 text-center">
-                  {stockMinimo}
-                </td>
-
                 <td className={`p-2 text-center font-bold ${
-                  enRiesgo ? 'text-red-600' : 'text-green-600'
+                  disponible ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {enRiesgo ? 'RIESGO' : 'OK'}
+                  {disponible ? 'Sí' : 'No'}
+                </td>
+
+                <td className={`p-2 text-center font-bold ${color}`}>
+                  {estado}
                 </td>
               </tr>
             );
