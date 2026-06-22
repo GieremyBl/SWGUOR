@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/auth/server';
 import { prisma } from '@/lib/prisma';
 import { obtenerPreviewPedidoGuorino } from '@/lib/services/guorino-pedido.service';
+import { serializeBigInt } from '@/lib/utils/serialize';
 
 type Params = { params: Promise<{ previewId: string }> };
 
@@ -36,5 +37,7 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ error: 'preview_no_encontrado' }, { status: 404 });
   }
 
-  return NextResponse.json({ success: true, data: preview, cliente });
+  return NextResponse.json(
+    serializeBigInt({ success: true, data: preview, cliente }),
+  );
 }

@@ -236,20 +236,8 @@ export async function POST(req: Request) {
         include: { pedido_items: true },
       });
 
-      if (reservar_stock) {
-        const expira = new Date(Date.now() + 30 * 60 * 1000);
-        for (const item of lineas) {
-          await tx.reservas_stock.create({
-            data: {
-              variante_id: BigInt(item.variante_id),
-              pedido_id: pedido.id,
-              cantidad: Number(item.cantidad),
-              expira_en: expira,
-              estado: 'activa',
-            },
-          });
-        }
-      }
+      // reservar_stock omitido al confirmar: el descuento inmediato hace redundante
+      // la reserva y el trigger de reservas_stock falla (referencia_id en movimientos_inventario).
 
       for (const item of lineas) {
         await descontarStockLineaPedido(tx, {

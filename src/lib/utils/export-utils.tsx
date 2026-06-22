@@ -1271,12 +1271,20 @@ const CotizacionDocument = ({ d }: { d: CotizacionPDFData }) => (
   </Document>
 );
 
-export const exportCotizacionIndividualToPDF = async (data: CotizacionPDFData) => {
-  if (typeof window === 'undefined') return;
+export const generarCotizacionIndividualPDFBlob = async (data: CotizacionPDFData): Promise<Blob> => {
+  if (typeof window === 'undefined') {
+    throw new Error('PDF solo disponible en el navegador');
+  }
 
   const asPdf = pdf();
   asPdf.updateContainer(<CotizacionDocument d={data} />);
-  const blob = await asPdf.toBlob();
+  return asPdf.toBlob();
+};
+
+export const exportCotizacionIndividualToPDF = async (data: CotizacionPDFData) => {
+  if (typeof window === 'undefined') return;
+
+  const blob = await generarCotizacionIndividualPDFBlob(data);
   downloadBlob(blob, `Cotizacion_GUOR_${data.numero}.pdf`);
 };
 

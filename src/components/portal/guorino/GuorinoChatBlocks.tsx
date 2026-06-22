@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { FileText, Loader2 } from 'lucide-react';
+import { Download, ExternalLink, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { GuorinoDecisionButtons } from '@/components/portal/guorino/GuorinoDecisionButtons';
-import { descargarPreviewPedidoGuorinoPDF } from '@/lib/helpers/guorino-pedido-pdf.helper';
+import {
+  abrirPreviewPedidoGuorinoPDF,
+  descargarPreviewPedidoGuorinoPDF,
+} from '@/lib/helpers/guorino-pedido-pdf.helper';
 import { descargarPreviewIncidenciaGuorinoPDF } from '@/lib/helpers/guorino-incidencia-pdf.helper';
 import type { GuorinoPedidoPreview } from '@/lib/services/guorino-pedido.service';
 import type { GuorinoIncidenciaPreview } from '@/lib/services/guorino-incidencia.service';
@@ -28,16 +31,34 @@ export function GuorinoChatBlocks({
   const [pedidoConfirmadoId, setPedidoConfirmadoId] = useState<string | null>(null);
   const [incidenciaConfirmadaId, setIncidenciaConfirmadaId] = useState<string | null>(null);
 
+  const cargarPreviewPedido = async (previewId: string) => {
+    const res = await fetch(`/api/portal/guorino/pedidos/${previewId}`);
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error ?? 'No se pudo cargar la previsualización');
+    return {
+      preview: json.data as GuorinoPedidoPreview,
+      cliente: json.cliente as Parameters<typeof descargarPreviewPedidoGuorinoPDF>[1],
+    };
+  };
+
+  const verPdfPedido = async (previewId: string) => {
+    setLoadingId(`view_${previewId}`);
+    try {
+      const { preview, cliente } = await cargarPreviewPedido(previewId);
+      await abrirPreviewPedidoGuorinoPDF(preview, cliente);
+      toast.success('PDF abierto en una nueva pestaña');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Error al generar PDF');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
   const descargarPdf = async (previewId: string) => {
     setLoadingId(`pdf_${previewId}`);
     try {
-      const res = await fetch(`/api/portal/guorino/pedidos/${previewId}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? 'No se pudo cargar la previsualización');
-      await descargarPreviewPedidoGuorinoPDF(
-        json.data as GuorinoPedidoPreview,
-        json.cliente,
-      );
+      const { preview, cliente } = await cargarPreviewPedido(previewId);
+      await descargarPreviewPedidoGuorinoPDF(preview, cliente);
       toast.success('PDF de previsualización descargado');
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : 'Error al generar PDF');
@@ -170,19 +191,40 @@ export function GuorinoChatBlocks({
                   ? 'Cumple stock y reglas de negocio.'
                   : 'Revise advertencias antes de confirmar.'}
               </p>
-              <button
-                type="button"
-                onClick={() => descargarPdf(block.preview_id)}
-                disabled={loadingId === `pdf_${block.preview_id}`}
-                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#D4AF37]/40 bg-[#fffdf8] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#5a4a2a] hover:border-[#D4AF37]"
-              >
-                {loadingId === `pdf_${block.preview_id}` ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <FileText className="w-3 h-3" />
-                )}
-                Previsualizar PDF
-              </button>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => verPdfPedido(block.preview_id)}
+                  disabled={
+                    loadingId === `view_${block.preview_id}` ||
+                    loadingId === `pdf_${block.preview_id}`
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#D4AF37]/40 bg-[#fffdf8] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#5a4a2a] hover:border-[#D4AF37] disabled:opacity-50"
+                >
+                  {loadingId === `view_${block.preview_id}` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-3 h-3" />
+                  )}
+                  Ver PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => descargarPdf(block.preview_id)}
+                  disabled={
+                    loadingId === `view_${block.preview_id}` ||
+                    loadingId === `pdf_${block.preview_id}`
+                  }
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#D4AF37]/40 bg-[#fffdf8] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-[#5a4a2a] hover:border-[#D4AF37] disabled:opacity-50"
+                >
+                  {loadingId === `pdf_${block.preview_id}` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Download className="w-3 h-3" />
+                  )}
+                  Descargar PDF
+                </button>
+              </div>
             </div>
           );
         }

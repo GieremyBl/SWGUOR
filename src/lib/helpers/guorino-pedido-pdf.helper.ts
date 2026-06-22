@@ -1,6 +1,9 @@
 import type { GuorinoPedidoPreview } from '@/lib/services/guorino-pedido.service';
 import type { CotizacionPDFData } from '@/lib/utils/export-utils';
-import { exportCotizacionIndividualToPDF } from '@/lib/utils/export-utils';
+import {
+  exportCotizacionIndividualToPDF,
+  generarCotizacionIndividualPDFBlob,
+} from '@/lib/utils/export-utils';
 
 export function buildGuorinoPedidoPreviewPDFData(
   preview: GuorinoPedidoPreview,
@@ -30,8 +33,8 @@ export function buildGuorinoPedidoPreviewPDFData(
     items: preview.items.map((item, index) => ({
       numero: index + 1,
       descripcion: item.nombre,
-      talla: '—',
-      color: '—',
+      talla: item.talla || '—',
+      color: item.color || '—',
       cantidad: item.cantidad,
       precio_unitario: item.precio_unitario,
       total: item.subtotal,
@@ -54,4 +57,17 @@ export async function descargarPreviewPedidoGuorinoPDF(
 ) {
   const data = buildGuorinoPedidoPreviewPDFData(preview, cliente);
   await exportCotizacionIndividualToPDF(data);
+}
+
+export async function abrirPreviewPedidoGuorinoPDF(
+  preview: GuorinoPedidoPreview,
+  cliente: Parameters<typeof buildGuorinoPedidoPreviewPDFData>[1],
+) {
+  if (typeof window === 'undefined') return;
+
+  const data = buildGuorinoPedidoPreviewPDFData(preview, cliente);
+  const blob = await generarCotizacionIndividualPDFBlob(data);
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
