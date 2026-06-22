@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { NextResponse } from 'next/server';
 import { notificarTransicionEstadoPedido } from '@/lib/helpers/crear-notificacion.helper';
+import { requireServerAuth } from '@/lib/auth/server';
+import { tienePermiso } from '@/lib/constants/roles';
 
 const ESTADOS_VALIDOS = ['pendiente', 'en_ruta', 'entregado', 'preparando', 'incidencia'] as const;
 
@@ -27,16 +29,40 @@ export async function GET(req: Request) {
             clientes: { select: { id: true, razon_social: true } },
           },
         },
+        despachos_grupo_pedidos: {
+          include: {
+            despachos_grupos: {
+              include: {
+                despachos_grupo_pedidos: {
+                  select: { id: true, pedido_id: true, numero_parada: true },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { fecha_despacho: 'desc' },
     });
 
-    const data = despachos.map((d) => ({
-      ...serializeBigInt(d),
-      despacho_id: `DSP-${String(d.id).padStart(6, '0')}`,
-      cliente: d.pedidos?.clientes?.razon_social ?? 'N/A',
-      direccion: d.direccion_entrega,
-    }));
+    const data = despachos.map((d) => {
+      const link = d.despachos_grupo_pedidos[0];
+      const grupo = link?.despachos_grupos;
+      const paradasGrupo = grupo?.despachos_grupo_pedidos ?? [];
+      const totalParadas = paradasGrupo.length;
+      const esRutaAgrupada = totalParadas > 1;
+
+      return {
+        ...serializeBigInt(d),
+        despacho_id: `DSP-${String(d.id).padStart(6, '0')}`,
+        cliente: d.pedidos?.clientes?.razon_social ?? 'N/A',
+        direccion: d.direccion_entrega,
+        grupo_id: link ? String(link.grupo_despacho_id) : null,
+        numero_parada: link?.numero_parada ?? 1,
+        total_paradas_grupo: totalParadas,
+        es_ruta_agrupada: esRutaAgrupada,
+        estado_entrega_parada: link?.estado_entrega ?? 'en_espera',
+      };
+    });
 
     return NextResponse.json({ data, count: data.length });
   } catch (error: any) {
@@ -108,6 +134,11 @@ export async function POST(req: Request) {
 // PATCH: Actualizar estado de entrega
 export async function PATCH(req: Request) {
   try {
+    const auth = await requireServerAuth();
+    if (!auth.success) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
     const body = await req.json();
     const { id, estado, fecha_entrega } = body;
 
@@ -120,6 +151,17 @@ export async function PATCH(req: Request) {
           { error: `Estado inválido. Debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}` },
           { status: 400 }
         );
+      }
+
+      if (normalizedEstado === 'entregado') {
+        if (!tienePermiso(auth.user.rol, 'confirmar_entrega_pedido')) {
+          return NextResponse.json(
+            { error: 'Solo el ayudante puede marcar un pedido como entregado' },
+            { status: 403 },
+          );
+        }
+      } else if (!tienePermiso(auth.user.rol, 'actualizar_estado_despachos')) {
+        return NextResponse.json({ error: 'sin_permisos' }, { status: 403 });
       }
     }
 

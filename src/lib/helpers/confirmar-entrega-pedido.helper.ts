@@ -107,24 +107,64 @@ export async function confirmarEntregaPedido(params: {
       },
     });
 
-    if (grupoId) {
-      await tx.despachos_grupos.update({
-        where: { id: grupoId },
-        data: {
-          estado: 'entregado',
-          fecha_entrega: toDateOnly(ahora),
-          updated_at: ahora,
+    if (grupoId && grupoLink) {
+      await tx.despachos_grupo_pedidos.update({
+        where: { id: grupoLink.id },
+        data: { estado_entrega: 'entregado' },
+      });
+
+      const pendientes = await tx.despachos_grupo_pedidos.count({
+        where: {
+          grupo_despacho_id: grupoId,
+          estado_entrega: { not: 'entregado' },
         },
       });
 
-      await tx.seguimiento_despachos.create({
-        data: {
-          grupo_despacho_id: grupoId,
-          status: 'entregado',
-          notas: params.notasEntrega?.trim() || 'Entrega confirmada por administración.',
-          creado_por: params.creadoPorAuthId ?? null,
-        },
-      });
+      if (pendientes === 0) {
+        await tx.despachos_grupos.update({
+          where: { id: grupoId },
+          data: {
+            estado: 'entregado',
+            fecha_entrega: toDateOnly(ahora),
+            updated_at: ahora,
+          },
+        });
+
+        await tx.seguimiento_despachos.create({
+          data: {
+            grupo_despacho_id: grupoId,
+            status: 'entregado',
+            notas: 'Ruta completada — todas las paradas entregadas.',
+            creado_por: params.creadoPorAuthId ?? null,
+          },
+        });
+      } else {
+        const siguiente = await tx.despachos_grupo_pedidos.findFirst({
+          where: {
+            grupo_despacho_id: grupoId,
+            estado_entrega: { not: 'entregado' },
+          },
+          orderBy: { numero_parada: 'asc' },
+        });
+
+        if (siguiente) {
+          await tx.despachos_grupo_pedidos.update({
+            where: { id: siguiente.id },
+            data: { estado_entrega: 'siguiente' },
+          });
+        }
+
+        await tx.seguimiento_despachos.create({
+          data: {
+            grupo_despacho_id: grupoId,
+            status: 'en_ruta',
+            notas:
+              params.notasEntrega?.trim() ||
+              `Parada entregada. Quedan ${pendientes} entrega(s) en la ruta.`,
+            creado_por: params.creadoPorAuthId ?? null,
+          },
+        });
+      }
     }
 
     const guia = await tx.guias_remision.create({

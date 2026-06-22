@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, ShoppingBag, Truck,
   ChevronRight, Settings, Package, PackageOpen,
-  ShoppingCart, UserCircle, CreditCard, MapPin, LifeBuoy,
+  ShoppingCart, UserCircle, CreditCard, MapPin, LifeBuoy, Sparkles,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -21,6 +21,7 @@ const MENU_GROUPS = [
       { href: '/portal/catalogo', label: 'Catálogo', icon: ShoppingBag },
       { href: '/portal/cotizaciones', label: 'Cotizaciones', icon: FileText },
       { href: '/portal/pedidos', label: 'Mis pedidos', icon: Package },
+      { href: '/portal/guorino', label: 'Guorino Chat', icon: Sparkles },
       { href: '/portal/pagos', label: 'Mis pagos', icon: CreditCard },
       { href: '/portal/compras', label: 'Confirmar compra', icon: ShoppingCart },
 

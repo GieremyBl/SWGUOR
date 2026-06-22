@@ -29,7 +29,8 @@ interface PedidoDetalleHeaderProps {
 
 export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
   const { hasRole } = usePermissions();
-  const puedeDespacho = hasRole(['administrador', 'gerente']);
+  const puedeEmpaque = hasRole(['administrador', 'gerente']);
+  const puedeConfirmarEntrega = hasRole('ayudante');
 
   const estadoCfg    = ESTADO_CONFIG[pedido.estado]       ?? { label: pedido.estado,    color: 'bg-stone-50 text-stone-500 border-stone-200', icon: undefined };
   const prioridadCfg = PRIORIDAD_CONFIG[pedido.prioridad] ?? { label: pedido.prioridad, color: 'bg-stone-50 text-stone-500 border-stone-200' };
@@ -71,21 +72,25 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
           </div>
         </div>
 
-        {puedeDespacho && pedido.estado === 'listo_para_despacho' && (
+        {(puedeEmpaque || puedeConfirmarEntrega) && pedido.estado === 'listo_para_despacho' && (
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Link
-              href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/empaque`}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-            >
-              <Package size={14} /> Empaque y despacho
-            </Link>
-            <Link
-              href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/entrega`}
-              prefetch={false}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
-            >
-              <Truck size={14} /> Confirmar entrega
-            </Link>
+            {puedeEmpaque && (
+              <Link
+                href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/empaque`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+              >
+                <Package size={14} /> Empaque y despacho
+              </Link>
+            )}
+            {puedeConfirmarEntrega && (
+              <Link
+                href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/entrega`}
+                prefetch={false}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
+              >
+                <Truck size={14} /> Confirmar entrega
+              </Link>
+            )}
           </div>
         )}
 

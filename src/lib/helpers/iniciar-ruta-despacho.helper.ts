@@ -27,9 +27,17 @@ export async function iniciarRutaDespacho(params: {
     throw new Error('El despacho no tiene grupo logístico asociado');
   }
 
+  const linksGrupo = await prisma.despachos_grupo_pedidos.findMany({
+    where: { grupo_despacho_id: grupoId },
+    select: { despacho_id: true, numero_parada: true, id: true },
+    orderBy: { numero_parada: 'asc' },
+  });
+
+  const despachoIdsGrupo = linksGrupo.map((l) => l.despacho_id);
+
   await prisma.$transaction(async (tx) => {
-    await tx.despachos.update({
-      where: { id: params.despachoId },
+    await tx.despachos.updateMany({
+      where: { id: { in: despachoIdsGrupo } },
       data: { estado: ESTADO_EN_RUTA, updated_at: new Date() },
     });
 
@@ -38,11 +46,22 @@ export async function iniciarRutaDespacho(params: {
       data: { estado: ESTADO_EN_RUTA, updated_at: new Date() },
     });
 
+    const primeraParada = linksGrupo.find((l) => l.numero_parada === 1) ?? linksGrupo[0];
+    if (primeraParada) {
+      await tx.despachos_grupo_pedidos.update({
+        where: { id: primeraParada.id },
+        data: { estado_entrega: 'siguiente' },
+      });
+    }
+
     await tx.seguimiento_despachos.create({
       data: {
         grupo_despacho_id: grupoId,
         status: ESTADO_EN_RUTA,
-        notas: 'Transportista en ruta — salida de fábrica.',
+        notas:
+          despachoIdsGrupo.length > 1
+            ? `Ruta iniciada — ${despachoIdsGrupo.length} paradas programadas.`
+            : 'Transportista en ruta — salida de fábrica.',
         creado_por: params.creadoPorAuthId ?? null,
       },
     });

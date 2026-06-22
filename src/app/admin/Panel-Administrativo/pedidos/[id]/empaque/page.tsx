@@ -52,7 +52,7 @@ export default async function PedidoEmpaquePage({ params }: PageProps) {
   });
 
   if (despachoActivo) {
-    if (despachoActivo.estado === 'en_ruta') {
+    if (despachoActivo.estado === 'en_ruta' && auth.user.rol === 'ayudante') {
       redirect(`/admin/Panel-Administrativo/pedidos/${id}/entrega`);
     }
     redirect(`/admin/Panel-Administrativo/pedidos/${id}`);

@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { requireServerRole } from '@/lib/auth/server';
-import { ROLES_LOGISTICA_DESPACHO } from '@/lib/constants/pedidos-logistica';
+import { requireServerPermission } from '@/lib/auth/server';
 import { PedidoEntregaForm } from '@/components/admin/pedidos/entrega/PedidoEntregaForm';
 import { PedidoEntregaPendienteRuta } from '@/components/admin/pedidos/entrega/PedidoEntregaPendienteRuta';
 
@@ -19,7 +18,7 @@ function redirectOnAuthFailure(error: string) {
 }
 
 export default async function PedidoEntregaPage({ params }: PageProps) {
-  const auth = await requireServerRole(ROLES_LOGISTICA_DESPACHO);
+  const auth = await requireServerPermission('confirmar_entrega_pedido');
   if (!auth.success) {
     redirectOnAuthFailure(auth.error);
   }

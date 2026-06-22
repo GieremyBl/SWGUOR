@@ -8,6 +8,10 @@ import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { requireServerAuth } from '@/lib/auth/server';
 import { getDefaultGeminiModel } from '@/lib/gemini';
+import { buildUiBlocksDesdePreview, buildUiBlocksDesdePreviewIncidencia } from '@/lib/helpers/guorino-chat-ui.helper';
+import { prepararPedidoGuorino } from '@/lib/services/guorino-pedido.service';
+import { prepararIncidenciaGuorino } from '@/lib/services/guorino-incidencia.service';
+import type { GuorinoUiBlock } from '@/lib/types/guorino-chat';
 
 const tools: Tool[] = [
   {
@@ -45,6 +49,61 @@ const tools: Tool[] = [
           required: ['items'],
         } as any,
       },
+      {
+        name: 'preparar_pedido',
+        description:
+          'Valida stock, MOQ y reglas de negocio, y genera una previsualización de pedido para que el cliente confirme o deniegue.',
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            items: {
+              type: SchemaType.ARRAY,
+              items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  producto_id: { type: SchemaType.NUMBER },
+                  cantidad: { type: SchemaType.NUMBER },
+                  talla_snapshot: { type: SchemaType.STRING },
+                  color_snapshot: { type: SchemaType.STRING },
+                },
+                required: ['producto_id', 'cantidad'],
+              } as any,
+            },
+            notas_cliente: { type: SchemaType.STRING },
+          },
+          required: ['items'],
+        } as any,
+      },
+      {
+        name: 'consultar_pedidos_cliente',
+        description:
+          'Lista los pedidos recientes del cliente para consultas de estado o reporte de incidencias.',
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            limite: { type: SchemaType.NUMBER, description: 'Cantidad máxima de pedidos (default 8)' },
+          },
+        } as any,
+      },
+      {
+        name: 'preparar_incidencia',
+        description:
+          'Prepara un reporte de incidencia post-venta vinculado a un pedido. El cliente debe confirmar o denegar antes de registrarlo.',
+        parameters: {
+          type: SchemaType.OBJECT,
+          properties: {
+            pedido_id: { type: SchemaType.NUMBER },
+            tipo: {
+              type: SchemaType.STRING,
+              description:
+                'defecto_confeccion | pedido_equivocado | talla_incorrecta | cantidad_incorrecta | dano_en_transporte | empaque_defectuoso | otro',
+            },
+            descripcion: { type: SchemaType.STRING, description: 'Detalle del problema (mín. 10 caracteres)' },
+            severidad: { type: SchemaType.STRING, description: 'baja | media | alta' },
+          },
+          required: ['pedido_id', 'tipo', 'descripcion'],
+        } as any,
+      },
     ],
   },
 ];
@@ -59,7 +118,7 @@ export async function POST(req: Request) {
     // usuarios ya NO tiene nombre_completo — lo obtenemos desde clientes o personal_interno
     const clienteDb = await prisma.clientes.findFirst({
       where: { usuario_id: auth.user.id },
-      select: { id: true, razon_social: true },
+      select: { id: true, razon_social: true, direccion_fiscal: true },
     });
 
     // Para personal interno, obtener nombre desde personal_interno
@@ -81,19 +140,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Se requieren mensajes' }, { status: 400 });
     }
 
-    const systemPrompt = `Eres el asistente experto de Modas y Estilos GUOR.
+    const systemPrompt = `Eres Guorino, el asistente comercial experto de Modas y Estilos GUOR.
       Estás atendiendo a: ${nombreCliente}.
       REGLAS CRÍTICAS:
       - NO utilices emojis en tus respuestas bajo ninguna circunstancia.
-      - Pedido mínimo (MOQ): 400 unidades.
+      - Pedido mínimo (MOQ): 400 unidades por producto y en total del pedido.
       - IGV: 18% incluido en todos los precios.
-      - Escalas de descuento: 400-999 (0%), 1000-4999 (5%), 5000-9999 (12%), 10000+ (18%).
       - Si el cliente pregunta por disponibilidad o stock, usa 'consultar_inventario'.
-      - Si el cliente quiere saber precios o armar un pedido, usa 'cotizar_pedido'.
+      - Si el cliente quiere cotizar sin compromiso, usa 'cotizar_pedido'.
+      - Si el cliente pide realizar, confirmar o generar un pedido, SIEMPRE usa 'preparar_pedido' después de verificar stock.
+      - Si el cliente consulta el estado de sus pedidos, usa 'consultar_pedidos_cliente'.
+      - Si el cliente reporta un problema, defecto o incidencia con un pedido, usa 'consultar_pedidos_cliente' si no conoce el número y luego 'preparar_incidencia'.
+      - Para incidencias, confirma pedido_id, tipo, descripción clara y severidad (baja, media, alta) antes de preparar el reporte.
+      - Explica con claridad las reglas de negocio cuando no se pueda comprar o reportar (stock, MOQ, pedido inexistente).
+      - Si el caso es muy complejo o el cliente pide hablar con una persona, indique que puede contactar soporte humano por WhatsApp o el módulo Soporte del portal.
       - Mantén un tono profesional, directo y formal orientado a negocios B2B.
       - Responde siempre en español.`;
 
     const model = await getDefaultGeminiModel();
+    let uiBlocks: GuorinoUiBlock[] = [];
     const chat = model.startChat({
       tools,
       history: [
@@ -121,8 +186,15 @@ export async function POST(req: Request) {
           .filter((p) => p.functionCall)
           .map(async (p) => {
             const call = p.functionCall!;
-            const output = await ejecutarTool(call.name, call.args);
-            return { functionResponse: { name: call.name, response: output } };
+            const output = await ejecutarTool(call.name, call.args, {
+              clienteId: clienteDb?.id ?? null,
+              direccionDespacho: clienteDb?.direccion_fiscal ?? null,
+            });
+            if (output._ui_blocks) {
+              uiBlocks = output._ui_blocks as GuorinoUiBlock[];
+            }
+            const { _ui_blocks: _omit, ...clean } = output as Record<string, unknown>;
+            return { functionResponse: { name: call.name, response: clean } };
           })
       );
       result = await chat.sendMessage(toolResponses);
@@ -130,7 +202,12 @@ export async function POST(req: Request) {
       iterations++;
     }
 
-    return NextResponse.json({ success: true, text: response.text(), cliente: nombreCliente });
+    return NextResponse.json({
+      success: true,
+      text: response.text(),
+      cliente: nombreCliente,
+      ui_blocks: uiBlocks.length > 0 ? uiBlocks : undefined,
+    });
   } catch (error: any) {
     console.error('[Portal Chat] Error completo:', {
       message: error.message,
@@ -143,19 +220,24 @@ export async function POST(req: Request) {
 
 // ─── Tool Executors ──────────────────────────────────────────────────────────
 
-async function ejecutarTool(nombre: string, args: any) {
+async function ejecutarTool(
+  nombre: string,
+  args: any,
+  ctx: { clienteId: bigint | null; direccionDespacho: string | null },
+) {
   switch (nombre) {
     case 'consultar_inventario': {
       const where: Record<string, unknown> = { estado: 'activo' };
 
       if (args.busqueda) {
-        const categorias = await prisma.categoria_insumo.findMany({
+        const categorias = await prisma.categorias_productos.findMany({
           where: { nombre: { contains: args.busqueda, mode: 'insensitive' } },
           select: { id: true },
         });
         const categoriaIds = categorias.map((c) => c.id);
         where.OR = [
           { nombre: { contains: args.busqueda, mode: 'insensitive' } },
+          { sku: { contains: args.busqueda, mode: 'insensitive' } },
           ...(categoriaIds.length > 0 ? [{ categoria_id: { in: categoriaIds } }] : []),
         ];
       }
@@ -243,6 +325,109 @@ async function ejecutarTool(nombre: string, args: any) {
           : `Alerta: No alcanza el mínimo de ${REGLAS_NEGOCIO.MOQ_GENERAL} unidades (actual: ${totales.cantidadTotal})`,
         detalle_descuentos_por_producto: totales.detallePorProducto,
       };
+    }
+
+    case 'preparar_pedido': {
+      if (!ctx.clienteId) {
+        return { error: 'Solo clientes del portal pueden generar pedidos desde Guorino.' };
+      }
+      if (!args.items?.length) {
+        return { error: 'Indique productos y cantidades para preparar el pedido.' };
+      }
+
+      try {
+        const preview = await prepararPedidoGuorino({
+          clienteId: ctx.clienteId,
+          items: args.items,
+          direccion_despacho: ctx.direccionDespacho,
+          notas_cliente: args.notas_cliente ?? null,
+        });
+
+        return {
+          preview_id: preview.id,
+          total: preview.totales.total,
+          total_unidades: preview.totales.total_unidades,
+          cumple_reglas: preview.errores.length === 0 && preview.totales.cumple_moq_global,
+          errores: preview.errores,
+          advertencias: preview.advertencias,
+          items: preview.items.map((i) => ({
+            producto_id: i.producto_id,
+            nombre: i.nombre,
+            cantidad: i.cantidad,
+            subtotal: i.subtotal,
+            stock_disponible: i.stock_disponible,
+            moq: i.moq,
+          })),
+          _ui_blocks: buildUiBlocksDesdePreview(preview),
+        };
+      } catch (error: unknown) {
+        return {
+          error: error instanceof Error ? error.message : 'No se pudo preparar el pedido',
+        };
+      }
+    }
+
+    case 'consultar_pedidos_cliente': {
+      if (!ctx.clienteId) {
+        return { error: 'Solo clientes del portal pueden consultar sus pedidos.' };
+      }
+      const limite = Math.min(Math.max(Number(args.limite) || 8, 1), 15);
+      const pedidos = await prisma.pedidos.findMany({
+        where: { cliente_id: ctx.clienteId },
+        orderBy: { created_at: 'desc' },
+        take: limite,
+        select: {
+          id: true,
+          estado: true,
+          total: true,
+          total_unidades: true,
+          created_at: true,
+        },
+      });
+
+      return {
+        pedidos: pedidos.map((p) => ({
+          id: p.id.toString(),
+          estado: p.estado,
+          total: Number(p.total),
+          total_unidades: p.total_unidades,
+          fecha: p.created_at?.toISOString() ?? null,
+        })),
+        total: pedidos.length,
+      };
+    }
+
+    case 'preparar_incidencia': {
+      if (!ctx.clienteId) {
+        return { error: 'Solo clientes del portal pueden reportar incidencias desde Guorino.' };
+      }
+      if (!args.pedido_id || !args.tipo || !args.descripcion) {
+        return { error: 'Indique pedido_id, tipo y descripción del problema.' };
+      }
+
+      try {
+        const preview = await prepararIncidenciaGuorino({
+          clienteId: ctx.clienteId,
+          pedido_id: Number(args.pedido_id),
+          tipo: String(args.tipo),
+          descripcion: String(args.descripcion),
+          severidad: args.severidad ? String(args.severidad) : undefined,
+        });
+
+        return {
+          preview_id: preview.id,
+          pedido_id: preview.pedido_id,
+          tipo: preview.tipo_label,
+          severidad: preview.severidad,
+          cumple_reglas: preview.errores.length === 0,
+          errores: preview.errores,
+          _ui_blocks: buildUiBlocksDesdePreviewIncidencia(preview),
+        };
+      } catch (error: unknown) {
+        return {
+          error: error instanceof Error ? error.message : 'No se pudo preparar la incidencia',
+        };
+      }
     }
 
     default:

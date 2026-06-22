@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 import { PedidosService } from '@/lib/services/pedidos.service';
 import { NextResponse } from 'next/server';
-import { requireServerRole } from '@/lib/auth/server';
+import { requireServerRole, requireServerPermission } from '@/lib/auth/server';
 import { auditoriaService } from '@/lib/services/auditoria.service';
 import { AccionAuditoria } from '@prisma/client'; // ← agregar
 import type { RolUsuario } from '@/lib/constants/roles';
@@ -48,6 +48,17 @@ export async function PUT(
     const body = await req.json();
 
     const { estado, prioridad, notas_pedido, notas_cliente } = body;
+
+    if (estado !== undefined && String(estado).toLowerCase().trim() === 'entregado') {
+      const permEntrega = await requireServerPermission('confirmar_entrega_pedido');
+      if (!permEntrega.success) {
+        return NextResponse.json(
+          { error: 'Solo el ayudante puede marcar un pedido como entregado' },
+          { status: 403 },
+        );
+      }
+    }
+
     const data = {
       ...(estado !== undefined && { estado }),
       ...(prioridad !== undefined && { prioridad }),

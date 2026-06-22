@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { subirFotoEmpaque } from '@/lib/helpers/despacho-upload.client';
 import { DireccionDespachoPeruFields, esDireccionDespachoPeruValida } from '@/components/shared/DireccionDespachoPeruFields';
+import { usePermissions } from '@/lib/hooks/usePermissions';
 
 interface Props {
   pedidoId: string;
@@ -16,6 +17,7 @@ interface Props {
 
 export function PedidoEmpaqueForm({ pedidoId, direccionInicial }: Props) {
   const router = useRouter();
+  const { hasRole } = usePermissions();
   const [direccion, setDireccion] = useState(direccionInicial);
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [notas, setNotas] = useState('');
@@ -74,7 +76,11 @@ export function PedidoEmpaqueForm({ pedidoId, direccionInicial }: Props) {
       if (!res.ok) throw new Error(json.error ?? 'Error al crear despacho');
 
       toast.success('Despacho creado correctamente');
-      router.push(`/admin/Panel-Administrativo/pedidos/${pedidoId}/entrega`);
+      router.push(
+        hasRole('ayudante')
+          ? `/admin/Panel-Administrativo/pedidos/${pedidoId}/entrega`
+          : `/admin/Panel-Administrativo/pedidos/${pedidoId}`,
+      );
       router.refresh();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al registrar empaque');

@@ -75,6 +75,7 @@ export type PermissionKey =
   | 'ver_reportes' | 'filtrar_reportes' | 'exportar_reportes'
   // Despachos
   | 'ver_despachos' | 'crear_despachos' | 'editar_despachos' | 'actualizar_estado_despachos' | 'exportar_despachos'
+  | 'confirmar_entrega_pedido'
   // Confecciones
   | 'ver_confecciones' | 'crear_confecciones' | 'editar_confecciones' | 'cancelar_confecciones' | 'finalizar_confecciones' | 'actualizar_estado_confecciones' | 'exportar_confecciones' | 'asignar_ordenes_confecciones'
   // Talleres
@@ -192,7 +193,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_usuarios', 'exportar_usuarios', 'suspender_usuarios',
     'ver_clientes', 'editar_clientes', 'ver_detalle_cliente', 'exportar_clientes',
     'ver_reportes', 'filtrar_reportes', 'exportar_reportes',
-    'ver_despachos', 'exportar_despachos',
+    'ver_despachos', 'actualizar_estado_despachos', 'exportar_despachos',
     'ver_confecciones', 'exportar_confecciones',
     'ver_orden_produccion', 'actualizar_etapas_produccion',
     'reservar_stock', 'liberar_stock',
@@ -228,7 +229,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_usuarios', 'crear_usuarios', 'editar_usuarios', 'suspender_usuarios', 'exportar_usuarios',
     'ver_personal', 'crear_personal', 'editar_personal', 'suspender_personal', 'exportar_personal',
     'ver_reportes', 'filtrar_reportes', 'exportar_reportes',
-    'ver_despachos', 'exportar_despachos',
+    'ver_despachos', 'actualizar_estado_despachos', 'exportar_despachos',
     'ver_confecciones', 'exportar_confecciones', 'crear_confecciones',
     'reservar_stock', 'liberar_stock',
     'ver_talleres', 'crear_talleres', 'editar_talleres', 'suspender_talleres', 'exportar_talleres',
@@ -306,7 +307,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_productos', 'ver_variantes',
     'ver_orden_produccion', 'ver_detalle_orden_produccion', 'actualizar_etapas_produccion',
     'ver_seguimiento_confeccion', 'ver_seguimiento_produccion',
-    'ver_confecciones', 'ver_despachos', 'actualizar_estado_despachos',
+    'ver_despachos', 'actualizar_estado_despachos', 'confirmar_entrega_pedido',
     'ver_notificaciones', 'ver_perfil', 'editar_perfil',
   ],
 

@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, ShieldCheck, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MONTO_MINIMO_PAGO_PARCIAL_SOLES } from '@/lib/constants/culqi-checkout';
-import type { PagoGatewayId } from '@/lib/constants/pago-gateway';
 import { usePortal } from '@/lib/hooks/usePortal';
 import { PagoDireccionEntregaForm } from '@/components/portal/pago/PagoDireccionEntregaForm';
 import { PagoDatosPagadorForm } from '@/components/portal/pago/PagoDatosPagadorForm';
@@ -56,7 +55,6 @@ export default function PagoPage() {
 
   const [cupon, setCupon] = useState('');
   const [descuento, setDescuento] = useState(0);
-  const [gateway, setGateway] = useState<PagoGatewayId>('culqi');
   const [datosEntrega, setDatosEntrega] = useState<DatosEntregaPago>(
     DATOS_ENTREGA_PAGO_INICIAL,
   );
@@ -271,8 +269,6 @@ export default function PagoPage() {
           </div>
 
           <PagoMetodoPagoSection
-            gateway={gateway}
-            onGatewayChange={setGateway}
             pedidoId={pedidoId}
             email={emailPago}
             montoSoles={montoSolesCheckout}
@@ -389,9 +385,7 @@ export default function PagoPage() {
 
               <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 font-medium">
                 <ShieldCheck size={14} className="text-emerald-500" />
-                {gateway === 'culqi' && 'Pago seguro con tarjeta vía Culqi'}
-                {gateway === 'stripe' && 'Pago seguro con tarjeta vía Stripe'}
-                {gateway === 'mercadopago' && 'Pago seguro con tarjeta vía Mercado Pago'}
+                Pago seguro con tarjeta vía Stripe
               </div>
             </>
           )}

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
-import type { RolUsuario, EstadoUsuario } from '@/lib/constants/roles';
-import { LISTA_ROLES } from '@/lib/constants/roles';
+import type { RolUsuario, EstadoUsuario, PermissionKey } from '@/lib/constants/roles';
+import { LISTA_ROLES, tienePermiso } from '@/lib/constants/roles';
 
 export type ServerAuthUser = {
   authId: string;
@@ -101,6 +101,21 @@ export async function requireServerRole(allowedRoles: RolUsuario[]): Promise<Aut
 
   const normalizedAllowed = allowedRoles.map((rol) => rol.toLowerCase().trim() as RolUsuario);
   if (!normalizedAllowed.includes(auth.user.rol)) {
+    return { success: false, error: 'sin_permisos', status: 403 };
+  }
+
+  return auth;
+}
+
+export async function requireServerPermission(
+  permission: PermissionKey,
+): Promise<AuthCheckResult> {
+  const auth = await getServerAuthUser();
+  if (!auth.success) {
+    return auth;
+  }
+
+  if (!tienePermiso(auth.user.rol, permission)) {
     return { success: false, error: 'sin_permisos', status: 403 };
   }
 

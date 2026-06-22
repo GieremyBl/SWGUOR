@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
-import { requireServerRole } from '@/lib/auth/server';
+import { requireServerRole, requireServerPermission } from '@/lib/auth/server';
 import type { RolUsuario } from '@/lib/constants/roles';
 import { notificarTransicionEstadoPedido } from '@/lib/helpers/crear-notificacion.helper';
 import { puedeTransicionar } from '@/lib/helpers/pedido-transiciones.helper';
@@ -54,6 +54,17 @@ export async function POST(req: Request) {
 
     if (!pedido_id || !status) {
       return NextResponse.json({ error: 'pedido_id y status requeridos' }, { status: 400 });
+    }
+
+    const statusNormalizado = String(status).toLowerCase().trim();
+    if (statusNormalizado === 'entregado') {
+      const permEntrega = await requireServerPermission('confirmar_entrega_pedido');
+      if (!permEntrega.success) {
+        return NextResponse.json(
+          { error: 'Solo el ayudante puede marcar un pedido como entregado' },
+          { status: 403 },
+        );
+      }
     }
 
     const pedidoAntes = await prisma.pedidos.findUnique({
