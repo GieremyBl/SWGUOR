@@ -11,7 +11,7 @@ function ReporteStockContent() {
 
         const variantes = p.variantes ?? p.variantes_producto ?? [];
 
-        // 🔥 sumar stock de todas las variantes
+        // stock real page prodcutso
         const stockActual = variantes.reduce((total: number, v: any) => {
           return total + (v.stock ?? v.stock_actual ?? 0);
         }, 0);
