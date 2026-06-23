@@ -1,15 +1,22 @@
 'use client';
 
-export default function ReporteStockPage() {
+import { PortalProvider } from '@/components/portal/_contexts/PortalContext';
+import { usePortal } from '@/lib/hooks/usePortal';
 
-  // placeholder
-  const productos = [
-    { id: 1, nombre: 'Polo Oversize' },
-    { id: 2, nombre: 'Polera Básica' },
-    { id: 3, nombre: 'Casaca Denim' },
-    { id: 4, nombre: 'Jogger Urbano' },
-    { id: 5, nombre: 'Camisa Formal' },
-  ];
+function ReporteStockContent() {
+  const { productos, loading } = usePortal();
+
+  const productosUnicos = productos
+    ? Array.from(new Map(productos.map(p => [p.id, p])).values())
+    : [];
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <p>Cargando productos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -30,9 +37,9 @@ export default function ReporteStockPage() {
         </thead>
 
         <tbody>
-          {productos.map((p) => {
+          {productosUnicos.map((p) => {
 
-            //placeholder
+            // placeholders
             const stockActual = 400;
             const stockReservado = 0;
             const disponible = true;
@@ -79,5 +86,13 @@ export default function ReporteStockPage() {
       </table>
 
     </div>
+  );
+}
+
+export default function ReporteStockPage() {
+  return (
+    <PortalProvider>
+      <ReporteStockContent />
+    </PortalProvider>
   );
 }
