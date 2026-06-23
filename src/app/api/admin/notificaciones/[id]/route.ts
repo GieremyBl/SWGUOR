@@ -18,7 +18,19 @@ export async function PATCH(
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const { id } = await params;                      // ← await obligatorio
+    const { id } = await params;
+
+    if (id === 'all') {
+      await prisma.notificaciones.updateMany({
+        where: { usuario_id: BigInt(auth.user?.id ?? 0), leido: false },
+        data: { leido: true, leido_at: new Date() },
+      });
+      return NextResponse.json({
+        success: true,
+        message: 'Todas las notificaciones marcadas como leídas',
+      });
+    }
+
     const notificacionId = BigInt(id);
 
     const notificacion = await prisma.notificaciones.findUnique({

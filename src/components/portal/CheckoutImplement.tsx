@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-declare global {
-  interface Window {
-    CulqiCheckout: any;
-  }
-}
+
 
 interface CulqiInstance {
   token?: { id: string };
@@ -37,9 +33,9 @@ interface CulqiConfig {
   };
 }
 
-// ✅ Props recibidas desde la página
+
 interface CheckoutImplementProps {
-  amount: number;           // en céntimos
+  amount: number;
   description: string;
   orderId: string;
   onSuccess?: (chargeId: string) => void;
@@ -67,15 +63,15 @@ export default function CheckoutImplement({
 
   const createCulqiConfig = useCallback((): CulqiConfig => ({
     settings: {
-      title: description,           // ✅ usa la prop
+      title: description,
       currency: 'PEN',
-      amount,                              // ✅ usa la prop
-      order: orderId,               // ✅ usa la prop
+      amount,
+      order: orderId,
       xculqirsaid: CULQI_CONFIG.RSA_ID,
       rsapublickey: CULQI_CONFIG.RSA_PUBLIC_KEY,
     },
     client: {
-      email: 'donvoid@gmail.com',          // TODO: recibir email del usuario
+      email: 'donvoid@gmail.com',
     },
     options: {
       lang: 'auto',
@@ -104,11 +100,11 @@ export default function CheckoutImplement({
       const data = await response.json();
 
       if (data.success) {
-        onSuccess?.(data.data?.id ?? '');   // ✅ notifica al padre
+        onSuccess?.(data.data?.id ?? '');
       } else {
         const msg = data.message || 'Error al procesar el pago';
         setError(msg);
-        onError?.(msg);                     // ✅ notifica al padre
+        onError?.(msg);
       }
     } catch (err) {
       const msg = 'Error de conexión. Intenta nuevamente.';
@@ -118,10 +114,10 @@ export default function CheckoutImplement({
   }, [amount, onSuccess, onError]);
 
   const initializeCulqi = useCallback(() => {
-    if (!window.CulqiCheckout) return;
+    if (!(window as any).CulqiCheckout) return;
 
     const config = createCulqiConfig();
-    const instance = new window.CulqiCheckout(CULQI_CONFIG.PUBLIC_KEY, config);
+    const instance = new (window as any).CulqiCheckout(CULQI_CONFIG.PUBLIC_KEY, config);
 
     instance.culqi = function () {
       if (instance.token) {

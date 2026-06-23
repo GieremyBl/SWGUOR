@@ -18,7 +18,7 @@ export default async function ConfeccionDetallePage({ params }: PageProps) {
       id: true,
       prenda: true,
       cantidad: true,
-      estado: true,
+      estado: true, // Mantiene la etapa actual guardada en la fila de la confección
       prioridad: true,
       costo_unitario: true,
       fecha_entrega: true,
@@ -57,10 +57,20 @@ export default async function ConfeccionDetallePage({ params }: PageProps) {
         orderBy: { created_at: 'desc' },
         select: {
           id: true,
-          estado_anterior: true,
-          estado_nuevo: true,
+          etapa_anterior: true,
+          etapa_nuevo: true,
           notas: true,
           created_at: true,
+          usuarios: {
+            select: {
+              id: true,
+              personal_interno: {
+                select: {
+                  nombre_completo: true,
+                }
+              }
+            },
+          },
         },
       },
     },

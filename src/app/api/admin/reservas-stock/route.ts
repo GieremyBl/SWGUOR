@@ -7,7 +7,7 @@ import { ZodError } from 'zod';
 import { requireServerRole } from '@/lib/auth/server';
 import { auditoriaService } from '@/lib/services/auditoria.service';
 
-const RESERVA_ROLES: any = ['administrador', 'gerente', 'almacenero', 'vendedor'];
+const RESERVA_ROLES: any = ['administrador', 'gerente', 'almacenero'];
 
 export async function GET() {
   const auth = await requireServerRole(RESERVA_ROLES);

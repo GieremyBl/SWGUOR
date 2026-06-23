@@ -7,6 +7,7 @@ import type { RolUsuario } from '@/lib/constants/roles';
 
 const MATERIALES_LECTURA_ROLES: RolUsuario[] = ['administrador', 'gerente', 'disenador', 'cortador', 'representante_taller', 'almacenero'];
 const MATERIALES_ESCRITURA_ROLES: RolUsuario[] = ['administrador', 'gerente', 'disenador', 'cortador', 'almacenero'];
+const LIMITE_MAXIMO = 200;
 
 export async function GET(req: Request) {
   const auth = await requireServerRole(MATERIALES_LECTURA_ROLES);
@@ -16,11 +17,26 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
+
+    // NUEVO: tope de resultados, pensado para selectores tipo combobox.
+    // Requiere que MaterialesService.listar aplique `take: limite` en su
+    // query de Prisma — sin ese cambio en el service, este valor no tiene efecto.
+    const rawLimite = searchParams.get('limite');
+    let limite: number | undefined;
+    if (rawLimite) {
+      const n = Number(rawLimite);
+      if (isNaN(n) || n <= 0) {
+        return NextResponse.json({ error: 'limite debe ser un número positivo' }, { status: 400 });
+      }
+      limite = Math.min(n, LIMITE_MAXIMO);
+    }
+
     const data = await MaterialesService.listar({
       tipo: searchParams.get('tipo') ?? undefined,
       busqueda: searchParams.get('busqueda') ?? undefined,
       bajo_stock: searchParams.get('stockBajo') === 'true',
       proveedor_id: searchParams.get('proveedor_id') ?? undefined,
+      limite,
     });
 
     return NextResponse.json({ success: true, data });

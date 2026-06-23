@@ -69,9 +69,6 @@ export default function OrdenesTable({ data, onView, onEtapas, onEdit }: Ordenes
                   const nombreProducto = orden.productos?.nombre || orden.producto?.nombre || orden.nombre_producto || "Producto sin nombre";
                   const versionFicha = orden.fichas_tecnicas?.version || orden.ficha_tecnica?.version || "1.0";
                   const nombreTaller = orden.talleres?.nombre || orden.taller?.nombre || "No asignado";
-
-                  // MEJORA AQUÍ: Priorizar la nueva columna directa 'etapa', 
-                  // cayendo en herencia segura hacia los históricos si fuera necesario.
                   const etapaActual = orden.etapa || orden.etapa_actual || orden.seguimiento_produccion?.[0]?.etapa;
 
                   return (

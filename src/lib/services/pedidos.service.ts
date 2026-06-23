@@ -111,7 +111,7 @@ export const PedidosService = {
         // 1. Buscamos los productos y cantidades exactas de este pedido
         const items = await tx.pedido_items.findMany({
           where: { pedido_id: BigInt(id) },
-          select: { producto_id: true, cantidad: true }
+          select: { producto_id: true, cantidad: true, variante_id: true }
         });
 
         // 2. Registramos la salida en el kárdex por cada ítem.
@@ -121,6 +121,7 @@ export const PedidosService = {
           if (item.producto_id) {
             await MovimientosInventarioService.registrar({
               producto_id: item.producto_id,
+              variante_id: item.variante_id,
               cantidad: item.cantidad,
               tipo_movimiento: 'salida', // Descuenta el inventario
               motivo: `Reserva y preparación automatizada de despacho`,
@@ -131,6 +132,12 @@ export const PedidosService = {
             });
           }
         }
+
+        // Marcar las reservas de stock como utilizadas
+        await tx.reservas_stock.updateMany({
+          where: { pedido_id: BigInt(id), estado: 'activa' },
+          data: { estado: 'utilizada' },
+        });
 
         // 3. Logística de dirección heredada
         if (antes?.cliente_id) {
@@ -195,13 +202,14 @@ export const PedidosService = {
       if (data.status === 'listo_para_despacho' && antes.estado !== 'listo_para_despacho') {
         const items = await tx.pedido_items.findMany({
           where: { pedido_id: BigInt(data.pedido_id) },
-          select: { producto_id: true, cantidad: true }
+          select: { producto_id: true, cantidad: true, variante_id: true }
         });
 
         for (const item of items) {
           if (item.producto_id) {
             await MovimientosInventarioService.registrar({
               producto_id: item.producto_id,
+              variante_id: item.variante_id,
               cantidad: item.cantidad,
               tipo_movimiento: 'salida',
               motivo: `Reserva desde línea de tiempo de seguimiento`,
@@ -212,6 +220,12 @@ export const PedidosService = {
             });
           }
         }
+
+        // Marcar las reservas de stock como utilizadas
+        await tx.reservas_stock.updateMany({
+          where: { pedido_id: BigInt(data.pedido_id), estado: 'activa' },
+          data: { estado: 'utilizada' },
+        });
 
         if (antes?.cliente_id) {
           await precargarDireccionDespachoPedido(tx, BigInt(data.pedido_id), antes.cliente_id!);

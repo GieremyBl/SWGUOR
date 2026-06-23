@@ -87,7 +87,7 @@ export function NotificationDropdown() {
   const getIcon = (tipo: TipoNotificacion, leido: boolean) => {
     const iconClass = cn(
       "size-4",
-      leido ? "text-stone-500" : "text-primary"
+      leido ? "text-stone-500" : "text-rose-500"
     );
     switch (tipo) {
       case 'stock_bajo': return <Package className={iconClass} />;
@@ -109,8 +109,8 @@ export function NotificationDropdown() {
           <Bell className="size-5 text-stone-600" />
           {sinLeer > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center">
-              <span className="animate-ping absolute inline-flex size-full rounded-full bg-primary/70 opacity-75" />
-              <span className="relative inline-flex items-center justify-center rounded-full size-4 bg-primary text-[10px] font-black text-primary-foreground">
+              <span className="animate-ping absolute inline-flex size-full rounded-full bg-rose-500/70 opacity-75" />
+              <span className="relative inline-flex items-center justify-center rounded-full size-4 bg-rose-500 text-[10px] font-black text-white">
                 {sinLeer > 99 ? '99+' : sinLeer}
               </span>
             </span>
@@ -123,22 +123,36 @@ export function NotificationDropdown() {
         {/* CABECERA FIJA */}
         <div className="px-5 py-4 border-b border-stone-100 bg-white flex justify-between items-center">
           <h4 className="text-xs font-black uppercase tracking-widest text-stone-950">Notificaciones</h4>
-          {sinLeer > 0 && (
-            <span className="text-[10px] font-black text-primary bg-rose-50 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
-              <AlertTriangle size={12} />
-              {sinLeer} {sinLeer === 1 ? 'Pendiente' : 'Pendientes'}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {sinLeer > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  mutation.mutate('all');
+                }}
+                className="text-[10px] font-bold text-stone-500 hover:text-rose-600 bg-stone-50 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors uppercase tracking-widest"
+                title="Marcar todas como leídas"
+              >
+                Marcar leídas
+              </button>
+            )}
+            {sinLeer > 0 && (
+              <span className="text-[10px] font-black text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                <AlertTriangle size={12} />
+                {sinLeer}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ÁREA SCROLLABLE */}
         <div className="max-h-[350px] overflow-y-auto bg-white custom-scrollbar">
           {isLoading ? (
             <div className="h-40 flex items-center justify-center text-stone-400 text-xs font-bold uppercase tracking-wider gap-2">
-              <Loader2 className="animate-spin text-primary" size={18} /> Sincronizando...
+              <Loader2 className="animate-spin text-rose-500" size={18} /> Sincronizando...
             </div>
           ) : error ? (
-            <div className="h-40 flex items-center justify-center text-primary text-xs font-bold p-4 text-center uppercase tracking-wider">
+            <div className="h-40 flex items-center justify-center text-rose-500 text-xs font-bold p-4 text-center uppercase tracking-wider">
               Error al cargar las notificaciones.
             </div>
           ) : notificaciones.length === 0 ? (
@@ -183,7 +197,7 @@ export function NotificationDropdown() {
                       {n.titulo}
                     </p>
                     {!n.leido && (
-                      <span className="size-2 rounded-full bg-primary shrink-0" />
+                      <span className="size-2 rounded-full bg-rose-500 shrink-0" />
                     )}
                   </div>
                   <p className="text-xs text-stone-600 leading-normal mt-1">
@@ -220,7 +234,7 @@ export function NotificationDropdown() {
         <div className="p-2 border-t border-stone-100 bg-white">
           <Button
             variant="ghost"
-            className="w-full text-[10px] font-black text-stone-500 hover:text-primary hover:bg-stone-50 uppercase tracking-widest rounded-xl py-5"
+            className="w-full text-[10px] font-black text-stone-500 hover:text-rose-600 hover:bg-stone-50 uppercase tracking-widest rounded-xl py-5"
             onClick={() => router.push('/admin/Panel-Administrativo/notificaciones')}
           >
             Ver todas las notificaciones

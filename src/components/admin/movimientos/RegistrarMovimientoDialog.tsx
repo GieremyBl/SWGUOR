@@ -36,7 +36,8 @@ import {
   ShoppingCart,
   Warehouse,
 } from 'lucide-react';
-import { registrarMovimientoInventario } from '@/app/admin/inventario/movimientos/actions';
+import { registrarMovimientoInventario } from '@/app/admin/Panel-Administrativo/movimientos/actions';
+import { ArticuloCombobox, type ItemOpcion, type TipoItem } from './ArticuloCombobox';
 
 const TIPOS_MOVIMIENTO = [
   {
@@ -79,32 +80,9 @@ const REFERENCIAS = [
   { value: 'INVENTARIO_INICIAL', label: 'Inventario Inicial' },
 ];
 
-type TipoItem = 'producto' | 'insumo' | 'material';
-
-interface ItemOpcion {
-  id: string;
-  nombre: string;
-  stock?: number;
-  unidad?: string;
-}
-
 interface AlmacenOpcion {
   id: string;
   nombre: string;
-}
-
-// Interfaces estrictas para tipar las respuestas de la API
-interface ApiResponseItem {
-  id: string | number;
-  nombre: string;
-  stock_actual?: number;
-  stock?: number;
-  unidad_medida?: string;
-  unidad?: string;
-}
-
-interface ApiResponseWrapper {
-  data?: ApiResponseItem[] | { productos?: ApiResponseItem[]; insumos?: ApiResponseItem[]; materiales?: ApiResponseItem[] };
 }
 
 interface RegistrarMovimientoDialogProps {
@@ -121,11 +99,9 @@ const TIPO_ITEM_CONFIG = {
 
 export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: RegistrarMovimientoDialogProps) {
   const [tipoItem, setTipoItem] = useState<TipoItem>('insumo');
-  const [items, setItems] = useState<ItemOpcion[]>([]);
   const [almacenes, setAlmacenes] = useState<AlmacenOpcion[]>([]);
-  const [loadingItems, setLoadingItems] = useState(false);
   const [loadingAlmacenes, setLoadingAlmacenes] = useState(false);
-  const [itemId, setItemId] = useState('');
+  const [articulo, setArticulo] = useState<ItemOpcion | null>(null);
   const [almacenId, setAlmacenId] = useState('');
   const [tipoMovimiento, setTipoMovimiento] = useState('');
   const [referenciaTipo, setReferenciaTipo] = useState('');
@@ -149,69 +125,15 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
     }
   }, []);
 
-  const cargarItems = useCallback(async (tipo: TipoItem) => {
-    setLoadingItems(true);
-    setItems([]);
-    setItemId('');
-    try {
-      const endpoints: Record<TipoItem, string> = {
-        producto: '/api/admin/productos?limite=200',
-        insumo: '/api/admin/insumos?limite=200',
-        material: '/api/admin/materiales?limite=200',
-      };
-
-      const res = await fetch(endpoints[tipo]);
-      if (!res.ok) throw new Error('Error al cargar artículos');
-
-      const json = await res.json();
-      let rawData: ApiResponseItem[] = [];
-
-      // 1. Si la respuesta es directamente un array
-      if (Array.isArray(json)) {
-        rawData = json;
-      }
-      // 2. Si la respuesta viene envuelta en { data: ... }
-      else if (json && json.data) {
-        if (Array.isArray(json.data)) {
-          rawData = json.data;
-        } else {
-          const keyMap: Record<TipoItem, string> = {
-            producto: 'productos',
-            insumo: 'insumos',
-            material: 'materiales'
-          };
-
-          const claveAcceso = keyMap[tipo];
-          rawData = json.data[claveAcceso] ?? [];
-        }
-      }
-
-      setItems(
-        rawData.map((item) => ({
-          id: String(item.id),
-          nombre: item.nombre,
-          stock: item.stock_actual ?? item.stock ?? undefined,
-          unidad: item.unidad_medida ?? item.unidad ?? undefined,
-        }))
-      );
-    } catch (error) {
-      console.error("Error cargando items:", error);
-      toast.error('No se pudieron cargar los artículos');
-    } finally {
-      setLoadingItems(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (open) {
-      cargarItems(tipoItem);
       cargarAlmacenes();
     }
-  }, [open, tipoItem, cargarItems, cargarAlmacenes]);
+  }, [open, cargarAlmacenes]);
 
   const resetForm = () => {
     setTipoItem('insumo');
-    setItemId('');
+    setArticulo(null);
     setAlmacenId('');
     setTipoMovimiento('');
     setReferenciaTipo('');
@@ -224,10 +146,15 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
     onClose();
   };
 
+  const cambiarTipoItem = (tipo: TipoItem) => {
+    setTipoItem(tipo);
+    setArticulo(null); // evita enviar un id que pertenece a otro tipo de artículo
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!almacenId) return toast.error('Selecciona un almacén de origen/destino');
-    if (!itemId) return toast.error('Selecciona un artículo');
+    if (!articulo) return toast.error('Selecciona un artículo');
     if (!tipoMovimiento) return toast.error('Selecciona el tipo de movimiento');
     if (!referenciaTipo) return toast.error('Selecciona el tipo de referencia');
     if (!cantidad || Number(cantidad) <= 0) return toast.error('La cantidad debe ser mayor a 0');
@@ -240,9 +167,9 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
         referencia_tipo: referenciaTipo,
         cantidad: Number(cantidad),
         motivo: motivo.trim(),
-        ...(tipoItem === 'producto' && { producto_id: itemId }),
-        ...(tipoItem === 'insumo' && { insumo_id: itemId }),
-        ...(tipoItem === 'material' && { material_id: itemId }),
+        ...(tipoItem === 'producto' && { producto_id: articulo.id }),
+        ...(tipoItem === 'insumo' && { insumo_id: articulo.id }),
+        ...(tipoItem === 'material' && { material_id: articulo.id }),
       };
 
       const result = await registrarMovimientoInventario(params);
@@ -260,12 +187,8 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
     }
   };
 
-  const itemSeleccionado = items.find(i => i.id === itemId);
-  const TipoItemIcon = TIPO_ITEM_CONFIG[tipoItem].icon;
-
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      {/* 🛠️ SOLUCIÓN VISUAL: Control estricto de altura máxima (max-h-[90vh]) y flexbox para contener elementos */}
       <DialogContent className="max-w-xl w-[95vw] max-h-[90vh] rounded-[22px] border-none shadow-2xl p-0 overflow-hidden bg-white flex flex-col">
 
         {/* Header Fijo */}
@@ -325,7 +248,7 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
                   <button
                     key={tipo}
                     type="button"
-                    onClick={() => setTipoItem(tipo)}
+                    onClick={() => cambiarTipoItem(tipo)}
                     className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg transition-all text-xs font-semibold ${isActive
                       ? 'bg-white text-slate-900 shadow-sm border border-slate-200/40'
                       : 'text-slate-500 hover:text-slate-800'
@@ -339,47 +262,18 @@ export function RegistrarMovimientoDialog({ open, onClose, onSuccess }: Registra
             </div>
           </div>
 
-          {/* Artículo */}
+          {/* Artículo — combobox con búsqueda server-side, ya no precarga todo el catálogo */}
           <div className="space-y-1.5">
             <Label className="text-[13px] font-medium text-slate-500">
               Artículo
             </Label>
-            <Select value={itemId} onValueChange={setItemId} disabled={loadingItems}>
-              <SelectTrigger className="h-11 rounded-xl border-slate-200/70 bg-[#FBF9F4] text-slate-700 font-medium focus:bg-white transition-colors">
-                {loadingItems ? (
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span className="text-xs">Cargando catálogo...</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder={`Seleccionar ${TIPO_ITEM_CONFIG[tipoItem].label.toLowerCase()}...`} />
-                )}
-              </SelectTrigger>
-              <SelectContent className="rounded-xl max-h-48 overflow-y-auto">
-                {items.map((item) => (
-                  <SelectItem key={item.id} value={item.id} className="rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <TipoItemIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="font-medium text-xs text-slate-700">{item.nombre}</span>
-                      {item.stock !== undefined && (
-                        <span className="text-[10px] text-slate-400 ml-auto pl-3">
-                          Global: {item.stock} {item.unidad ?? ''}
-                        </span>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-                {!loadingItems && items.length === 0 && (
-                  <div className="py-4 text-center text-xs text-slate-400">No hay registros disponibles</div>
-                )}
-              </SelectContent>
-            </Select>
+            <ArticuloCombobox tipoItem={tipoItem} value={articulo} onChange={setArticulo} />
 
-            {itemSeleccionado?.stock !== undefined && (
+            {articulo?.stock !== undefined && (
               <p className="text-xs text-slate-400 pl-1">
                 Cantidad disponible total:{' '}
-                <span className={`font-semibold ${(itemSeleccionado.stock ?? 0) <= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                  {itemSeleccionado.stock} {itemSeleccionado.unidad ?? 'unidades'}
+                <span className={`font-semibold ${(articulo.stock ?? 0) <= 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {articulo.stock} {articulo.unidad ?? 'unidades'}
                 </span>
               </p>
             )}

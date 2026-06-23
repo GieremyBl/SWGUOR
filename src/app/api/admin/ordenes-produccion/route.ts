@@ -9,9 +9,9 @@ import { ordenProduccionSchema } from '@/lib/schemas/ordenes-produccion';
 import type { RolUsuario } from '@/lib/constants/roles';
 
 const ROLES_LECTURA: RolUsuario[] = [
-  'administrador', 'gerente', 'representante_taller', 'recepcionista', 'disenador', 'almacenero',
+  'administrador', 'gerente', 'representante_taller', 'recepcionista', 'disenador', 'almacenero', 'cortador', 'ayudante',
 ];
-const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller'];
+const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller', 'cortador', 'ayudante', 'disenador'];
 
 export async function GET(req: Request) {
   const auth = await requireServerRole(ROLES_LECTURA);

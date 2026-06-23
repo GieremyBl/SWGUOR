@@ -45,8 +45,8 @@ export default function OrdenesProduccionPage() {
     total: meta?.total ?? 0,
     totalPages: meta?.totalPages ?? 1,
     page: meta?.page ?? 1,
-    enProceso: (meta as any)?.enProceso ?? 0,
-    completadas: (meta as any)?.completadas ?? 0,
+    enProceso: meta?.enProceso ?? 0,
+    completadas: meta.completadas ?? 0,
   }), [meta]);
 
   const stats = useMemo(() => ({
@@ -63,8 +63,6 @@ export default function OrdenesProduccionPage() {
     router.push(`/admin/Panel-Administrativo/ordenes-produccion/${id}/etapas`);
   };
 
-  // Corrección en la condición del Skeleton: No verifiques "ordenes.length" 
-  // si está vacío inicialmente, porque si no hay datos nunca saldrá del esqueleto.
   if (isLoading) {
     return <OrdenesSkeleton />;
   }

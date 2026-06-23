@@ -17,7 +17,7 @@ import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import {
   obtenerEstadisticasMovimientos,
   obtenerMovimientos,
-} from '@/app/admin/inventario/movimientos/actions';
+} from '@/app/admin/Panel-Administrativo/movimientos/actions';
 
 const ESTADISTICAS_INICIALES: EstadisticasMovimientosType = {
   totalEntradas: 0,

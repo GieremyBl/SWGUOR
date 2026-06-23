@@ -8,6 +8,7 @@ import { auditoriaService } from '@/lib/services/auditoria.service';
 import type { RolUsuario } from '@/lib/constants/roles';
 
 const PRODUCTOS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'disenador'];
+const LIMITE_MAXIMO = 200;
 
 export async function GET(req: Request) {
   const auth = await requireServerRole(PRODUCTOS_ROLES);
@@ -21,6 +22,20 @@ export async function GET(req: Request) {
     const colorParam = searchParams.get('color');
     const tallaParam = searchParams.get('talla');
 
+    // 'ligero=true' es para selectores tipo combobox: evita traer todas las
+    // variantes_producto + fichas_tecnicas de cada producto, que es lo más
+    // pesado de esta consulta. 'limite' evita traer el catálogo completo.
+    const ligero = searchParams.get('ligero') === 'true';
+    const rawLimite = searchParams.get('limite');
+    let limite: number | undefined;
+    if (rawLimite) {
+      const n = Number(rawLimite);
+      if (isNaN(n) || n <= 0) {
+        return NextResponse.json({ error: 'limite debe ser un número positivo' }, { status: 400 });
+      }
+      limite = Math.min(n, LIMITE_MAXIMO);
+    }
+
     const color = colorParam && colorParam in ColorPrenda
       ? ColorPrenda[colorParam as keyof typeof ColorPrenda]
       : undefined;
@@ -29,23 +44,43 @@ export async function GET(req: Request) {
       ? TallaProductos[tallaParam as keyof typeof TallaProductos]
       : undefined;
 
-    const [productos, categorias] = await Promise.all([
-      prisma.productos.findMany({
-        where: {
-          ...(estado && { estado: estado as keyof typeof EstadoProducto }),
-          ...(categoriaId && { categoria_id: parseInt(categoriaId) }),
-          ...(busqueda && { nombre: { contains: busqueda, mode: 'insensitive' } }),
-          ...(color && { variantes_producto: { some: { color } } }),
-          ...(talla && { variantes_producto: { some: { talla } } }),
+    const where = {
+      ...(estado && { estado: estado as keyof typeof EstadoProducto }),
+      ...(categoriaId && { categoria_id: parseInt(categoriaId) }),
+      ...(busqueda && { nombre: { contains: busqueda, mode: 'insensitive' as const } }),
+      ...(color && { variantes_producto: { some: { color } } }),
+      ...(talla && { variantes_producto: { some: { talla } } }),
+    };
+
+    const productosQuery = ligero
+      ? prisma.productos.findMany({
+        where,
+        select: {
+          id: true,
+          nombre: true,
+          sku: true,
+          precio: true,
+          estado: true,
+          imagen: true,
         },
+        orderBy: { nombre: 'asc' },
+        ...(limite && { take: limite }),
+      })
+      : prisma.productos.findMany({
+        where,
         include: {
           categorias_productos: true,
           variantes_producto: true,
           fichas_tecnicas: true,
         },
         orderBy: { nombre: 'asc' },
-      }),
-      prisma.categorias_productos.findMany({ orderBy: { nombre: 'asc' } }),
+        ...(limite && { take: limite }),
+      });
+
+    const [productos, categorias] = await Promise.all([
+      productosQuery,
+      // El combobox (ligero=true) no necesita la lista de categorías.
+      ligero ? Promise.resolve([]) : prisma.categorias_productos.findMany({ orderBy: { nombre: 'asc' } }),
     ]);
 
     return NextResponse.json(

@@ -23,6 +23,7 @@ export interface RegistrarParams {
   insumo_id?: string | number | bigint;
   material_id?: string | number | bigint;
   producto_id?: string | number | bigint;
+  variante_id?: string | number | bigint;
   cantidad: number; // Siempre positivo (la BD valida chk_cantidad_positiva)
   tipo_movimiento?: TipoMovimiento;
   referencia_tipo?: ReferenciaMovimiento;
@@ -72,7 +73,7 @@ export const MovimientosInventarioService = {
 
   async registrar(params: RegistrarParams) {
     const {
-      insumo_id, material_id, producto_id, cantidad,
+      insumo_id, material_id, producto_id, variante_id, cantidad,
       motivo, usuario_id, almacen_id, verificarStock = true,
     } = params;
 
@@ -128,7 +129,7 @@ export const MovimientosInventarioService = {
       // 4. Inserción en la Base de Datos (Los triggers se encargan del resto de tablas)
       if (producto_id) {
         // Sincronización histórica manual para stocks globales de productos terminados
-        await aplicarMovimientoStockProducto(tx, BigInt(producto_id), cantidad, tipoMovimiento);
+        await aplicarMovimientoStockProducto(tx, BigInt(producto_id), cantidad, tipoMovimiento, variante_id ? BigInt(variante_id) : undefined);
 
         const mov = await tx.movimientos_inventario.create({
           data: {
@@ -143,18 +144,17 @@ export const MovimientosInventarioService = {
         });
         return serializeBigInt(mov);
       } else {
-        // Insumos y Materiales delegan en tu Trigger BEFORE INSERT 'tr_procesar_movimiento_insumo'
         await insertarMovimiento({
           tipoMovimiento,
           referenciaType: referenciaTipo,
-          referenciaId: documentoId ?? undefined, // El RPC consume este parámetro para cruces lógicos
+          referenciaId: documentoId ?? undefined,
           cantidad,
           motivo: motivoFinal,
           insumoId: insumo_id ? Number(insumo_id) : undefined,
           materialId: material_id ? Number(material_id) : undefined,
           usuarioId: usuarioId ? Number(usuarioId) : undefined,
           almacenId: almacenId ? Number(almacenId) : undefined,
-        });
+        }, tx);
 
         return { success: true };
       }

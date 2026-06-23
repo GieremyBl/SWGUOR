@@ -311,9 +311,9 @@ export function ConfeccionForm({
               {isEditing ? "Actualizando..." : "Generando..."}
             </>
           ) : isEditing ? (
-            "Actualizar Orden"
+            "Actualizar Confección"
           ) : (
-            "Generar Orden de Producción"
+            "Generar Confección"
           )}
         </Button>
       </form>

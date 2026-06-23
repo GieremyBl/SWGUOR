@@ -1,105 +1,130 @@
 "use client";
 
-import { Check, Zap, ChevronRight } from "lucide-react";
-import { ETAPA_LABELS } from "@/lib/schemas/ordenes-produccion";
+import { Check, Zap } from "lucide-react";
+
+// DICCIONARIO LOCAL INTEGRADO DE RESPALDO:
+// Mapea exactamente los identificadores ENUM de la base de datos con los nombres del taller.
+const ETAPA_LABELS_INTERNO = {
+  diseno: "Diseño",
+  patronaje: "Patronaje",
+  corte: "Corte de Tela",
+  confeccion: "Confección",
+  remallado: "Remallado",
+  bordado_estampado: "Bordado / Estampado",
+  control_calidad: "Control de Calidad",
+  acabado: "Acabados",
+  listo_entrega: "Listo para Entrega",
+};
 
 interface OrdenStepperProps {
   etapas: readonly string[];
   etapaActual: string;
 }
 
-// Colores únicos por etapa - mejorados con más contraste
-const ETAPA_COLORS: Record<string, { bg: string; text: string; border: string; icon: string; gradient: string }> = {
-  diseno: { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-300", icon: "bg-teal-500", gradient: "from-teal-400 to-teal-600" },
-  patronaje: { bg: "bg-cyan-50", text: "text-cyan-700", border: "border-cyan-300", icon: "bg-cyan-500", gradient: "from-cyan-400 to-cyan-600" },
-  corte: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-300", icon: "bg-indigo-500", gradient: "from-indigo-400 to-indigo-600" },
-  confeccion: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-300", icon: "bg-amber-500", gradient: "from-amber-400 to-amber-600" },
-  remallado: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-300", icon: "bg-orange-500", gradient: "from-orange-400 to-orange-600" },
-  bordado_estampado: { bg: "bg-fuchsia-50", text: "text-fuchsia-700", border: "border-fuchsia-300", icon: "bg-fuchsia-500", gradient: "from-fuchsia-400 to-fuchsia-600" },
-  control_calidad: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-300", icon: "bg-rose-500", gradient: "from-rose-400 to-rose-600" },
-  acabado: { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-300", icon: "bg-violet-500", gradient: "from-violet-400 to-violet-600" },
-  listo_entrega: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-300", icon: "bg-emerald-500", gradient: "from-emerald-400 to-emerald-600" },
-};
+type Estado = "completado" | "activo" | "pendiente";
 
 export default function OrdenStepper({ etapas, etapaActual }: OrdenStepperProps) {
-  const indexActual = etapas.indexOf(etapaActual);
-  const porcentajeProgreso = ((indexActual + 1) / etapas.length) * 100;
+  // Limpiamos la etapa actual para asegurar que haga match con el índice sin importar tildes o plurales accidentales
+  const etapaActualSanitizada = etapaActual
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // Si el backend envía "acabados", lo asimilamos a "acabado"
+  const etapaBuscada = etapaActualSanitizada === "acabados" ? "acabado" : etapaActualSanitizada;
+
+  // Encontrar el índice actual en el flujo lineal enviado
+  const indexActual = etapas.findIndex(
+    (e) => e.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === etapaBuscada
+  );
+
+  const porcentaje = etapas.length
+    ? Math.round((Math.max(indexActual, 0) / etapas.length) * 100)
+    : 0;
+
+  const estadoDe = (idx: number): Estado =>
+    idx < indexActual ? "completado" : idx === indexActual ? "activo" : "pendiente";
+
+  const labelDe = (etapa: string) => {
+    const key = etapa
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace("acabados", "acabado"); // Asegura compatibilidad con el plural
+
+    return ETAPA_LABELS_INTERNO[key as keyof typeof ETAPA_LABELS_INTERNO] || etapa;
+  };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Header con progreso general */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900">Control de Etapas</h3>
-          <p className="text-sm text-slate-500">Seguimiento de la orden de producción</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-2xl font-bold text-slate-900">{indexActual + 1}</p>
-            <p className="text-xs text-slate-500">de {etapas.length} etapas</p>
-          </div>
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-50 border-2 border-slate-200 flex items-center justify-center">
-            <span className="text-xl font-bold text-slate-700">{Math.round(porcentajeProgreso)}%</span>
-          </div>
-        </div>
-      </div>
+    <div className="w-full">
+      <div className="relative overflow-hidden rounded-3xl border border-[hsl(var(--admin-accent)/0.15)] bg-white shadow-lg shadow-black/5">
 
-      {/* Stepper Visual Principal */}
-      <div className="bg-gradient-to-br from-white via-slate-50 to-white border-2 border-slate-200 rounded-2xl p-8 shadow-lg">
-        {/* Versión Desktop */}
-        <div className="hidden md:block">
-          <div className="flex items-center justify-between gap-1">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 sm:px-8 pt-7">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[hsl(var(--admin-accent))]">
+              Control de Etapas
+            </p>
+            <h3 className="mt-1 text-xl sm:text-2xl font-black text-[var(--guor-dark)] tracking-tight">
+              Seguimiento de producción
+            </h3>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-2xl sm:text-3xl font-black text-[hsl(var(--admin-accent))] tabular-nums leading-none">
+              {Math.max(indexActual + 1, 1)}
+              <span className="text-sm font-bold text-[hsl(var(--admin-accent)/0.5)]">/{etapas.length}</span>
+            </p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--admin-accent))]">
+              {porcentaje}% completado
+            </p>
+          </div>
+        </div>
+
+        {/* ── Horizontal: tablet / desktop ── */}
+        <div className="hidden sm:block px-6 sm:px-8 py-8 overflow-x-auto">
+          <div className="flex items-start min-w-max">
             {etapas.map((etapa, idx) => {
-              const isCompletado = idx < indexActual;
-              const isActual = idx === indexActual;
-              const colors = ETAPA_COLORS[etapa] || ETAPA_COLORS.diseno;
-
+              const estado = estadoDe(idx);
               return (
-                <div key={etapa} className="flex items-center flex-1">
-                  {/* Nodo de la etapa */}
-                  <div className="flex flex-col items-center flex-shrink-0">
+                <div key={etapa} className="flex items-center last:flex-none">
+                  <div className="flex flex-col items-center w-[100px] shrink-0">
                     <div
-                      className={`w-16 h-16 rounded-full flex items-center justify-center border-2 transition-all duration-500 transform hover:scale-110 ${
-                        isCompletado
-                          ? `${colors.icon} border-white text-white shadow-xl scale-100`
-                          : isActual
-                            ? `bg-white ${colors.border} border-4 ring-4 ring-offset-2 ${colors.icon} ring-opacity-30 shadow-2xl scale-110`
-                            : `bg-slate-100 border-slate-300 text-slate-400 shadow-sm`
-                      }`}
+                      className={
+                        "flex h-12 w-12 items-center justify-center rounded-full border-2 transition-all duration-300 " +
+                        (estado === "completado"
+                          ? "bg-[hsl(var(--admin-accent))] border-[hsl(var(--admin-accent))] text-white"
+                          : estado === "activo"
+                            ? "bg-white border-[hsl(var(--admin-accent))] text-[var(--guor-dark)] ring-4 ring-[hsl(var(--admin-accent)/0.15)] motion-safe:animate-pulse"
+                            : "bg-transparent border-[var(--guor-cream)] text-[hsl(var(--admin-accent)/0.3)]")
+                      }
                     >
-                      {isCompletado ? (
-                        <Check size={28} className="stroke-[3]" />
+                      {estado === "completado" ? (
+                        <Check size={18} className="stroke-[3]" />
                       ) : (
-                        <span className="text-xl font-black">{idx + 1}</span>
+                        <span className="text-sm font-black">{idx + 1}</span>
                       )}
                     </div>
-
                     <span
-                      className={`mt-4 text-xs font-bold uppercase tracking-widest text-center block max-w-[90px] leading-tight transition-all duration-300 ${
-                        isActual
-                          ? "text-slate-900 font-black text-sm"
-                          : isCompletado
-                            ? "text-slate-700"
-                            : "text-slate-400"
-                      }`}
+                      className={
+                        "mt-3 text-center text-[10px] font-bold uppercase tracking-wider leading-tight max-w-[90px] break-words " +
+                        (estado === "pendiente" ? "text-[hsl(var(--admin-accent)/0.4)]" : "text-[var(--guor-dark)]")
+                      }
                     >
-                      {ETAPA_LABELS[etapa as keyof typeof ETAPA_LABELS] || etapa}
+                      {labelDe(etapa)}
                     </span>
                   </div>
 
-                  {/* Línea conectora */}
                   {idx < etapas.length - 1 && (
-                    <div className="flex-1 h-1.5 mx-2 rounded-full relative overflow-hidden bg-slate-200">
-                      <div
-                        className={`h-full rounded-full transition-all duration-700 ${
-                          isCompletado
-                            ? `bg-gradient-to-r from-emerald-500 to-emerald-400`
-                            : isActual
-                              ? `bg-gradient-to-r ${colors.gradient} animate-pulse`
-                              : `bg-slate-200`
-                        }`}
-                      />
-                    </div>
+                    <div
+                      className={
+                        "w-12 border-t-[3px] mx-1 mx-2 " +
+                        (idx < indexActual
+                          ? "border-dashed border-[hsl(var(--admin-accent))]"
+                          : "border-dashed border-[var(--guor-cream)]")
+                      }
+                    />
                   )}
                 </div>
               );
@@ -107,100 +132,75 @@ export default function OrdenStepper({ etapas, etapaActual }: OrdenStepperProps)
           </div>
         </div>
 
-        {/* Versión Mobile */}
-        <div className="md:hidden space-y-4">
+        {/* ── Vertical: mobile ── */}
+        <div className="sm:hidden px-6 py-6">
           {etapas.map((etapa, idx) => {
-            const isCompletado = idx < indexActual;
-            const isActual = idx === indexActual;
-            const colors = ETAPA_COLORS[etapa] || ETAPA_COLORS.diseno;
-
+            const estado = estadoDe(idx);
+            const esUltima = idx === etapas.length - 1;
             return (
-              <div key={etapa}>
-                <div className="flex items-center gap-4">
-                  {/* Nodo */}
+              <div key={etapa} className="flex gap-4">
+                <div className="flex flex-col items-center">
                   <div
-                    className={`w-14 h-14 rounded-full flex items-center justify-center border-2 flex-shrink-0 transition-all duration-300 ${
-                      isCompletado
-                        ? `${colors.icon} border-white text-white shadow-lg`
-                        : isActual
-                          ? `bg-white ${colors.border} border-3 ring-2 ${colors.icon} ring-opacity-30 shadow-lg scale-105`
-                          : `bg-slate-100 border-slate-300 text-slate-400`
-                    }`}
+                    className={
+                      "flex h-10 w-10 items-center justify-center rounded-full border-2 shrink-0 transition-all duration-300 " +
+                      (estado === "completado"
+                        ? "bg-[hsl(var(--admin-accent))] border-[hsl(var(--admin-accent))] text-white"
+                        : estado === "activo"
+                          ? "bg-white border-[hsl(var(--admin-accent))] text-[var(--guor-dark)] ring-4 ring-[hsl(var(--admin-accent)/0.15)] motion-safe:animate-pulse"
+                          : "bg-transparent border-[var(--guor-cream)] text-[hsl(var(--admin-accent)/0.3)]")
+                    }
                   >
-                    {isCompletado ? (
-                      <Check size={22} className="stroke-[3]" />
+                    {estado === "completado" ? (
+                      <Check size={16} className="stroke-[3]" />
                     ) : (
-                      <span className="text-lg font-black">{idx + 1}</span>
+                      <span className="text-xs font-black">{idx + 1}</span>
                     )}
                   </div>
-
-                  {/* Contenido */}
-                  <div className="flex-1">
-                    <p
-                      className={`text-sm font-bold uppercase tracking-wide ${
-                        isActual ? "text-slate-900 font-black" : isCompletado ? "text-slate-700" : "text-slate-400"
-                      }`}
-                    >
-                      {ETAPA_LABELS[etapa as keyof typeof ETAPA_LABELS] || etapa}
-                    </p>
-                    <p className={`text-xs ${isCompletado ? "text-emerald-600" : isActual ? colors.text : "text-slate-400"}`}>
-                      {isCompletado ? "✓ Completado" : isActual ? "En progreso" : "Pendiente"}
-                    </p>
-                  </div>
-
-                  {isActual && <ChevronRight className="text-slate-400 flex-shrink-0" size={20} />}
-                </div>
-
-                {/* Línea conectora en mobile */}
-                {idx < etapas.length - 1 && (
-                  <div className="ml-6 mt-2 mb-2">
+                  {!esUltima && (
                     <div
-                      className={`w-1 h-6 rounded-full transition-all duration-500 ${
-                        isCompletado ? "bg-gradient-to-b from-emerald-500 to-emerald-400" : "bg-slate-200"
-                      }`}
+                      className="w-[2px] flex-1 min-h-[28px] my-1"
+                      style={{
+                        backgroundImage:
+                          idx < indexActual
+                            ? "repeating-linear-gradient(180deg, hsl(var(--admin-accent)) 0 6px, transparent 6px 11px)"
+                            : "repeating-linear-gradient(180deg, var(--guor-cream) 0 6px, transparent 6px 11px)",
+                      }}
                     />
-                  </div>
-                )}
+                  )}
+                </div>
+                <div className={esUltima ? "pb-1" : "pb-5"}>
+                  <p
+                    className={
+                      "text-xs font-black uppercase tracking-wide " +
+                      (estado === "pendiente" ? "text-[hsl(var(--admin-accent)/0.4)]" : "text-[var(--guor-dark)]")
+                    }
+                  >
+                    {labelDe(etapa)}
+                  </p>
+                  <p
+                    className={
+                      "text-[10px] font-semibold " +
+                      (estado === "pendiente"
+                        ? "text-[hsl(var(--admin-accent)/0.4)]"
+                        : "text-[hsl(var(--admin-accent))]")
+                    }
+                  >
+                    {estado === "completado" ? "Completado" : estado === "activo" ? "En curso" : "Pendiente"}
+                  </p>
+                </div>
               </div>
             );
           })}
         </div>
 
-        {/* Barra de progreso mejorada */}
-        <div className="mt-8 pt-6 border-t border-slate-200">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Progreso General</p>
-            <p className="text-sm font-bold text-slate-900">{Math.round(porcentajeProgreso)}%</p>
+        {/* Etapa actual */}
+        <div className="flex items-center gap-3 border-t border-[hsl(var(--admin-accent)/0.1)] bg-gray-50 px-6 sm:px-8 py-5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--admin-accent)/0.15)] border border-[hsl(var(--admin-accent)/0.2)]">
+            <Zap size={16} className="text-[hsl(var(--admin-accent))]" />
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden shadow-inner">
-            <div
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-700 shadow-lg"
-              style={{ width: `${porcentajeProgreso}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Card de etapa actual mejorada */}
-      <div
-        className={`p-8 rounded-2xl border-2 transition-all duration-500 shadow-lg ${
-          ETAPA_COLORS[etapaActual]?.bg || ETAPA_COLORS.diseno.bg
-        } ${ETAPA_COLORS[etapaActual]?.border || ETAPA_COLORS.diseno.border}`}
-      >
-        <div className="flex items-start gap-4">
-          <div
-            className={`p-3 rounded-xl flex-shrink-0 ${ETAPA_COLORS[etapaActual]?.icon || ETAPA_COLORS.diseno.icon} shadow-lg`}
-          >
-            <Zap size={24} className="text-white" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Etapa Actual</p>
-            <p className={`text-2xl font-black ${ETAPA_COLORS[etapaActual]?.text || ETAPA_COLORS.diseno.text} mb-2`}>
-              {ETAPA_LABELS[etapaActual as keyof typeof ETAPA_LABELS] || etapaActual}
-            </p>
-            <p className="text-sm text-slate-600">
-              Completa esta etapa para avanzar a la siguiente fase de producción
-            </p>
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--admin-accent))]">Etapa actual</p>
+            <p className="text-base font-black text-[var(--guor-dark)]">{labelDe(etapaActual)}</p>
           </div>
         </div>
       </div>

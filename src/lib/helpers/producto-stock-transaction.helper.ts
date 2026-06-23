@@ -86,24 +86,15 @@ export async function descontarStockLineaPedido(
   await sincronizarStockProductoDesdeVariantes(tx, productoId);
 }
 
-/**
- * Aplica movimiento de inventario sobre productos.stock (columna Int en BD).
- */
 export async function aplicarMovimientoStockProducto(
   tx: Tx,
   productoId: bigint,
   cantidad: number,
   tipo_movimiento: TipoMovimiento,
+  varianteId?: bigint,
 ): Promise<void> {
   const qty = Math.floor(Math.abs(Number(cantidad)));
   if (qty <= 0) throw new Error('La cantidad debe ser mayor a 0');
-
-  const producto = await tx.productos.findFirst({
-    where: { id: productoId },
-    select: { id: true, stock: true, nombre: true },
-  });
-
-  if (!producto) throw new Error('Producto no encontrado');
 
   const tiposEntrada: TipoMovimiento[] = [
     'entrada',
@@ -112,8 +103,37 @@ export async function aplicarMovimientoStockProducto(
     'recepcion_devolucion_proveedor',
     'devolucion_consumo',
   ];
+  const esEntrada = tiposEntrada.includes(tipo_movimiento);
 
-  if (tiposEntrada.includes(tipo_movimiento)) {
+  if (varianteId) {
+    const variante = await tx.variantes_producto.findFirst({
+      where: { id: varianteId, producto_id: productoId },
+      select: { id: true, stock: true },
+    });
+
+    if (!variante) {
+      throw new Error(`Variante ${varianteId} no encontrada`);
+    }
+
+    if (!esEntrada && variante.stock < qty) {
+      throw new Error(`Stock insuficiente en la variante. Actual: ${variante.stock}, solicitado: ${qty}`);
+    }
+
+    const nuevoStockVariante = esEntrada ? variante.stock + qty : variante.stock - qty;
+    await setVarianteStock(tx, varianteId, nuevoStockVariante);
+    await sincronizarStockProductoDesdeVariantes(tx, productoId);
+    return;
+  }
+
+  // Fallback si no hay variante_id (actualiza directo el producto padre)
+  const producto = await tx.productos.findFirst({
+    where: { id: productoId },
+    select: { id: true, stock: true, nombre: true },
+  });
+
+  if (!producto) throw new Error('Producto no encontrado');
+
+  if (esEntrada) {
     await setProductoStock(tx, productoId, producto.stock + qty);
     return;
   }

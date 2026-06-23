@@ -237,7 +237,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_precio_historico', 'crear_precio_historico', 'editar_precio_historico',
     'ver_asientos_contables', 'crear_asientos_contables', 'editar_asientos_contables', 'exportar_asientos_contables',
     'ver_configuracion', 'editar_configuracion',
-    'ver_orden_produccion', 'crear_orden_produccion', 'editar_orden_produccion',
+    'ver_orden_produccion', 'crear_orden_produccion', 'actualizar_etapas_produccion', 'editar_orden_produccion', 'ver_detalle_orden_produccion', 'cancelar_orden_produccion',
     'ver_devoluciones_proveedor', 'crear_devoluciones_proveedor', 'exportar_devoluciones_proveedor',
     'ver_devoluciones_cliente', 'exportar_devoluciones_cliente',
     'ver_proveedores', 'crear_proveedores', 'editar_proveedores', 'descontinuar_proveedores', 'exportar_proveedores',

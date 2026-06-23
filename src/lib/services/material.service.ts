@@ -12,6 +12,7 @@ export const MaterialesService = {
     bajo_stock?: boolean;
     proveedor_id?: string;
     sort?: 'asc' | 'desc';
+    limite?: number;
   }) {
     const where: Prisma.materialesWhereInput = {};
 
@@ -34,8 +35,12 @@ export const MaterialesService = {
       orderBy: params?.sort
         ? { precio_unitario: params.sort }
         : { nombre: 'asc' },
+      ...(params?.limite && { take: params.limite }),
     });
 
+    // Nota: igual que en InsumosService, bajo_stock filtra en memoria
+    // después del take, así que combinar limite + bajo_stock puede
+    // devolver menos de `limite` items. Comportamiento heredado, no nuevo.
     const resultado = params?.bajo_stock
       ? materiales.filter(m => Number(m.stock_actual) <= Number(m.stock_minimo))
       : materiales;

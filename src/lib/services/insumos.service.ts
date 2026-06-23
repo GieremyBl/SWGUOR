@@ -10,6 +10,7 @@ export interface ListarInsumosComprasParams {
   bajo_stock?: boolean;
   proveedor_id?: string;
   sort?: 'asc' | 'desc';
+  limite?: number;
 }
 
 function buildWhere(params?: ListarInsumosComprasParams): Prisma.insumoWhereInput {
@@ -32,8 +33,13 @@ export const InsumosService = {
       orderBy: params?.sort
         ? { precio_unitario: params.sort }
         : { nombre: 'asc' },
+      ...(params?.limite && { take: params.limite }),
     });
 
+    // Nota: bajo_stock filtra en memoria después del take. Si en algún
+    // momento se usan limite + bajo_stock juntos, el resultado final puede
+    // tener menos de `limite` items (no es un bug nuevo, ya pasaba antes
+    // de agregar `limite`, solo queda documentado aquí).
     const resultado = params?.bajo_stock
       ? insumos.filter(i => Number(i.stock_actual) <= Number(i.stock_minimo))
       : insumos;

@@ -121,24 +121,8 @@ export default function ConfeccionesPage() {
     [meta.total, prioridadCounts]
   );
 
-  async function handleEstadoChange(id: number, nuevoEstado: ConfeccionRow_T['estado']) {
-    try {
-      const res = await fetch(`/api/admin/confecciones/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: nuevoEstado }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success(`Estado actualizado a "${ESTADO_LABELS[nuevoEstado]}"`);
-      fetchData();
-    } catch {
-      toast.error('Error al actualizar el estado.');
-    }
-  }
-
-  const handleDelete = async (_id: number) => {
-    fetchData();
-  };
+  // 🛠️ Se removió 'handleEstadoChange' de aquí ya que la mutación física con modal e historial
+  // de bitácoras se gatilla de manera asíncrona y segura a través de <ConfeccionesTable />
 
   const canView =
     can('view', 'confecciones') || hasRole(CONFECCIONES_ROLES_VER);
@@ -184,7 +168,7 @@ export default function ConfeccionesPage() {
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-bold"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-sm font-bold transition-colors"
             >
               <Plus className="w-4 h-4" />
               Nueva confección
@@ -238,7 +222,7 @@ export default function ConfeccionesPage() {
           </Button>
         </div>
 
-        {/* Tabla */}
+        {/* Tabla con el Stepper e Historial Integrados */}
         <div className="space-y-4">
           <ConfeccionesTable
             data={confecciones}

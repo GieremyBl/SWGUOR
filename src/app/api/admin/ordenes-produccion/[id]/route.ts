@@ -9,9 +9,9 @@ import { ESTADO_ORDEN_PRODUCCION } from '@/lib/schemas/ordenes-produccion';
 import type { RolUsuario } from '@/lib/constants/roles';
 
 const ROLES_LECTURA: RolUsuario[] = [
-  'administrador', 'gerente', 'representante_taller', 'recepcionista', 'disenador', 'almacenero',
+  'administrador', 'gerente', 'representante_taller', 'recepcionista', 'disenador', 'almacenero', 'cortador', 'ayudante'
 ];
-const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller'];
+const ROLES_ESCRITURA: RolUsuario[] = ['administrador', 'gerente', 'representante_taller', 'cortador', 'ayudante', 'disenador'];
 
 const updateSchema = z.object({
   producto_id: z.coerce.number().optional(),

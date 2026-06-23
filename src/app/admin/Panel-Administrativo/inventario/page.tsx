@@ -40,6 +40,7 @@ export default function InventarioPage() {
   // Insumos state
   const [searchTermIns, setSearchTermIns] = useState("");
   const [selectedTipoIns, setSelectedTipoIns] = useState("todos");
+  const [selectedCategoriaIns, setSelectedCategoriaIns] = useState("todos");
   const [statusFilterIns, setStatusFilterIns] = useState<string | null>(null);
   const [currentPageIns, setCurrentPageIns] = useState(0);
   const [isCreateInsumoOpen, setIsCreateInsumoOpen] = useState(false);
@@ -66,6 +67,20 @@ export default function InventarioPage() {
     if (!authLoading && can("view", "inventario")) obtenerInsumosList();
   }, [obtenerInsumosList, authLoading, can]);
 
+  // Categorías de insumo derivadas de los propios insumos ya cargados
+  // (cada insumo trae categoria_insumo: { id, nombre } por el include del service).
+  // Evita una llamada extra a la API solo para poblar el filtro.
+  const categorias = useMemo(() => {
+    const mapa = new Map<number, string>();
+    insumos.forEach((i: any) => {
+      if (i.categoria_insumo?.id != null) {
+        mapa.set(i.categoria_insumo.id, i.categoria_insumo.nombre);
+      }
+    });
+    return Array.from(mapa, ([id, nombre]) => ({ id, nombre }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [insumos]);
+
   const statsIns = useMemo(() => {
     const total = insumos.length;
     const bajoStock = insumos.filter((i: any) => i.stock_actual > 0 && i.stock_actual <= i.stock_minimo).length;
@@ -87,12 +102,13 @@ export default function InventarioPage() {
   const filteredInsumos = useMemo(() => insumos.filter((i: any) => {
     const matchSearch = !searchTermIns || i.nombre.toLowerCase().includes(searchTermIns.toLowerCase());
     const matchTipo = selectedTipoIns === "todos" || i.tipo === selectedTipoIns;
+    const matchCategoria = selectedCategoriaIns === "todos" || String(i.categoria_insumo?.id) === selectedCategoriaIns;
     let matchStatus = true;
     if (statusFilterIns === "bajoStock") matchStatus = i.stock_actual > 0 && i.stock_actual <= i.stock_minimo;
     if (statusFilterIns === "sinStock") matchStatus = i.stock_actual <= 0;
     if (statusFilterIns === "optimo") matchStatus = i.stock_actual > i.stock_minimo;
-    return matchSearch && matchTipo && matchStatus;
-  }), [insumos, searchTermIns, selectedTipoIns, statusFilterIns]);
+    return matchSearch && matchTipo && matchCategoria && matchStatus;
+  }), [insumos, searchTermIns, selectedTipoIns, selectedCategoriaIns, statusFilterIns]);
 
   const filteredMateriales = useMemo(() => materiales.filter((m: any) => {
     const matchSearch = !searchTermMat || m.nombre.toLowerCase().includes(searchTermMat.toLowerCase());
@@ -104,7 +120,7 @@ export default function InventarioPage() {
     return matchSearch && matchTipo && matchStatus;
   }), [materiales, searchTermMat, selectedTipoMat, statusFilterMat]);
 
-  useEffect(() => { setCurrentPageIns(0); }, [searchTermIns, selectedTipoIns, statusFilterIns]);
+  useEffect(() => { setCurrentPageIns(0); }, [searchTermIns, selectedTipoIns, selectedCategoriaIns, statusFilterIns]);
   useEffect(() => { setCurrentPageMat(0); }, [searchTermMat, selectedTipoMat, statusFilterMat]);
 
   const totalPagesIns = Math.ceil(filteredInsumos.length / pageSize);
@@ -220,6 +236,8 @@ export default function InventarioPage() {
           searchTermMat={searchTermMat} setSearchTermMat={setSearchTermMat}
           selectedTipoIns={selectedTipoIns} setSelectedTipoIns={setSelectedTipoIns}
           selectedTipoMat={selectedTipoMat} setSelectedTipoMat={setSelectedTipoMat}
+          selectedCategoriaIns={selectedCategoriaIns} setSelectedCategoriaIns={setSelectedCategoriaIns}
+          categorias={categorias}
           cargando={cargando}
           onRefresh={() => isInsumos ? obtenerInsumosList() : refetchMateriales()}
         />

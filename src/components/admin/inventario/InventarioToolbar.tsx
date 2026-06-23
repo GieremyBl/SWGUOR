@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Scale, RefreshCw, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface CategoriaOpcion {
+  id: number | string;
+  nombre: string;
+}
+
 interface InventarioToolbarProps {
   isInsumos: boolean;
   // Búsqueda
@@ -19,6 +24,10 @@ interface InventarioToolbarProps {
   setSelectedTipoIns: (v: string) => void;
   selectedTipoMat: string;
   setSelectedTipoMat: (v: string) => void;
+  // Categoría (solo insumos por ahora — viene de categoria_insumo)
+  selectedCategoriaIns: string;
+  setSelectedCategoriaIns: (v: string) => void;
+  categorias: CategoriaOpcion[];
   // Refresh
   cargando: boolean;
   onRefresh: () => void;
@@ -30,19 +39,21 @@ export default function InventarioToolbar({
   searchTermMat, setSearchTermMat,
   selectedTipoIns, setSelectedTipoIns,
   selectedTipoMat, setSelectedTipoMat,
+  selectedCategoriaIns, setSelectedCategoriaIns,
+  categorias,
   cargando,
   onRefresh,
 }: InventarioToolbarProps) {
-  const [calcOpen, setCalcOpen]       = useState(false);
-  const [kilos, setKilos]             = useState("");
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [kilos, setKilos] = useState("");
   const [rendimiento, setRendimiento] = useState("");
   const kilosId = useId();
-  const rendId  = useId();
+  const rendId = useId();
 
-  const k             = parseFloat(kilos) || 0;
-  const r             = parseFloat(rendimiento) || 0;
-  const total         = k * r;
-  const hasResult     = k > 0 && r > 0;
+  const k = parseFloat(kilos) || 0;
+  const r = parseFloat(rendimiento) || 0;
+  const total = k * r;
+  const hasResult = k > 0 && r > 0;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
@@ -56,23 +67,39 @@ export default function InventarioToolbar({
           onChange={isInsumos ? setSearchTermIns : setSearchTermMat}
         />
 
-        {/* Tipo */}
+        {/* Tipo — valores deben matchear el enum de Postgres exactamente */}
         <FilterSelect
           value={isInsumos ? selectedTipoIns : selectedTipoMat}
           onValueChange={isInsumos ? setSelectedTipoIns : setSelectedTipoMat}
           options={[
             { label: "Todos los tipos", value: "todos" },
             ...(isInsumos ? [
-              { label: "Materia Prima", value: "Materia Prima" },
-              { label: "Botones / Cierres", value: "Insumo" },
-              { label: "Herramientas", value: "Herramienta" },
+              // TipoInsumo (Postgres): materia_prima, avio, empaque, suministro
+              { label: "Materia Prima", value: "materia_prima" },
+              { label: "Avíos (botones, cierres)", value: "avio" },
+              { label: "Empaque", value: "empaque" },
+              { label: "Suministros", value: "suministro" },
             ] : [
-              { label: "Plano", value: "plano" },
+              // TipoMaterial (Postgres): punto, plano, no_tejido, especial
               { label: "Punto", value: "punto" },
-              { label: "Tejido", value: "tejido" },
+              { label: "Plano", value: "plano" },
+              { label: "No Tejido", value: "no_tejido" },
+              { label: "Especial", value: "especial" },
             ])
           ]}
         />
+
+        {/* Categoría — solo insumos, viene de categoria_insumo */}
+        {isInsumos && (
+          <FilterSelect
+            value={selectedCategoriaIns}
+            onValueChange={setSelectedCategoriaIns}
+            options={[
+              { label: "Todas las categorías", value: "todos" },
+              ...categorias.map((c) => ({ label: c.nombre, value: String(c.id) })),
+            ]}
+          />
+        )}
 
         {/* Botón calculadora — solo en materiales */}
         {!isInsumos && (

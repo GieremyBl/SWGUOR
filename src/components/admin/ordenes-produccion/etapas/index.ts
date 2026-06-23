@@ -2,7 +2,7 @@ export { FormSelector } from "./FormSelector";
 export { VistaLectura } from "./VistaLectura";
 export { FormDisenador } from "./disenador/FormDisenador";
 export { FormCortador } from "./cortador/FormCortador";
-export { FormTaller } from "./taller/FormTaller";
+export { FormRepresentanteTaller } from "./taller/FormTaller";
 export { FormAyudante } from "./ayudante/FormAyudante";
 // Shared
 export { SectionCard } from "./shared/SectionCard";

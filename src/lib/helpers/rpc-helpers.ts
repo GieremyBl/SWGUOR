@@ -4,10 +4,11 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { 
-  TipoMovimiento, 
-  ReferenciaMovimiento, 
-  ReferenciaNotificacion, 
+import type {
+  Prisma,
+  TipoMovimiento,
+  ReferenciaMovimiento,
+  ReferenciaNotificacion,
   TipoNotificacion,
   EstadoConfeccion,
 } from "@prisma/client";
@@ -158,10 +159,11 @@ export async function actualizarPrecioConHistorico(
 }
 
 export async function insertarMovimiento(
-  params: InsertarMovimientoParams
+  params: InsertarMovimientoParams,
+  client: Prisma.TransactionClient | typeof prisma = prisma, // ← nuevo parámetro, default = comportamiento actual
 ): Promise<void> {
   try {
-    await prisma.$executeRaw`
+    await client.$executeRaw`
       SELECT public.fn_insertar_movimiento(
         ${params.tipoMovimiento}::"TipoMovimiento",
         ${params.referenciaType}::"ReferenciaMovimiento",
@@ -230,7 +232,7 @@ export async function registrarCambioEstadoConfeccion(
     await prisma.seguimiento_confeccion.create({
       data: {
         confeccion_id: confeccionId,
-        estado_anterior: estadoAnterior as EstadoConfeccion, 
+        estado_anterior: estadoAnterior as EstadoConfeccion,
         estado_nuevo: estadoNuevo as EstadoConfeccion,
         notas: notasCambio,
       },
@@ -259,7 +261,7 @@ export async function crearNotificacion(data: {
   tipo: string;
   titulo: string;
   mensaje: string;
-  referenciaType: ReferenciaNotificacion; 
+  referenciaType: ReferenciaNotificacion;
   referenciaId?: number;
   urlDestino?: string;
 }): Promise<NotificacionResultado> {

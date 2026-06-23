@@ -1,278 +1,167 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Plus, Loader2, CheckCircle2, GitCommitVertical, MessageSquare, Pencil, Check, X, User,
-} from "lucide-react";
+import { Loader2, CheckCircle2, MessageSquare, Pencil, Check, X, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ESTADO_LABELS } from "@/lib/schemas/confecciones";
 import { useSeguimientoConfeccion } from "@/lib/hooks/useSeguimientoConfeccion";
 import { nombreResponsableSeguimiento } from "@/lib/helpers/seguimiento-confeccion-helpers";
-import type { SeguimientoConfeccionRow } from "@/lib/schemas/seguimiento-confeccion";
+import ConfeccionStepper, { ETAPA_LABELS_CONFECCION } from "../ConfeccionStepper"; // Importaciones cruzadas limpias
+import { registrarAvanceTaller } from "../actions";
+import { toast } from "sonner";
 
-const ESTADO_COLORS: Record<string, { pill: string; dot: string }> = {
-  pendiente: { pill: "bg-slate-100   text-slate-700", dot: "bg-slate-400" },
-  en_proceso: { pill: "bg-blue-100    text-blue-700", dot: "bg-blue-500" },
-  completada: { pill: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
-  rechazada: { pill: "bg-amber-100   text-amber-700", dot: "bg-amber-500" },
-  cancelada: { pill: "bg-red-100     text-red-700", dot: "bg-red-500" },
-};
-
-const SIGUIENTE_ESTADO: Record<string, string[]> = {
-  pendiente: ["en_proceso", "cancelada"],
-  en_proceso: ["completada", "rechazada", "cancelada"],
-  rechazada: ["pendiente", "cancelada"],
-  completada: [],
-  cancelada: [],
+// MAPEO DE COLORES DE RELIEVE VISUAL PARA CADA ETAPA DE TU ENUM REAL
+const ETAPA_COLORS: Record<string, { pill: string; dot: string }> = {
+  recepcion_cortes: { pill: "bg-slate-100   text-slate-700", dot: "bg-slate-400" },
+  confeccion_y_remalle: { pill: "bg-blue-100    text-blue-700", dot: "bg-blue-500" },
+  acabado_y_limpieza: { pill: "bg-amber-100   text-amber-700", dot: "bg-amber-500" },
+  planchado_y_empaque: { pill: "bg-violet-100  text-violet-700", dot: "bg-violet-500" },
+  entregado_a_guor: { pill: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
 };
 
 interface Props {
-  confeccionId: string;
-  estadoActual: string;
+  confeccion: any;
+  etapaActual: string;
   puedeActualizar: boolean;
-  onEstadoChanged?: (estado: string) => void;
+  onEtapaChanged?: (nuevaEtapa: string) => void;
 }
 
 export default function ConfeccionSeguimientoTab({
-  confeccionId,
-  estadoActual,
+  confeccion,
+  etapaActual,
   puedeActualizar,
-  onEstadoChanged,
+  onEtapaChanged,
 }: Props) {
-  const {
-    seguimientos,
-    isLoading,
-    registrarCambio,
-    actualizarNotas,
-    isRegistrando,
-    isActualizando,
-  } = useSeguimientoConfeccion(confeccionId);
+  const confeccionId = confeccion.id.toString();
+  const { seguimientos, isLoading, actualizarNotas } = useSeguimientoConfeccion(confeccionId);
 
-  const [showForm, setShowForm] = useState(false);
-  const [estadoNuevo, setEstadoNuevo] = useState("");
-  const [notas, setNotas] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editNotas, setEditNotas] = useState("");
+  const [isMutationLoading, setIsMutationLoading] = useState(false);
 
-  const siguientes = SIGUIENTE_ESTADO[estadoActual] ?? [];
+  // Manejador del avance físico de etapas conectando el stepper con actions.ts
+  const handleAvanzarEtapaTaller = async (nuevaEtapa: any) => {
+    setIsMutationLoading(true);
+    try {
+      const res = await registrarAvanceTaller({
+        confeccionId: Number(confeccion.id),
+        etapaAnterior: etapaActual,
+        etapaNueva: nuevaEtapa,
+        notas: `Cambio de fase de producción realizado desde el panel de control del taller.`,
+        responsableId: 1, // Reemplazar dinámicamente con tu sesión de usuario logueado en el ERP
+      });
 
-  const handleSubmit = async () => {
-    if (!estadoNuevo) return;
-    const res = await registrarCambio({
-      estado_anterior: estadoActual as Parameters<typeof registrarCambio>[0]['estado_anterior'],
-      estado_nuevo: estadoNuevo as Parameters<typeof registrarCambio>[0]['estado_nuevo'],
-      notas: notas || null,
-    });
-    if (res?.success) {
-      onEstadoChanged?.(estadoNuevo);
-      setEstadoNuevo("");
-      setNotas("");
-      setShowForm(false);
+      if (res?.success) {
+        toast.success("Progreso guardado en la bitácora.");
+        if (onEtapaChanged) onEtapaChanged(nuevaEtapa);
+      }
+    } catch (error) {
+      console.error("Error al registrar avance físico:", error);
+      toast.error("Error de servidor al guardar el cambio de etapa.");
+    } finally {
+      setIsMutationLoading(false);
     }
   };
 
-  const startEdit = (row: SeguimientoConfeccionRow) => {
-    setEditId(String(row.id));
-    setEditNotas(row.notas ?? "");
+  const startEdit = (seg: any) => {
+    setEditId(seg.id);
+    setEditNotas(seg.notas || "");
   };
 
   const saveEdit = async () => {
     if (!editId) return;
-    const res = await actualizarNotas(editId, editNotas || null);
-    if (res?.success) {
+    setIsMutationLoading(true);
+    try {
+      await actualizarNotas(editId, editNotas);
       setEditId(null);
-      setEditNotas("");
+      toast.success("Nota de incidencia actualizada correctamente.");
+    } catch (error) {
+      toast.error("No se pudo modificar la nota.");
+    } finally {
+      setIsMutationLoading(false);
     }
   };
 
-  const formatDate = (dateStr?: string | null) => {
-    if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("es-PE", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  };
-
-  const getLabel = (key?: string | null) =>
-    (key && ESTADO_LABELS[key as keyof typeof ESTADO_LABELS]) ??
-    (key ? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—");
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-12 text-slate-400">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        <span className="text-xs font-medium">Cargando seguimiento...</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <GitCommitVertical size={15} className="text-violet-500" />
-            <h3 className="text-[11px] font-black text-gray-700 uppercase tracking-widest">
-              Historial de seguimiento
-            </h3>
-            {seguimientos.length > 0 && (
-              <span className="text-[10px] font-black bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
-                {seguimientos.length}
-              </span>
-            )}
-          </div>
+    <div className="space-y-6">
 
-          {puedeActualizar && siguientes.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowForm(!showForm)}
-              className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-all ${
-                showForm
-                  ? "bg-gray-100 text-gray-500 border-gray-200"
-                  : "bg-pink-50 text-pink-600 border-pink-200 hover:bg-pink-100"
-              }`}
-            >
-              <Plus
-                size={12}
-                className={`transition-transform duration-200 ${showForm ? "rotate-45" : ""}`}
-              />
-              {showForm ? "Cancelar" : "Registrar cambio"}
-            </button>
-          )}
+      {/* 1. CONTROLADOR GRÁFICO DE ETAPAS (STEPPER) EN LA CABECERA DE LA PESTAÑA */}
+      <ConfeccionStepper
+        etapaActual={etapaActual as any}
+        prendaNombre={confeccion.prenda}
+        cantidadPrendas={confeccion.cantidad || 0}
+        onCambiarEtapa={handleAvanzarEtapaTaller}
+      />
+
+      {/* 2. BITÁCORA / LÍNEA DE TIEMPO DEL HISTORIAL DE PRODUCCIÓN */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="pb-4 border-b border-gray-100 mb-6">
+          <h3 className="text-sm font-bold text-gray-900">Historial de Confección</h3>
+          <p className="text-xs text-gray-400">Auditoría en tiempo real de los cambios de fase física en el taller externo</p>
         </div>
 
-        {showForm && puedeActualizar && (
-          <div className="px-6 py-5 bg-gray-50/70 border-b border-gray-100 space-y-3">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-              Nuevo cambio de estado
-            </p>
-
-            <div className="flex items-center gap-3">
-              <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
-                ESTADO_COLORS[estadoActual]?.pill ?? "bg-gray-100 text-gray-600"
-              }`}>
-                {getLabel(estadoActual)}
-              </span>
-              <span className="text-gray-300 text-sm shrink-0">→</span>
-              <select
-                value={estadoNuevo}
-                onChange={(e) => setEstadoNuevo(e.target.value)}
-                className="flex-1 h-9 px-3 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300"
-              >
-                <option value="">Seleccionar nuevo estado…</option>
-                {siguientes.map((s) => (
-                  <option key={s} value={s}>{getLabel(s)}</option>
-                ))}
-              </select>
+        <div className="relative pl-4">
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-xs text-gray-400 py-4">
+              <Loader2 size={14} className="animate-spin text-pink-500" />
+              Cargando histórico de transiciones...
             </div>
-
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              placeholder="Observaciones del cambio (opcional)…"
-              rows={3}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
-            />
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => { setShowForm(false); setEstadoNuevo(""); setNotas(""); }}
-                className="text-xs font-bold text-gray-400 hover:text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-100"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isRegistrando || !estadoNuevo}
-                className="flex items-center gap-1.5 bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold px-4 py-1.5 rounded-lg"
-              >
-                {isRegistrando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                Guardar cambio
-              </button>
-            </div>
-          </div>
-        )}
-
-        <div className="px-6 py-5">
-          {seguimientos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <GitCommitVertical size={18} className="text-gray-300" />
-              </div>
-              <p className="text-xs text-gray-400 font-medium">Sin seguimientos registrados</p>
+          ) : seguimientos.length === 0 ? (
+            <div className="text-xs text-gray-400 italic py-4">
+              La orden de confección se encuentra registrada pero aún no reporta ingresos a la línea de costura.
             </div>
           ) : (
-            <ol className="space-y-0">
-              {seguimientos.map((seg, i) => {
-                const dotColor = ESTADO_COLORS[seg.estado_nuevo ?? ""]?.dot ?? "bg-gray-300";
-                const isFirst = i === 0;
-                const isEditing = editId === String(seg.id);
+            <ol className="relative border-l border-gray-200 space-y-6">
+              {seguimientos.map((seg: any) => {
+                const labelAnterior = ETAPA_LABELS_CONFECCION[seg.etapa_anterior as keyof typeof ETAPA_LABELS_CONFECCION] || "Inicio de Orden";
+                const labelNuevo = ETAPA_LABELS_CONFECCION[seg.etapa_nuevo as keyof typeof ETAPA_LABELS_CONFECCION] || seg.etapa_nuevo;
+                const dotColor = ETAPA_COLORS[seg.etapa_nuevo]?.dot ?? "bg-gray-300";
 
                 return (
-                  <li key={String(seg.id)} className="flex gap-4">
-                    <div className="flex flex-col items-center shrink-0 w-4">
-                      <div className={`w-3 h-3 rounded-full shrink-0 mt-1 ring-2 ring-white ${dotColor} ${
-                        isFirst ? "ring-offset-1 ring-offset-pink-200" : ""
-                      }`} />
-                      {i < seguimientos.length - 1 && (
-                        <div className="w-px flex-1 bg-gray-100 mt-1 mb-1" />
-                      )}
-                    </div>
+                  <li key={seg.id} className="mb-2 ml-6 group relative">
+                    <span className={`absolute flex items-center justify-center w-3 h-3 rounded-full -left-[30px] top-1.5 ring-4 ring-white ${dotColor}`} />
 
-                    <div className={`flex-1 ${i < seguimientos.length - 1 ? "pb-5" : "pb-0"}`}>
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {seg.estado_anterior && (
-                            <>
-                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                ESTADO_COLORS[seg.estado_anterior]?.pill ?? "bg-gray-100 text-gray-500"
-                              }`}>
-                                {getLabel(seg.estado_anterior)}
-                              </span>
-                              <span className="text-gray-300 text-[10px] font-black">→</span>
-                            </>
-                          )}
-                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                            ESTADO_COLORS[seg.estado_nuevo ?? ""]?.pill ?? "bg-gray-100 text-gray-500"
-                          }`}>
-                            {getLabel(seg.estado_nuevo)}
+                    <div className="bg-gray-50/60 hover:bg-gray-50 rounded-xl p-4 border border-gray-100 transition-colors">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+
+                        {/* Flujo de cambio físico real */}
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="font-semibold text-gray-400 opacity-70">
+                            {labelAnterior}
+                          </span>
+                          <ArrowRight size={12} className="text-gray-300" />
+                          <span className={`font-bold px-2.5 py-0.5 rounded-md text-[11px] ${ETAPA_COLORS[seg.etapa_nuevo]?.pill ?? "bg-gray-100 text-gray-700"}`}>
+                            {labelNuevo}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <time className="text-[10px] text-gray-400 font-mono">
-                            {formatDate(seg.created_at)}
-                          </time>
-                          {puedeActualizar && !isEditing && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-slate-400 hover:text-pink-600"
-                              onClick={() => startEdit(seg)}
-                              disabled={isActualizando}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
+
+                        {/* Marca de tiempo de la base de datos */}
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {seg.created_at ? new Date(seg.created_at).toLocaleString("es-PE", {
+                            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+                          }) : "—"}
+                        </span>
                       </div>
 
-                      <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
-                        <User className="w-3 h-3" />
-                        {nombreResponsableSeguimiento(seg.usuarios)}
-                      </p>
+                      {/* Operario / Responsable */}
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-500">
+                        <User size={11} className="text-gray-400" />
+                        <span className="font-medium text-gray-400">Registrado por:</span>
+                        <span className="font-bold text-gray-600">
+                          {nombreResponsableSeguimiento(seg.usuarios)}
+                        </span>
+                      </div>
 
-                      {isEditing ? (
-                        <div className="mt-2 space-y-2">
+                      {/* Editor / Visualizador de Notas */}
+                      {editId === seg.id ? (
+                        <div className="mt-3 space-y-2 max-w-md">
                           <Textarea
                             value={editNotas}
                             onChange={(e) => setEditNotas(e.target.value)}
                             className="min-h-[64px] text-xs resize-none"
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" onClick={saveEdit} disabled={isActualizando} className="h-7 gap-1">
+                            <Button size="sm" onClick={saveEdit} disabled={isMutationLoading} className="h-7 gap-1">
                               <Check className="w-3 h-3" /> Guardar
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setEditId(null)} className="h-7 gap-1">
@@ -281,12 +170,32 @@ export default function ConfeccionSeguimientoTab({
                           </div>
                         </div>
                       ) : seg.notas ? (
-                        <div className="mt-2 flex items-start gap-1.5">
-                          <MessageSquare size={11} className="text-gray-300 mt-0.5 shrink-0" />
-                          <p className="text-xs text-gray-500 leading-relaxed">{seg.notas}</p>
+                        <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-start gap-1.5">
+                          <MessageSquare size={11} className="text-gray-400 mt-0.5 shrink-0" />
+                          <p className="text-xs text-gray-600 leading-relaxed">
+                            <span className="font-semibold text-gray-400">Nota técnica:</span> {seg.notas}
+                          </p>
+                          {puedeActualizar && (
+                            <button
+                              onClick={() => startEdit(seg)}
+                              className="opacity-0 group-hover:opacity-100 ml-auto p-1 text-gray-400 hover:text-gray-600 transition-opacity"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          )}
                         </div>
                       ) : (
-                        <p className="mt-2 text-xs text-gray-400 italic">Sin observaciones.</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <p className="text-xs text-gray-400 italic">Transición fluida sin incidencias en lote.</p>
+                          {puedeActualizar && (
+                            <button
+                              onClick={() => startEdit(seg)}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 transition-opacity"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </li>

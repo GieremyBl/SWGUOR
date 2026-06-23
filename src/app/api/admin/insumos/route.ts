@@ -11,6 +11,7 @@ import { prisma } from '@/lib/prisma';
 import type { TipoInsumo, UnidadMedida } from '@prisma/client';
 
 const INSUMOS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'almacenero'];
+const LIMITE_MAXIMO = 200;
 
 const TIPOS_VALIDOS = new Set<TipoInsumo>([
   'materia_prima', 'avio', 'empaque', 'suministro'
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
     const rawCategoriaId = searchParams.get('categoria_id');
     const rawTipo = searchParams.get('tipo');
     const rawSort = searchParams.get('sort');
+    const rawLimite = searchParams.get('limite');
 
     if (rawCategoriaId) {
       if (isNaN(Number(rawCategoriaId))) {
@@ -49,20 +51,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'sort debe ser "asc" o "desc"' }, { status: 400 });
     }
 
-    const proveedorId = searchParams.get('proveedor_id');
-
-    // Validar categoria_id como número
-    if (rawCategoriaId && isNaN(Number(rawCategoriaId)))
-      return NextResponse.json({ error: 'categoria_id debe ser un número' }, { status: 400 });
-
-    // Validar que la categoría exista en la tabla
-    if (rawCategoriaId) {
-      const existe = await prisma.categoria_insumo.findUnique({
-        where: { id: Number(rawCategoriaId) },
-      });
-      if (!existe)
-        return NextResponse.json({ error: `categoria_id ${rawCategoriaId} no existe` }, { status: 400 });
+    // NUEVO: tope de resultados, pensado para selectores tipo combobox.
+    // Requiere que InsumosService.listar aplique `take: limite` en su query
+    // de Prisma — sin ese cambio en el service, este valor no tiene efecto.
+    let limite: number | undefined;
+    if (rawLimite) {
+      const n = Number(rawLimite);
+      if (isNaN(n) || n <= 0) {
+        return NextResponse.json({ error: 'limite debe ser un número positivo' }, { status: 400 });
+      }
+      limite = Math.min(n, LIMITE_MAXIMO);
     }
+
+    const proveedorId = searchParams.get('proveedor_id');
 
     const [insumos, categorias] = await Promise.all([
       InsumosService.listar({
@@ -72,6 +73,7 @@ export async function GET(req: NextRequest) {
         bajo_stock: searchParams.get('bajo_stock') === 'true',
         proveedor_id: proveedorId ?? undefined,
         sort: rawSort ? (rawSort as 'asc' | 'desc') : undefined,
+        limite,
       }),
       prisma.categoria_insumo.findMany({
         where: { activo: true },

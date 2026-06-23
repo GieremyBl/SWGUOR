@@ -148,7 +148,13 @@ export function PortalProvider({ children }: { children: ReactNode }) {
                     supabase.from('costo_envio').select('*').eq('activo', true).order('id'),
                 ]);
 
-                if (resReglas.data) setReglas(resReglas.data);
+                if (resReglas.data) {
+                    const reglasNormalizadas = resReglas.data.map((r: any) => ({
+                        ...r,
+                        monto_min_compra: r.monto_min_compra ?? null,
+                    })) as ReglaDescuento[];
+                    setReglas(reglasNormalizadas);
+                }
 
                 // Mapear los productos desde tu API route de Prisma
                 if (resProductos.success && resProductos.data) {

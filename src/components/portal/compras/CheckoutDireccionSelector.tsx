@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Loader2, MapPin, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ export function CheckoutDireccionSelector({
   onDireccionChange,
 }: CheckoutDireccionSelectorProps) {
   const { direcciones, isLoading } = useDireccionesClientePortal();
+  const ultimoIdNotificado = useRef<string | null | undefined>(undefined);
 
   const effectiveSelectedId = useMemo(() => {
     if (direcciones.length === 0) return null;
@@ -39,27 +40,28 @@ export function CheckoutDireccionSelector({
 
   useEffect(() => {
     if (isLoading) {
-      onDireccionChange({
-        id: null,
-        direccionDespacho: null,
-        listo: false,
-        vacio: false,
-      });
+      if (ultimoIdNotificado.current !== null) {
+        ultimoIdNotificado.current = null;
+        onDireccionChange({ id: null, direccionDespacho: null, listo: false, vacio: false });
+      }
       return;
     }
 
     if (direcciones.length === 0) {
-      onDireccionChange({
-        id: null,
-        direccionDespacho: null,
-        listo: false,
-        vacio: true,
-      });
+      if (ultimoIdNotificado.current !== 'vacio') {
+        ultimoIdNotificado.current = 'vacio';
+        onDireccionChange({ id: null, direccionDespacho: null, listo: false, vacio: true });
+      }
       return;
     }
 
     const id = effectiveSelectedId;
+
+    if (ultimoIdNotificado.current === id) return;
+
     const dir = buscarDireccionPorId(direcciones, id);
+
+    ultimoIdNotificado.current = id;
 
     onDireccionChange({
       id,

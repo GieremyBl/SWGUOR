@@ -7,7 +7,7 @@ import { getMercadoPagoPublicKeyEnv } from '@/lib/constants/mercadopago';
 import { formatearSoles } from '@/lib/helpers/pago-parcial.helper';
 import { toDatosPagadorCheckoutPayload } from '@/lib/helpers/datos-pagador-pago.helper';
 import { redirigirTrasPagoExitoso } from '@/lib/helpers/checkout-redirect.helper';
-import type { CheckoutGatewayPanelProps } from '@/components/portal/pagos/checkout-gateway.types';
+import type { CheckoutGatewayPanelProps } from '@/components/portal/pagos/metodos-pagos/checkout-gateway.types';
 import { BotonPagoAccion } from '@/components/portal/pagos/BotonPagoAccion';
 import type { MercadoPagoCardFormData } from '@/types/mercadopago-brick';
 import { cn } from '@/lib/utils';

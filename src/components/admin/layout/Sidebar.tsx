@@ -60,52 +60,52 @@ const GESTION_OPERATIVA: NavGroup = {
       icon: BarChart3,
       roles: ['gerente', 'administrador', 'ayudante', 'representante_taller'],
 
-  subItems: [
+      subItems: [
 
-    {
-      title: 'Talleres Externos',
-      href: '/admin/Panel-Administrativo/reportes/talleres-externos',
-      icon: BarChart3,
-      resource: 'dashboard' as RecursoKey,
+        {
+          title: 'Talleres Externos',
+          href: '/admin/Panel-Administrativo/reportes/talleres-externos',
+          icon: BarChart3,
+          resource: 'dashboard' as RecursoKey,
+        },
+
+        {
+          title: 'Incidencias',
+          href: '/admin/Panel-Administrativo/reportes/incidencias',
+          icon: Bell,
+          resource: 'dashboard' as RecursoKey,
+        },
+
+        {
+          title: 'Analítica Financiera',
+          href: '/admin/Panel-Administrativo/reportes/analitica-financiera',
+          icon: DollarSign,
+          resource: 'reportes' as RecursoKey,
+        },
+
+        {
+          title: 'Inventarios y Abastecimiento',
+          href: '/admin/Panel-Administrativo/reportes/inventario-abastecimiento',
+          icon: Boxes,
+          resource: 'inventario' as RecursoKey,
+        },
+
+        {
+          title: 'Eficiencia Manufactura',
+          href: '/admin/Panel-Administrativo/reportes/eficiencia-manufactura',
+          icon: Scissors,
+          resource: 'reportes' as RecursoKey,
+        },
+
+        {
+          title: 'Conversión Comercial',
+          href: '/admin/Panel-Administrativo/reportes/conversion-comercial',
+          icon: ShoppingCart,
+          resource: 'cotizaciones' as RecursoKey,
+        },
+
+      ],
     },
-
-    {
-      title: 'Incidencias',
-      href: '/admin/Panel-Administrativo/reportes/incidencias',
-      icon: Bell,
-      resource: 'dashboard' as RecursoKey,
-    },
-
-    {
-      title: 'Analítica Financiera',
-      href: '/admin/Panel-Administrativo/reportes/analitica-financiera',
-      icon: DollarSign,
-      resource: 'reportes' as RecursoKey,
-    },
-
-    {
-      title: 'Inventarios y Abastecimiento',
-      href: '/admin/Panel-Administrativo/reportes/inventario-abastecimiento',
-      icon: Boxes,
-      resource: 'inventario' as RecursoKey,
-    },
-
-    {
-      title: 'Eficiencia Manufactura',
-      href: '/admin/Panel-Administrativo/reportes/eficiencia-manufactura',
-      icon: Scissors,
-      resource: 'produccion' as RecursoKey,
-    },
-
-    {
-      title: 'Conversión Comercial',
-      href: '/admin/Panel-Administrativo/reportes/conversion-comercial',
-      icon: ShoppingCart,
-      resource: 'cotizaciones' as RecursoKey,
-    },
-
-  ],
-},
     {
       title: 'Catálogo',
       icon: Package,
@@ -134,9 +134,9 @@ const GESTION_OPERATIVA: NavGroup = {
     {
       title: 'Manufactura',
       icon: Scissors,
-      roles: ['gerente', 'administrador', 'cortador', 'representante_taller', 'disenador'],
+      roles: ['gerente', 'administrador', 'cortador', 'representante_taller', 'disenador', 'ayudante'],
       subItems: [
-        { title: 'Órdenes de Producción', href: '/admin/Panel-Administrativo/ordenes-produccion', icon: Package, resource: 'produccion' as RecursoKey },
+        { title: 'Órdenes de Producción', href: '/admin/Panel-Administrativo/ordenes-produccion', icon: Package, resource: 'orden_produccion' as RecursoKey },
         { title: 'Confecciones', href: '/admin/Panel-Administrativo/confecciones', icon: Scissors, resource: 'confecciones' as RecursoKey },
         { title: 'Talleres', href: '/admin/Panel-Administrativo/talleres', icon: Building, resource: 'talleres' as RecursoKey },
         { title: 'Pagos a Talleres', href: '/admin/Panel-Administrativo/pagos-taller', icon: DollarSign, resource: 'talleres' as RecursoKey },

@@ -11,10 +11,10 @@ import {
 } from '@/lib/services/portal-pedidos-list.service';
 import { resolverCostoEnvioPedido } from '@/lib/helpers/portal-costo-envio.helper';
 import { resolverItemsPedido } from '@/lib/helpers/portal-pedido-items.helper';
-import { descontarStockLineaPedido } from '@/lib/helpers/producto-stock-transaction.helper';
 import { notificarClienteSobrePedido } from '@/lib/helpers/pedido-seguimiento.helper';
 
 const IGV_RATE = 0.18;
+const ALMACEN_DESPACHO_DEFAULT_ID = 1n; // 💡 Ajusta este ID según tu tabla de 'almacenes'
 
 async function obtenerClienteSesion() {
   const auth = await requireServerAuth();
@@ -70,26 +70,6 @@ export async function GET(req: Request) {
   }
 }
 
-async function stockDisponibleVariante(varianteId: bigint, cantidad: number) {
-  const variante = await prisma.variantes_producto.findUnique({
-    where: { id: varianteId },
-    select: { id: true, stock: true },
-  });
-  if (!variante) return { ok: false, disponible: 0 };
-
-  const reservasActivas = await prisma.reservas_stock.findMany({
-    where: {
-      variante_id: varianteId,
-      estado: 'activa',
-      expira_en: { gt: new Date() },
-    },
-    select: { cantidad: true },
-  });
-  const reservado = reservasActivas.reduce((s, r) => s + r.cantidad, 0);
-  const disponible = variante.stock - reservado;
-  return { ok: cantidad <= disponible, disponible };
-}
-
 export async function POST(req: Request) {
   try {
     const sesion = await obtenerClienteSesion();
@@ -125,8 +105,7 @@ export async function POST(req: Request) {
         {
           success: false,
           error: itemsResueltos.error,
-          mensaje:
-            'No hay variante activa para uno de los productos. Quita el ítem del carrito y agrégalo de nuevo desde el catálogo.',
+          mensaje: 'No hay variante activa para uno de los productos.',
           producto_id: itemsResueltos.producto_id,
         },
         { status: 400 },
@@ -182,19 +161,20 @@ export async function POST(req: Request) {
       ? Math.max(...productos.map((p) => p.moq))
       : 400;
 
+    // Validación de stock real físico en variantes antes de abrir transacciones pesadas
     if (reservar_stock) {
       for (const item of lineas) {
-        const check = await stockDisponibleVariante(
-          BigInt(item.variante_id),
-          Number(item.cantidad),
-        );
-        if (!check.ok) {
+        const v = await prisma.variantes_producto.findUnique({
+          where: { id: BigInt(item.variante_id) },
+          select: { stock: true },
+        });
+        if (!v || v.stock < Number(item.cantidad)) {
           return NextResponse.json(
             {
               success: false,
               error: 'stock_insuficiente',
-              mensaje: `Stock insuficiente en variante ${item.variante_id}`,
-              disponible: check.disponible,
+              mensaje: `Stock físico insuficiente en la variante ID: ${item.variante_id}`,
+              disponible: v?.stock ?? 0,
             },
             { status: 409 },
           );
@@ -203,6 +183,7 @@ export async function POST(req: Request) {
     }
 
     const resultado = await prisma.$transaction(async (tx) => {
+      // 1. Registrar pedido de venta principal
       const pedido = await tx.pedidos.create({
         data: {
           cliente_id: sesion.cliente_id,
@@ -227,7 +208,7 @@ export async function POST(req: Request) {
               producto_id: BigInt(item.producto_id),
               variante_id: BigInt(item.variante_id),
               cantidad: Number(item.cantidad),
-              especificaciones: {                              // ← agregar
+              especificaciones: {
                 precio_unitario: Number(item.precio_unitario ?? 0),
               },
             })),
@@ -236,29 +217,61 @@ export async function POST(req: Request) {
         include: { pedido_items: true },
       });
 
+      // 2. Descontar stock real y registrar el kárdex (movimientos_inventario)
       if (reservar_stock) {
         const expira = new Date(Date.now() + 30 * 60 * 1000);
+
         for (const item of lineas) {
+          const varianteIdBf = BigInt(item.variante_id);
+          const cantidadNum = Number(item.cantidad);
+
+          const varianteActual = await tx.variantes_producto.findUnique({
+            where: { id: varianteIdBf },
+            select: { stock: true, producto_id: true }
+          });
+
+          if (!varianteActual || varianteActual.stock < cantidadNum) {
+            throw new Error(`Stock insuficiente en variante ${item.variante_id}.`);
+          }
+
+          // 2.a Registrar en reservas_stock
           await tx.reservas_stock.create({
             data: {
-              variante_id: BigInt(item.variante_id),
+              variante_id: varianteIdBf,
               pedido_id: pedido.id,
-              cantidad: Number(item.cantidad),
+              cantidad: cantidadNum,
               expira_en: expira,
               estado: 'activa',
+            },
+          });
+
+          // 2.b Restar del stock real de la variante
+          await tx.variantes_producto.update({
+            where: { id: varianteIdBf },
+            data: {
+              stock: { decrement: cantidadNum },
+            },
+          });
+
+          // 2.c Registrar en movimientos_inventario
+          await tx.movimientos_inventario.create({
+            data: {
+              producto_id: varianteActual.producto_id,
+              insumo_id: null,
+              material_id: null,
+              variante_id: varianteIdBf,
+              almacen_id: ALMACEN_DESPACHO_DEFAULT_ID,
+              cantidad: cantidadNum,
+              usuario_id: BigInt(sesion.usuario_id),
+              motivo: `Reserva automática por Compra Directa - Pedido #${pedido.id}`,
+              tipo_movimiento: 'SALIDA' as any,
+              referencia_tipo: 'PEDIDO' as any,
             },
           });
         }
       }
 
-      for (const item of lineas) {
-        await descontarStockLineaPedido(tx, {
-          producto_id: item.producto_id,
-          variante_id: item.variante_id,
-          cantidad: Number(item.cantidad),
-        });
-      }
-
+      // 3. Generar hito de trazabilidad inicial
       await tx.seguimiento_pedido.create({
         data: {
           pedido_id: pedido.id,
