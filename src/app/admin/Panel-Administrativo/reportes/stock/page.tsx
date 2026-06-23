@@ -6,16 +6,29 @@ import { usePortal } from '@/lib/hooks/usePortal';
 function ReporteStockContent() {
   const { productos, loading } = usePortal();
 
-  const productosUnicos = productos
-    ? Array.from(new Map(productos.map(p => [p.id, p])).values())
+  const productosConStock = productos
+    ? productos.map((p) => {
+
+        const variantes = p.variantes ?? p.variantes_producto ?? [];
+
+        // 🔥 sumar stock de todas las variantes
+        const stockActual = variantes.reduce((total: number, v: any) => {
+          return total + (v.stock ?? v.stock_actual ?? 0);
+        }, 0);
+
+        const stockReservado = 0; // luego lo conectamos
+
+        return {
+          id: p.id,
+          nombre: p.nombre,
+          stockActual,
+          stockReservado,
+        };
+      })
     : [];
 
   if (loading) {
-    return (
-      <div className="p-6">
-        <p>Cargando productos...</p>
-      </div>
-    );
+    return <div className="p-6">Cargando productos...</div>;
   }
 
   return (
@@ -37,20 +50,17 @@ function ReporteStockContent() {
         </thead>
 
         <tbody>
-          {productosUnicos.map((p) => {
+          {productosConStock.map((p) => {
 
-            // placeholders
-            const stockActual = 400;
-            const stockReservado = 0;
-            const disponible = true;
+            const disponible = p.stockActual - p.stockReservado > 0;
 
             let estado = '';
             let color = '';
 
-            if (stockActual <= 400) {
+            if (p.stockActual <= 10) {
               estado = 'CRÍTICO';
               color = 'text-red-600';
-            } else if (stockActual <= 800) {
+            } else if (p.stockActual <= 50) {
               estado = 'PRECAUCIÓN';
               color = 'text-yellow-600';
             } else {
@@ -63,11 +73,11 @@ function ReporteStockContent() {
                 <td className="p-2">{p.nombre}</td>
 
                 <td className="p-2 text-center font-bold">
-                  {stockActual}
+                  {p.stockActual}
                 </td>
 
                 <td className="p-2 text-center">
-                  {stockReservado}
+                  {p.stockReservado}
                 </td>
 
                 <td className={`p-2 text-center font-bold ${
