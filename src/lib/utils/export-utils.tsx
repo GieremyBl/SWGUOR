@@ -24,6 +24,27 @@ interface PedidoPDFExportData {
   }[];
 }
 
+export interface PedidoItemPDF {
+  sku: string;
+  nombre: string;
+  talla?: string;
+  color?: string;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+export interface PedidoPDFData {
+  numero: string;
+  fecha: string;
+  direccion?: string;
+  estado: string;
+  estado_pago: string;
+  total: number;
+  subtotal: number;
+  igv: number;
+  items: PedidoItemPDF[];
+}
+
   
 
 interface jsPDFWithAutoTable extends jsPDF {
@@ -724,87 +745,203 @@ export const exportConfeccionesDetailedPDF = async (data: ConfeccionBase[], conf
 // =====================================================
 // EXPORTACIÓN A PDF — DETALLESPEDIDOS (@react-pdf/renderer)
 // =====================================================
+
+const PedidoDocument = ({ pedido }: { pedido: PedidoPDFData }) => (
+ 
+  <Document>
+    <Page size="A4" style={P.page}>
+
+      <View style={P.header}>
+        <Text style={P.title}>
+          PEDIDO #{pedido.numero}
+        </Text>
+
+        <Text style={P.subtitle}>
+          Modas y Estilos GUOR
+        </Text>
+      </View>
+
+      <View style={P.box}>
+        <Text style={P.sectionTitle}>
+          Información General
+        </Text>
+
+        <View style={P.row}>
+          <Text style={P.label}>Fecha:</Text>
+          <Text style={P.value}>{pedido.fecha}</Text>
+        </View>
+
+        <View style={P.row}>
+          <Text style={P.label}>Estado:</Text>
+          <Text style={P.value}>{pedido.estado}</Text>
+        </View>
+
+        <View style={P.row}>
+          <Text style={P.label}>Pago:</Text>
+          <Text style={P.value}>{pedido.estado_pago}</Text>
+        </View>
+
+        <View style={P.row}>
+          <Text style={P.label}>Dirección:</Text>
+          <Text style={P.value}>{pedido.direccion}</Text>
+        </View>
+      </View>
+
+      <View style={P.box}>
+        <Text style={P.sectionTitle}>
+          Productos
+        </Text>
+        {/* Header */}
+  <View
+    style={{
+      flexDirection: 'row',
+      backgroundColor: '#F8F4EB',
+      paddingVertical: 8,
+    }}
+  >
+    <Text style={{ width: '60%', paddingLeft: 10, fontWeight: 'bold' }}>
+      PRODUCTO
+    </Text>
+
+    <Text style={{ width: '15%', textAlign: 'center', fontWeight: 'bold' }}>
+      CANT.
+    </Text>
+
+    <Text style={{ width: '25%', textAlign: 'right', paddingRight: 10, fontWeight: 'bold' }}>
+      P. UNITARIO
+    </Text>
+  </View>
+
+  {/* Filas */}
+  {pedido.items.map((item, i) => (
+    <View
+      key={i}
+      style={{
+        flexDirection: 'row',
+        borderLeftWidth: 1,
+        borderRightWidth: 1,
+        borderBottomWidth: 1,
+      }}
+    >
+      <Text
+        style={{
+          width: '60%',
+          padding: 5,
+          borderRightWidth: 1,
+        }}
+      >
+        {item.nombre}
+      </Text>
+
+      <Text
+        style={{
+          width: '15%',
+          padding: 5,
+          borderRightWidth: 1,
+          textAlign: 'center',
+        }}
+      >
+        {item.cantidad}
+      </Text>
+
+      <Text
+        style={{
+          width: '25%',
+          padding: 5,
+          textAlign: 'right',
+        }}
+      >
+        {formatCurrency(item.precio_unitario)}
+      </Text>
+    </View>
+  ))}
+
+      </View>
+
+      <View style={P.box}>
+        <View style={P.row}>
+          <Text style={P.label}>Subtotal:</Text>
+          <Text>{formatCurrency(pedido.subtotal)}</Text>
+        </View>
+
+        <View style={P.row}>
+          <Text style={P.label}>IGV:</Text>
+          <Text>{formatCurrency(pedido.igv)}</Text>
+        </View>
+
+        <View style={P.row}>
+          <Text style={P.label}>TOTAL:</Text>
+          <Text>{formatCurrency(pedido.total)}</Text>
+        </View>
+      </View>
+
+    </Page>
+  </Document>
+);
+
+
+export interface PedidoItemPDF {
+  sku: string;
+  nombre: string;
+  talla?: string;
+  color?: string;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+export interface PedidoPDFData {
+  numero: string;
+  fecha: string;
+  direccion?: string;
+  estado: string;
+  estado_pago: string;
+  subtotal: number;
+  igv: number;
+  total: number;
+  items: PedidoItemPDF[];
+}
+
 export const exportPedidoToPDF = async ({
   pedido,
   items,
 }: PedidoPDFExportData) => {
-  const doc = new jsPDF();
-
-  await drawHeaderWithLogo(
-    doc,
-    `Pedido #${pedido.id}`,
-    'Detalle del pedido'
-  );
-
-  let y = 50;
-
-  doc.setFontSize(11);
-
-  doc.text(`Fecha: ${new Date(pedido.created_at).toLocaleDateString('es-PE')}`, 14, y);
-  y += 8;
-
-  doc.text(`Estado: ${pedido.estado}`, 14, y);
-  y += 8;
-
-  doc.text(
-    `Dirección: ${pedido.direccion_envio ?? 'Retiro en almacén'}`,
-    14,
-    y
-  );
-
-  y += 12;
-
-  autoTable(doc, {
-    startY: y,
-    head: [[
-      'SKU',
-      'Producto',
-      'Variante',
-      'Cant.',
-      'P. Unitario'
-    ]],
-    body: items.map((item) => [
-      item.productos?.sku ?? '-',
-      item.productos?.nombre ?? '-',
-      item.variantes_producto
-        ? `${item.variantes_producto.talla} / ${item.variantes_producto.color}`
-        : '-',
-      item.cantidad,
-      item.especificaciones?.precio_unitario
-        ? formatCurrency(
-            Number(item.especificaciones.precio_unitario)
-          )
-        : '-',
-    ]),
-  });
-
-  const finalY =
-    (doc as jsPDFWithAutoTable).lastAutoTable?.finalY ?? 150;
-
   const subtotal = pedido.total / 1.18;
-  const igv = pedido.total - subtotal;
+const igv = pedido.total - subtotal;
 
-  doc.text(
-    `Subtotal: ${formatCurrency(subtotal)}`,
-    140,
-    finalY + 15
-  );
+const pedidoPDF: PedidoPDFData = {
+  numero: String(pedido.id),
+  fecha: new Date(pedido.created_at).toLocaleDateString('es-PE'),
+  direccion: pedido.direccion_envio ?? 'Retiro en almacén',
+  estado: pedido.estado,
+  estado_pago: pedido.estado_pago,
+  subtotal,
+  igv,
+  total: pedido.total,
 
-  doc.text(
-    `IGV: ${formatCurrency(igv)}`,
-    140,
-    finalY + 25
-  );
+  items: items.map(item => ({
+    sku: item.productos?.sku ?? '-',
+    nombre: item.productos?.nombre ?? '-',
+    talla: item.variantes_producto?.talla,
+    color: item.variantes_producto?.color,
+    cantidad: item.cantidad,
+    precio_unitario: Number(
+      item.especificaciones?.precio_unitario ?? 0
+    ),
+  })),
+};
 
-  doc.setFont('helvetica', 'bold');
+const asPdf = pdf();
 
-  doc.text(
-    `TOTAL: ${formatCurrency(pedido.total)}`,
-    140,
-    finalY + 40
-  );
+asPdf.updateContainer(
+  <PedidoDocument pedido={pedidoPDF} />
+);
 
-  doc.save(`pedido_${pedido.id}.pdf`);
+const blob = await asPdf.toBlob();
+
+downloadBlob(
+  blob,
+  `pedido_${pedido.id}.pdf`
+);
 };
 // =====================================================
 // EXPORTACIÓN A PDF — COTIZACIONES (@react-pdf/renderer)
@@ -1063,7 +1200,63 @@ export const exportClientesListToPDF = async (data: ClienteBase[], config?: { fi
 // =====================================================
 // PEDIDO INDIVIDUAL — TIPOS Y ESTILOS EN LIMPIO
 // =====================================================
+const P = StyleSheet.create({
+  page: {
+    fontFamily: 'Helvetica',
+    fontSize: 9,
+    padding: 30,
+  },
 
+  header: {
+    backgroundColor: '#FFF4E2',
+    padding: 15,
+    marginBottom: 15,
+    borderBottomWidth: 2,
+    borderBottomColor: '#b5854b',
+  },
+
+  title: {
+    fontSize: 18,
+    color: '#231e1d',
+    fontFamily: 'Helvetica-Bold', // <- agregado
+  },
+
+  subtitle: {
+    fontSize: 9,
+    color: '#64748b',
+    marginTop: 4,
+  },
+
+  box: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 10,
+    marginBottom: 12,
+    borderRadius: 4,
+  },
+
+  sectionTitle: {
+    color: '#b5854b',
+    fontSize: 10,
+    marginBottom: 6,
+    fontFamily: 'Helvetica-Bold', // <- agregado
+  },
+
+  row: {
+    flexDirection: 'row',
+    marginBottom: 3,
+  },
+
+  label: {
+    width: 90,
+    color: '#64748b',
+    fontFamily: 'Helvetica-Bold', // <- agregado
+  },
+
+  value: {
+    flex: 1,
+  },
+});
 
 
 

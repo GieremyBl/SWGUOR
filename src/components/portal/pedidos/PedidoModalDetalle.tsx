@@ -89,7 +89,6 @@ export function PedidoModalDetalle({
           `)
                     .eq('pedido_id', pedido.id)
                     .order('id');
-
                 setItems((data as PedidoItemDB[]) ?? []);
             } finally {
                 setLoadingItems(false);
