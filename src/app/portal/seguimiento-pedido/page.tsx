@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Package, RefreshCw, AlertCircle } from 'lucide-react';
-import { getPedidosActivos, type PedidoConSeguimiento } from '@/lib/services/seguimiento-pedido.service';
+import { getPedidosActivos, type PedidoConSeguimiento } from '@/lib/services/portal-seguimiento-pedido.service';
 import { usePortal } from '@/lib/hooks/usePortal';
 import PedidoCard from '@/components/portal/seguimiento-pedido/PedidoCard';
 
