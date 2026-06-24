@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
-import PagoFormModal from '@/components/admin/pagos/PagoFormModal';
 import { PagoDetailModal, PagoVerifyModal } from '@/components/admin/pagos/PagoModals';
 import type { Pago } from '@/components/admin/pagos/PagosTable';
 import { TesoreriaComprobanteDialog } from '@/components/admin/tesoreria/TesoreriaComprobanteDialog';
@@ -233,11 +232,7 @@ export default function UltimosPagosPage() {
           onPageChange={setPage}
         />
       </div>
-
-      {modalMode === 'create' && (
-        <PagoFormModal onClose={closeModal} onSuccess={loadPagos} />
-      )}
-
+      
       {modalMode === 'view' && selectedPago && (
         <PagoDetailModal pago={selectedPago} onClose={closeModal} />
       )}

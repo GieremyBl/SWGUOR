@@ -27,12 +27,25 @@ interface PedidoDetalleHeaderProps {
   pedido: DetallePedidoData;
 }
 
+/**
+ * Header del detalle de pedido
+ * 
+ * Cambios respecto a versión anterior:
+ * - Estado es SOLO lectura (derivado de órdenes/confecciones/despacho)
+ * - Botones de acción solo aparecen en estados específicos:
+ *   * "Empaque y despacho" → cuando está 'listo_para_despacho'
+ *   * "Confirmar entrega" → cuando está 'en_despacho'
+ * - No hay botón "Cambiar estado" (ese está en PedidoDetalleSecciones)
+ * - Muestra solo info de lectura: estado, prioridad, fecha, totales
+ */
 export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
   const { hasRole } = usePermissions();
-  const puedeDespacho = hasRole(['administrador', 'gerente']);
+  const esAdmin = hasRole(['administrador', 'gerente']);
 
-  const estadoCfg    = ESTADO_CONFIG[pedido.estado]       ?? { label: pedido.estado,    color: 'bg-stone-50 text-stone-500 border-stone-200', icon: undefined };
-  const prioridadCfg = PRIORIDAD_CONFIG[pedido.prioridad] ?? { label: pedido.prioridad, color: 'bg-stone-50 text-stone-500 border-stone-200' };
+  const estadoCfg    = ESTADO_CONFIG[pedido.estado] 
+    ?? { label: pedido.estado, color: 'bg-stone-50 text-stone-500 border-stone-200', icon: undefined };
+  const prioridadCfg = PRIORIDAD_CONFIG[pedido.prioridad] 
+    ?? { label: pedido.prioridad, color: 'bg-stone-50 text-stone-500 border-stone-200' };
   const EstadoIcon   = estadoCfg.icon;
 
   return (
@@ -49,7 +62,10 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         {/* Título + badges */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl shadow-sm flex-shrink-0" style={{ background: G.accent }}>
+          <div 
+            className="p-2.5 rounded-xl shadow-sm flex-shrink-0" 
+            style={{ background: G.accent }}
+          >
             <ShoppingBag size={20} className="text-white" />
           </div>
           <div>
@@ -58,9 +74,16 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-1.5">
               {EstadoIcon && (
-                <Badge label={estadoCfg.label} color={estadoCfg.color} icon={EstadoIcon} />
+                <Badge 
+                  label={estadoCfg.label} 
+                  color={estadoCfg.color} 
+                  icon={EstadoIcon} 
+                />
               )}
-              <Badge label={prioridadCfg.label} color={prioridadCfg.color} />
+              <Badge 
+                label={prioridadCfg.label} 
+                color={prioridadCfg.color} 
+              />
               {pedido.created_at && (
                 <span className="text-[11px] text-stone-400 font-bold flex items-center gap-1">
                   <Calendar size={11} />
@@ -71,36 +94,64 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
           </div>
         </div>
 
-        {puedeDespacho && pedido.estado === 'listo_para_despacho' && (
+        {/* Botones de acción condicionados por estado */}
+        {esAdmin && (
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            <Link
-              href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/empaque`}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
-            >
-              <Package size={14} /> Empaque y despacho
-            </Link>
-            <Link
-              href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/entrega`}
-              prefetch={false}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
-            >
-              <Truck size={14} /> Confirmar entrega
-            </Link>
+            {/* 1. Preparar despacho (aparece cuando está listo) */}
+            {pedido.estado === 'listo_para_despacho' && (
+              <Link
+                href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/empaque`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+              >
+                <Package size={14} /> Empaque y despacho
+              </Link>
+            )}
+
+            {/* 2. Confirmar entrega (aparece cuando está en despacho) */}
+            {pedido.estado === 'en_despacho' && (
+              <Link
+                href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/entrega`}
+                prefetch={false}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-colors"
+              >
+                <Truck size={14} /> Confirmar entrega
+              </Link>
+            )}
+
+            {/* 3. Re-despachar si fue rechazado o necesita corrección */}
+            {pedido.estado === 'rechazada' && (
+              <Link
+                href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/empaque`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+              >
+                <Package size={14} /> Re-despachar
+              </Link>
+            )}
           </div>
         )}
 
         {/* KPI chips */}
         <div className="flex gap-3 flex-shrink-0">
           {[
-            { label: 'Total',    value: fmt(pedido.total, pedido.moneda),                  icon: TrendingUp },
-            { label: 'Unidades', value: pedido.total_unidades.toLocaleString('es-PE'),     icon: Hash       },
+            { 
+              label: 'Total', 
+              value: fmt(pedido.total, pedido.moneda), 
+              icon: TrendingUp 
+            },
+            { 
+              label: 'Unidades', 
+              value: pedido.total_unidades.toLocaleString('es-PE'), 
+              icon: Hash 
+            },
           ].map((k) => (
             <div
               key={k.label}
               className="bg-white border border-stone-100 rounded-xl px-4 py-2.5 text-center shadow-sm min-w-[90px]"
             >
               <k.icon size={12} className="text-stone-400 mx-auto mb-0.5" />
-              <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">{k.label}</p>
+              <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest">
+                {k.label}
+              </p>
               <p className="text-sm font-black text-stone-900">{k.value}</p>
             </div>
           ))}

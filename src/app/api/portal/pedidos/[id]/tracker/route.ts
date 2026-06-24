@@ -81,7 +81,7 @@ export async function GET(_req: Request, { params }: Params) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno';
-    console.error('[GET /api/pedidos/:id/tracker]', error);
+    console.error('[GET /api/portal/pedidos/:id/tracker]', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

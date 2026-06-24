@@ -1,7 +1,7 @@
 'use client';
 
 import type { PedidoConSeguimiento } from '@/lib/services/portal-seguimiento-pedido.service';
-import { PedidoTracker } from '@/components/pedidos/PedidoTracker';
+import { PedidoTracker } from '@/components/portal/pedidos/PedidoTracker';
 import { EstadoBadge } from '@/components/portal/EstadoBadge';
 
 interface PedidoCardProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PedidoTracker } from '@/components/pedidos/PedidoTracker';
+import { PedidoTracker } from '@/components/portal/pedidos/PedidoTracker';
 import type { DetallePedidoData } from './types';
 
 interface TabSeguimientoProps {

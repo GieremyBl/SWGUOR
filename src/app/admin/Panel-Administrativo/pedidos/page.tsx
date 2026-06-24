@@ -26,7 +26,7 @@ export default function PedidosPage() {
   const [searchTerm,     setSearchTerm]     = useState("");
   const [isCreateOpen,   setIsCreateOpen]   = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<any | null>(null);
-  const [dialogMode,     setDialogMode]     = useState<"view" | "cancel" | null>(null);
+  const [pedidoACancelar, setPedidoACancelar] = useState<any | null>(null);
   const [statusFilter,   setStatusFilter]   = useState("todos");
   const [dateFilter,     setDateFilter]     = useState<"todas" | "hoy" | "semana" | "mes">("todas");
   const [currentPage,    setCurrentPage]    = useState(0);
@@ -129,7 +129,7 @@ export default function PedidosPage() {
               <PedidosTable
                 data={paginatedData}
                 onCancel={can("archive", "pedidos") 
-                  ? (p) => { setSelectedPedido(p); setDialogMode("cancel"); } 
+                  ? (p) => setPedidoACancelar(p) 
                   : undefined}
               />
             </div>
@@ -156,8 +156,13 @@ export default function PedidosPage() {
       </div>
 
       <CreatePedidoDialog isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onSuccess={() => refetch()} />
-      {selectedPedido && dialogMode === "cancel" && (
-        <CancelPedidoDialog isOpen pedido={selectedPedido} onClose={() => { setSelectedPedido(null); setDialogMode(null); }} onSuccess={() => refetch()} />
+      {pedidoACancelar && (
+        <CancelPedidoDialog
+          isOpen
+          pedido={pedidoACancelar}
+          onClose={() => setPedidoACancelar(null)}
+          onSuccess={() => { setPedidoACancelar(null); refetch(); }}
+        />
       )}
     </div>
   );

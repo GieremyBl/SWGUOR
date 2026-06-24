@@ -17,7 +17,7 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-const ROLES_CAMBIO_ESTADO = ['administrador', 'gerente'] as const;
+const ROLES_ANULACION = ['administrador', 'gerente'] as const;
 
 export default async function PedidoDetallePage({ params }: PageProps) {
   const { id } = await params;
@@ -27,8 +27,8 @@ export default async function PedidoDetallePage({ params }: PageProps) {
     notFound();
   }
 
-  const puedeCambiarEstado = ROLES_CAMBIO_ESTADO.includes(
-    auth.user.rol as (typeof ROLES_CAMBIO_ESTADO)[number],
+  const puedeAnular     = ROLES_ANULACION.includes(
+    auth.user.rol as (typeof ROLES_ANULACION)[number],
   );
 
   let pedido;
@@ -132,8 +132,7 @@ export default async function PedidoDetallePage({ params }: PageProps) {
 
   return (
     <PedidoDetalle
-      pedido={pedidoFormateado}
-      puedeCambiarEstado={puedeCambiarEstado}
+      pedido={pedidoFormateado} puedeAnular={puedeAnular}
     />
   );
 }

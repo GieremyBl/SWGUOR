@@ -706,6 +706,7 @@ model confecciones {
   prioridad              String                   @default("media")
   notas                  String?
   orden_produccion_id    BigInt?
+  etapa                  EtapaConfeccion?         @default(recepcion_cortes)
   ordenes_produccion     ordenes_produccion?      @relation(fields: [orden_produccion_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   usuarios               usuarios?                @relation(fields: [responsable_id], references: [id], map: "fk_confecciones_responsable_id")
   talleres               talleres                 @relation(fields: [taller_id], references: [id])
@@ -714,6 +715,8 @@ model confecciones {
   seguimiento_confeccion seguimiento_confeccion[]
 
   @@index([responsable_id], map: "idx_confecciones_responsable")
+  @@index([etapa], map: "idx_confecciones_etapa")
+  @@index([etapa, taller_id], map: "idx_confecciones_etapa_taller")
   @@schema("public")
 }
 
@@ -1186,12 +1189,13 @@ model incidencias_cliente {
   id            BigInt                 @id @default(autoincrement())
   cliente_id    BigInt?
   pedido_id     BigInt?
-  tipo          TIpoIncidenciaCliente?
+  tipo          TipoIncidenciaCliente?
   descripcion   String?
   estado        String?                @default("abierta")
   evidencia_url String[]
   created_at    DateTime?              @default(now()) @db.Timestamptz(6)
   updated_at    DateTime?              @default(now()) @db.Timestamptz(6)
+  severidad     SeveridadIncidencia?   @default(media)
   cliente       clientes?              @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   pedido        pedidos?               @relation(fields: [pedido_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -1572,6 +1576,7 @@ model pedidos {
   monto_pagado            Decimal                   @default(0) @db.Decimal(12, 2)
   saldo_pendiente         Decimal                   @default(0) @db.Decimal(12, 2)
   zona_envio_id           Int?
+  estado_pago             EstadoPago?               @default(pendiente)
   asientos_contables      asientos_contables[]
   comprobantes            comprobantes[]
   despachos               despachos[]
@@ -1727,6 +1732,7 @@ model seguimiento_confeccion {
   usuarios       usuarios?        @relation(fields: [responsable_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_seguimiento_confeccion_responsable_id")
 
   @@index([confeccion_id], map: "idx_seguimiento_confeccion_id")
+  @@index([responsable_id], map: "idx_seguimiento_confeccion_responsable_id")
   @@schema("public")
 }
 
@@ -2231,6 +2237,8 @@ enum EstadoPedido {
   entregado
   cancelado
   pagado
+  preparando
+  en_ruta
 
   @@schema("public")
 }
@@ -2602,7 +2610,7 @@ enum EstadoEntrega {
   @@schema("public")
 }
 
-enum TIpoIncidenciaCliente {
+enum TipoIncidenciaCliente {
   defecto_confeccion
   pedido_equivocado
   talla_incorrecta

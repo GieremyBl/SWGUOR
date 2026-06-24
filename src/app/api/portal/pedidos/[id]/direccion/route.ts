@@ -2,17 +2,25 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { requireServerAuth } from '@/lib/auth/server';
-import { prisma } from '@/lib/prisma';
+import { verificarAccesoPedido } from '@/lib/helpers/pedido-acceso.helper';
 import { actualizarDireccionDespachoPedido } from '@/lib/helpers/pedido-direccion.helper';
+import { prisma } from '@/lib/prisma';
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Compatibilidad portal → delega en la misma lógica que /api/pedidos/[id]/direccion */
 export async function PATCH(req: Request, { params }: Params) {
   try {
     const auth = await requireServerAuth();
     if (!auth.success) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const { id } = await params;
+    const pedidoId = BigInt(id);
+
+    const acceso = await verificarAccesoPedido(pedidoId, auth.user);
+    if (!acceso.ok || !acceso.esClienteDueño) {
+      return NextResponse.json({ error: 'sin_permisos' }, { status: 403 });
     }
 
     const cliente = await prisma.clientes.findFirst({
@@ -24,13 +32,13 @@ export async function PATCH(req: Request, { params }: Params) {
       return NextResponse.json({ error: 'cliente_no_encontrado' }, { status: 404 });
     }
 
-    const { id } = await params;
     const body = await req.json();
+    const direccion = String(body.direccion_despacho ?? '');
 
     const resultado = await actualizarDireccionDespachoPedido({
-      pedidoId: BigInt(id),
+      pedidoId,
       clienteId: cliente.id,
-      direccion: String(body.direccion_despacho ?? ''),
+      direccion,
     });
 
     if (!resultado.ok) {
@@ -53,6 +61,7 @@ export async function PATCH(req: Request, { params }: Params) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error interno';
+    console.error('[PATCH /api/portal/pedidos/:id/direccion]', error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

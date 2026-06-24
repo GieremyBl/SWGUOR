@@ -1,6 +1,6 @@
 'use client';
 
-import { CulqiCheckoutButton } from '@/components/payments/CulqiCheckoutButton';
+import { CulqiCheckoutButton } from '@/components/portal/payments/CulqiCheckoutButton';
 import { toCulqiAmountCents } from '@/lib/constants/culqi';
 import { toDatosPagadorCheckoutPayload } from '@/lib/helpers/datos-pagador-pago.helper';
 import { formatearSoles } from '@/lib/helpers/pago-parcial.helper';

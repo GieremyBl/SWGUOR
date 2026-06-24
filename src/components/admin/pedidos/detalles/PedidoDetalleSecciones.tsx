@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Building2,
   Calendar,
@@ -12,9 +14,10 @@ import {
   MapPin,
   Phone,
   Clock,
+  X,
 } from 'lucide-react';
-import { PedidoTracker } from '@/components/pedidos/PedidoTracker';
-import { PedidoCambiarEstado } from './PedidoCambiarEstado';
+import { PedidoTracker } from '@/components/portal/pedidos/PedidoTracker';
+import CancelPedidoDialog from '../CancelPedidoDialog';
 import { PedidoNotasLogisticaSection } from './PedidoNotasLogisticaSection';
 import { PedidoDocumentosSection } from './PedidoDocumentosSection';
 import { Badge, SectionCard, FinRow } from './PedidoDetalleUI';
@@ -33,7 +36,7 @@ import type { TipoCliente } from '@prisma/client';
 
 interface PedidoDetalleSeccionesProps {
   pedido: DetallePedidoData;
-  puedeCambiarEstado: boolean;
+  puedeAnular: boolean; // ← Cambio: era puedeCambiarEstado
 }
 
 function EspecificacionesLista({
@@ -58,8 +61,11 @@ function EspecificacionesLista({
 
 export function PedidoDetalleSecciones({
   pedido,
-  puedeCambiarEstado,
+  puedeAnular, // ← Cambio: era puedeCambiarEstado
 }: PedidoDetalleSeccionesProps) {
+  const router = useRouter();
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false); // ← Agregar
+
   const estadoCfg = ESTADO_CONFIG[pedido.estado];
   const estadoPedidoInfo = ESTADOS_PEDIDO[pedido.estado as keyof typeof ESTADOS_PEDIDO];
   const estadoLabel = estadoCfg?.label ?? estadoPedidoInfo?.label ?? pedido.estado;
@@ -156,12 +162,17 @@ export function PedidoDetalleSecciones({
                 label={prioridadCfg.label}
                 color={prioridadCfg.color}
               />
-              {puedeCambiarEstado && (
+              {/* ← Cambio: Botón de cancelación */}
+              {puedeAnular && (
                 <div className="ml-auto">
-                  <PedidoCambiarEstado
-                    pedidoId={pedido.id}
-                    estadoActual={pedido.estado}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setCancelDialogOpen(true)}
+                    className="gap-2 font-black uppercase text-[10px] tracking-widest h-9 px-4 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors inline-flex items-center"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Cancelar pedido
+                  </button>
                 </div>
               )}
             </div>
@@ -402,6 +413,14 @@ export function PedidoDetalleSecciones({
           <TabPagos pedido={pedido} />
         </div>
       </details>
+
+      {/* ← Agregar el dialog al final */}
+      <CancelPedidoDialog
+        isOpen={cancelDialogOpen}
+        pedido={pedido}
+        onClose={() => setCancelDialogOpen(false)}
+        onSuccess={() => router.refresh()}
+      />
     </div>
   );
 }

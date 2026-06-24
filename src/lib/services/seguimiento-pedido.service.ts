@@ -1,36 +1,25 @@
-import { getSupabaseBrowserClient } from '@/lib/supabase';
+import type { EstadoPedido } from '@prisma/client';
 
-export type {
-  EstadoPedido,
-  SeguimientoPedido,
-  PedidoConSeguimiento,
-} from '@/lib/services/portal-seguimiento-pedido.service';
+export interface SeguimientoPedidoRow {
+  id:         number | string;
+  pedido_id:  number | string;
+  status:     EstadoPedido;
+  notas:      string | null;
+  /** UUID → cancelación manual (admin/gerente). null → trigger de BD. */
+  creado_por: string | null;
+  created_at: string;
+}
 
-export {
-  getPedidosActivos,
-  actualizarDireccionDespacho,
-} from '@/lib/services/portal-seguimiento-pedido.service';
+export async function getSeguimientoPorPedido(
+  pedidoId: number | string,
+): Promise<SeguimientoPedidoRow[]> {
+  const res = await fetch(
+    `/api/admin/pedidos/seguimiento?pedido_id=${pedidoId}`,
+    { credentials: 'include', cache: 'no-store' },
+  );
 
-import type { SeguimientoPedido } from '@/lib/services/portal-seguimiento-pedido.service';
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error ?? 'Error al cargar historial de seguimiento');
 
-export function subscribeSeguimiento(
-  pedidoId: number,
-  onInsert: (row: SeguimientoPedido) => void,
-) {
-  const supabase = getSupabaseBrowserClient();
-  const channel = supabase
-    .channel(`seguimiento-${pedidoId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'seguimiento_pedido',
-        filter: `pedido_id=eq.${pedidoId}`,
-      },
-      (payload) => onInsert(payload.new as SeguimientoPedido),
-    )
-    .subscribe();
-
-  return () => supabase.removeChannel(channel);
+  return (json.data ?? []) as SeguimientoPedidoRow[];
 }
