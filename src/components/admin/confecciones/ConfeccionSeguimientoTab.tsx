@@ -1,21 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2, MessageSquare, Pencil, Check, X, User, ArrowRight } from "lucide-react";
+import { Loader2, MessageSquare, Pencil, Check, X, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSeguimientoConfeccion } from "@/lib/hooks/useSeguimientoConfeccion";
 import { nombreResponsableSeguimiento } from "@/lib/helpers/seguimiento-confeccion-helpers";
-import ConfeccionStepper, { ETAPA_LABELS_CONFECCION } from "../ConfeccionStepper"; // Importaciones cruzadas limpias
-import { registrarAvanceTaller } from "../actions";
+import ConfeccionStepper, { ETAPA_LABELS_CONFECCION } from "./ConfeccionStepper"; // Importaciones cruzadas limpias
+import { registrarAvanceTaller } from "./actions";
 import { toast } from "sonner";
 
 // MAPEO DE COLORES DE RELIEVE VISUAL PARA CADA ETAPA DE TU ENUM REAL
 const ETAPA_COLORS: Record<string, { pill: string; dot: string }> = {
-  recepcion_cortes: { pill: "bg-slate-100   text-slate-700", dot: "bg-slate-400" },
-  confeccion_y_remalle: { pill: "bg-blue-100    text-blue-700", dot: "bg-blue-500" },
-  acabado_y_limpieza: { pill: "bg-amber-100   text-amber-700", dot: "bg-amber-500" },
-  planchado_y_empaque: { pill: "bg-violet-100  text-violet-700", dot: "bg-violet-500" },
+  recepcion_cortes: { pill: "bg-slate-100 text-slate-700", dot: "bg-slate-400" },
+  confeccion_y_remalle: { pill: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
+  acabado_y_limpieza: { pill: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
+  planchado_y_empaque: { pill: "bg-violet-100 text-violet-700", dot: "bg-violet-500" },
   entregado_a_guor: { pill: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
 };
 

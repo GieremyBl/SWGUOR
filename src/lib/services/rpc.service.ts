@@ -618,22 +618,40 @@ export async function obtenerInsumosBajoStock() {
  */
 export async function obtenerItemsConStockBajo(almacenId?: number) {
   const stocks = await prisma.almacen_stock.findMany({
-    where:   almacenId ? { almacen_id: BigInt(almacenId) } : undefined,
+    where: almacenId ? { almacen_id: BigInt(almacenId) } : undefined,
     include: {
-      productos:  { select: { nombre: true } },
-      insumo:     { select: { nombre: true } },
+      productos: { select: { nombre: true } },
       materiales: { select: { nombre: true } },
+      // insumo REMOVIDO - no existe relación
     },
   });
-
+ 
   return stocks
     .filter((s) => Number(s.cantidad ?? 0) <= Number(s.stock_minimo ?? 0) * 1.2)
     .map((s) => {
       if (s.producto_id)
-        return { tipo: 'producto' as const, id: Number(s.producto_id), nombre: s.productos?.nombre ?? '—', stock: Number(s.cantidad ?? 0), minimo: Number(s.stock_minimo ?? 0) };
-      if (s.insumo_id)
-        return { tipo: 'insumo'   as const, id: Number(s.insumo_id),   nombre: s.insumo?.nombre     ?? '—', stock: Number(s.cantidad ?? 0), minimo: Number(s.stock_minimo ?? 0) };
-      return   { tipo: 'material' as const, id: Number(s.material_id ?? 0), nombre: s.materiales?.nombre ?? '—', stock: Number(s.cantidad ?? 0), minimo: Number(s.stock_minimo ?? 0) };
+        return {
+          tipo: 'producto' as const,
+          id: Number(s.producto_id),
+          nombre: s.productos?.nombre ?? '—',
+          stock: Number(s.cantidad ?? 0),
+          minimo: Number(s.stock_minimo ?? 0),
+        };
+      if (s.material_id)
+        return {
+          tipo: 'material' as const,
+          id: Number(s.material_id),
+          nombre: s.materiales?.nombre ?? '—',
+          stock: Number(s.cantidad ?? 0),
+          minimo: Number(s.stock_minimo ?? 0),
+        };
+      return {
+        tipo: 'material' as const,
+        id: Number(s.material_id ?? 0),
+        nombre: s.materiales?.nombre ?? '—',
+        stock: Number(s.cantidad ?? 0),
+        minimo: Number(s.stock_minimo ?? 0),
+      };
     });
 }
 

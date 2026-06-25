@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
-import { SeguimientoConfeccionService } from '@/lib/services/seguimiento-confeccion.service';
-import { EstadoConfeccion, Prisma } from '@prisma/client';
+import { EstadoConfeccion, EtapaConfeccion, Prisma } from '@prisma/client';
 
 export const ConfeccionesService = {
 
@@ -130,9 +129,7 @@ export const ConfeccionesService = {
         prioridad: data.prioridad,
         estado: data.estado ?? 'pendiente',
         fecha_inicio: new Date(),
-        orden_produccion_id: data.orden_produccion_id
-          ? BigInt(data.orden_produccion_id)
-          : null,
+        orden_produccion_id: data.orden_produccion_id ? BigInt(data.orden_produccion_id) : null,
         costo_unitario: data.costo_unitario ?? null,
         fecha_entrega: data.fecha_entrega ? new Date(data.fecha_entrega) : null,
         notas: data.notas ?? null,
@@ -152,39 +149,17 @@ export const ConfeccionesService = {
     return serializeBigInt(confeccion);
   },
 
-  async actualizar(id: string, data: Partial<{
-    taller_id: string;
-    responsable_id: string;
-    observaciones: string;
-    notas: string;
-    costo_unitario: number;
-    fecha_entrega: string;
-  }>) {
-    const { taller_id, responsable_id, fecha_entrega, costo_unitario, ...rest } = data;
-    const confeccion = await prisma.confecciones.update({
-      where: { id: BigInt(id) },
-      data: {
-        ...rest,
-        ...(taller_id !== undefined && { taller_id: BigInt(taller_id) }),
-        ...(responsable_id !== undefined && { responsable_id: BigInt(responsable_id) }),
-        ...(fecha_entrega !== undefined && { fecha_entrega: new Date(fecha_entrega) }),
-        ...(costo_unitario !== undefined && { costo_unitario }),
-        updated_at: new Date(),
-      },
-    });
-    return serializeBigInt(confeccion);
-  },
-
   async actualizarDatos(
     id: string,
     data: {
+      etapa_nueva: EtapaConfeccion;
       taller_id?: string;
       prenda?: string;
       cantidad?: number;
       costo_unitario?: number | null;
       fecha_entrega?: string | null;
       prioridad?: string;
-      estado?: string;
+      estado?: EstadoConfeccion;
       notas?: string | null;
       orden_produccion_id?: string | number | null;
     },
@@ -196,15 +171,21 @@ export const ConfeccionesService = {
       throw new Error('No se puede editar una confección cerrada');
     }
 
-    if (data.estado && data.estado !== actual.estado) {
-      await SeguimientoConfeccionService.registrarCambioEstado({
-        confeccion_id: id,
-        estado_nuevo: data.estado,
-        notas: data.notas ?? null,
-        responsable_id,
+    // 🌟 FLUJO DE TRIGGERS: Si cambia la etapa o estado, insertamos en el historial.
+    // El trigger `trg_sync_confeccion_etapa` actualizará automáticamente el modelo "confecciones".
+    if (data.etapa_nueva !== actual.etapa || (data.estado && data.estado !== actual.estado)) {
+      await prisma.seguimiento_confeccion.create({
+        data: {
+          confeccion_id: BigInt(id),
+          etapa_anterior: actual.etapa,
+          etapa_nueva: data.etapa_nueva,
+          notas: data.notas ?? null,
+          responsable_id: responsable_id ? BigInt(responsable_id) : null,
+        }
       });
     }
 
+    // Actualizamos el resto de propiedades puras de la confección
     const confeccion = await prisma.confecciones.update({
       where: { id: BigInt(id) },
       data: {
@@ -218,12 +199,11 @@ export const ConfeccionesService = {
         ...(data.prioridad !== undefined && { prioridad: data.prioridad }),
         ...(data.notas !== undefined && { notas: data.notas }),
         ...(data.orden_produccion_id !== undefined && {
-          orden_produccion_id: data.orden_produccion_id
-            ? BigInt(data.orden_produccion_id)
-            : null,
+          orden_produccion_id: data.orden_produccion_id ? BigInt(data.orden_produccion_id) : null,
         }),
+        // Si el estado cambió, lo mutamos (por si el trigger de etapa no cambia estados terminales como 'completada')
+        ...(data.estado !== undefined && { estado: data.estado }),
         ...(data.estado === 'completada' && !actual.fecha_fin && { fecha_fin: new Date() }),
-        updated_at: new Date(),
       },
       include: {
         talleres: { select: { id: true, nombre: true } },
@@ -239,45 +219,53 @@ export const ConfeccionesService = {
     return serializeBigInt(confeccion);
   },
 
-  async cancelar(id: string, data: { estado: 'cancelada' | 'rechazada'; notas?: string | null }, responsable_id?: string) {
+  async cambiarEstadoYEtapa(id: string, data: {
+    etapa_nueva: EtapaConfeccion;
+    estado: EstadoConfeccion;
+    notas?: string;
+    responsable_id?: string;
+  }) {
+    const actual = await prisma.confecciones.findUnique({ where: { id: BigInt(id) } });
+    if (!actual) throw new Error('Confección no encontrada');
+
+    // 1. Insertamos el seguimiento
+    await prisma.seguimiento_confeccion.create({
+      data: {
+        confeccion_id: BigInt(id),
+        etapa_anterior: actual.etapa,
+        etapa_nueva: data.etapa_nueva,
+        notas: data.notas ?? null,
+        responsable_id: data.responsable_id ? BigInt(data.responsable_id) : null,
+      },
+    });
+
+    // 2. Forzamos la actualización del estado (por si acaso el trigger de la BD solo sincroniza etapas)
+    const confeccion = await prisma.confecciones.update({
+      where: { id: BigInt(id) },
+      data: {
+        estado: data.estado,
+        ...(['cancelada', 'rechazada', 'completada'].includes(data.estado) && { fecha_fin: new Date() }),
+      },
+      include: {
+        talleres: { select: { id: true, nombre: true } },
+      },
+    });
+
+    return serializeBigInt(confeccion);
+  },
+
+  async cancelar(id: string, data: { estado: 'cancelada' | 'rechazada'; etapa_nueva: EtapaConfeccion; notas?: string | null }, responsable_id?: string) {
     const actual = await prisma.confecciones.findUnique({ where: { id: BigInt(id) } });
     if (!actual) throw new Error('Confección no encontrada');
     if (['cancelada', 'rechazada', 'completada'].includes(actual.estado)) {
       throw new Error('La confección ya está cerrada');
     }
 
-    await this.actualizarEstado(id, {
+    return await this.cambiarEstadoYEtapa(id, {
       estado: data.estado,
+      etapa_nueva: data.etapa_nueva,
       notas: data.notas ?? undefined,
       responsable_id,
     });
-
-    const confeccion = await prisma.confecciones.findUnique({
-      where: { id: BigInt(id) },
-      include: {
-        talleres: { select: { id: true, nombre: true } },
-      },
-    });
-    if (!confeccion) throw new Error('Confección no encontrada');
-    return serializeBigInt(confeccion);
-  },
-
-  async actualizarEstado(id: string, data: {
-    estado: string;
-    notas?: string;
-    responsable_id?: string;
-  }) {
-    await SeguimientoConfeccionService.registrarCambioEstado({
-      confeccion_id: id,
-      estado_nuevo: data.estado,
-      notas: data.notas ?? null,
-      responsable_id: data.responsable_id,
-    });
-
-    const confeccion = await prisma.confecciones.findUnique({
-      where: { id: BigInt(id) },
-    });
-    if (!confeccion) throw new Error('Confección no encontrada');
-    return serializeBigInt(confeccion);
   },
 };

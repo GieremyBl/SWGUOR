@@ -5,7 +5,7 @@ import { ArrowLeft, Scissors, Clock, FileText } from "lucide-react";
 import Link from "next/link";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { ConfeccionHeader } from "./ConfeccionHeader";
-import ConfeccionSeguimientoTab from "./ConfeccionSeguimientoTab";
+import ConfeccionSeguimientoTab from "../ConfeccionSeguimientoTab";
 import { ConfeccionInfoTab } from "./ConfeccionInfoTab";
 import { useConfeccionDetalle } from "@/lib/hooks/useConfecciones";
 import { useSeguimientoConfeccion } from "@/lib/hooks/useSeguimientoConfeccion";

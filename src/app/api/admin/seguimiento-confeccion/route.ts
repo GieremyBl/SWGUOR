@@ -6,6 +6,7 @@ import { SeguimientoConfeccionService } from '@/lib/services/seguimiento-confecc
 import { requireServerRole } from '@/lib/auth/server';
 import { registrarSeguimientoConfeccionSchema } from '@/lib/schemas/seguimiento-confeccion';
 import type { RolUsuario } from '@/lib/constants/roles';
+import { EtapaConfeccion } from '@prisma/client';
 
 const ROLES_LECTURA: RolUsuario[] = [
   'administrador', 'gerente', 'disenador', 'cortador', 'representante_taller', 'ayudante', 'recepcionista',
@@ -54,11 +55,11 @@ export async function POST(req: Request) {
     }
 
     const seguimiento = await SeguimientoConfeccionService.registrarCambioEstado({
-      confeccion_id: String(parsed.data.confeccion_id),
-      estado_nuevo: parsed.data.estado_nuevo,
-      estado_anterior: parsed.data.estado_anterior ?? null,
-      notas: parsed.data.notas ?? null,
-      responsable_id: String(auth.user.id),
+      confeccion_id:   String(body.confeccion_id),
+      etapa_nueva:     body.etapa_nuevo as EtapaConfeccion,   // ← cuerpo usa etapa_nuevo (DB)
+      etapa_anterior:  body.etapa_anterior as EtapaConfeccion ?? null,
+      notas:           body.notas ?? null,
+      responsable_id:  body.responsable_id,
     });
 
     return NextResponse.json({ success: true, data: seguimiento }, { status: 201 });

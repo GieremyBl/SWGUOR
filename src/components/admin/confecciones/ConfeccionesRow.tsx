@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { Eye, Scissors, Calendar, Pencil, XCircle } from "lucide-react";
+import { Eye, Scissors, Calendar, Pencil, XCircle, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ESTADO_LABELS, PRIORIDAD_LABELS } from "@/lib/schemas/confecciones";
@@ -138,6 +138,13 @@ const ConfeccionRow = memo(({ orden, talleres, onRefresh }: ConfeccionRowProps) 
               onClick={() => router.push(`/admin/Panel-Administrativo/confecciones/${orden.id}`)}
             >
               <Eye size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push(`/admin/Panel-Administrativo/confecciones/${orden.id}/etapas`)}
+            >
+              <Layers size={16} />
             </Button>
             <Button
               variant="outline"

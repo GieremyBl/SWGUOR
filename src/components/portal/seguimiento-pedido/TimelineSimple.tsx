@@ -1,7 +1,7 @@
 'use client';
 
 import { ClipboardCheck, Factory, ShieldCheck, Truck, CheckCircle2 } from 'lucide-react';
-import type { EstadoPedido } from '@/lib/services/seguimiento-pedido.service';
+import type { EstadoPedido } from '@prisma/client';
 import type { EtapaConfig } from './types';
 
 const ETAPAS: EtapaConfig[] = [

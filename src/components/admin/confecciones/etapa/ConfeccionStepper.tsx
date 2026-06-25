@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Zap, ArrowRight } from "lucide-react";
 
-// DICCIONARIO PARA TRADUCIR EL ENUM DEL TALLER A TEXTOS LIMPIOS Y PROFESIONALES:
+// DICCIONARIO PARA TRADUCIR EL ENUM REAL DE LA BASE DE DATOS
 export const ETAPA_LABELS_CONFECCION = {
     "recepcion_cortes": "Recepción de Cortes",
     "confeccion_y_remalle": "Confección y Remalle",
@@ -12,8 +12,8 @@ export const ETAPA_LABELS_CONFECCION = {
     "entregado_a_guor": "Entregado a GUOR",
 };
 
-// Array ordenado secuencialmente según tu ENUM en Prisma / Supabase
-const ETAPAS_CONFECCION_ORDENADAS = [
+// Array secuencial idéntico al tipo public.EtapaConfeccion de Postgres
+export const ETAPAS_CONFECCION_ORDENADAS = [
     "recepcion_cortes",
     "confeccion_y_remalle",
     "acabado_y_limpieza",
@@ -21,8 +21,8 @@ const ETAPAS_CONFECCION_ORDENADAS = [
     "entregado_a_guor",
 ] as const;
 
-type EtapaConfeccion = typeof ETAPAS_CONFECCION_ORDENADAS[number];
-type Estado = "completado" | "activo" | "pendiente";
+export type EtapaConfeccion = typeof ETAPAS_CONFECCION_ORDENADAS[number];
+type EstadoElemento = "completado" | "activo" | "pendiente";
 
 interface ConfeccionStepperProps {
     etapaActual: EtapaConfeccion;
@@ -39,19 +39,15 @@ export default function ConfeccionStepper({
 }: ConfeccionStepperProps) {
     const [loading, setLoading] = useState(false);
 
-    // Encontrar el índice actual en base al flujo estricto del taller
+    // Obtener índice basado en el valor real del Enum de la BD
     const indexActual = ETAPAS_CONFECCION_ORDENADAS.indexOf(etapaActual);
-
     const porcentaje = Math.round((Math.max(indexActual, 0) / (ETAPAS_CONFECCION_ORDENADAS.length - 1)) * 100);
 
-    const estadoDe = (idx: number): Estado =>
+    const estadoDe = (idx: number): EstadoElemento =>
         idx < indexActual ? "completado" : idx === indexActual ? "activo" : "pendiente";
 
-    const labelDe = (etapa: EtapaConfeccion) => {
-        return ETAPA_LABELS_CONFECCION[etapa] || etapa;
-    };
+    const labelDe = (etapa: EtapaConfeccion) => ETAPA_LABELS_CONFECCION[etapa] || etapa;
 
-    // Determinar cuál es la siguiente etapa lógica
     const siguienteEtapa = indexActual < ETAPAS_CONFECCION_ORDENADAS.length - 1
         ? ETAPAS_CONFECCION_ORDENADAS[indexActual + 1]
         : null;
@@ -71,7 +67,6 @@ export default function ConfeccionStepper({
     return (
         <div className="w-full">
             <div className="relative overflow-hidden rounded-3xl border border-[hsl(var(--admin-accent)/0.15)] bg-white shadow-lg shadow-black/5">
-
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 px-6 sm:px-8 pt-7">
                     <div>
@@ -93,7 +88,7 @@ export default function ConfeccionStepper({
                     </div>
                 </div>
 
-                {/* ── Horizontal: tablet / desktop ── */}
+                {/* Vista Horizontal Desktop */}
                 <div className="hidden sm:block px-6 sm:px-8 py-8 overflow-x-auto">
                     <div className="flex items-start min-w-max">
                         {ETAPAS_CONFECCION_ORDENADAS.map((etapa, idx) => {
@@ -107,7 +102,7 @@ export default function ConfeccionStepper({
                                                 (estado === "completado"
                                                     ? "bg-[hsl(var(--admin-accent))] border-[hsl(var(--admin-accent))] text-white"
                                                     : estado === "activo"
-                                                        ? "bg-white border-[hsl(var(--admin-accent))] text-[var(--guor-dark)] ring-4 ring-[hsl(var(--admin-accent)/0.15)] motion-safe:animate-pulse"
+                                                        ? "bg-white border-[hsl(var(--admin-accent))] text-[var(--guor-dark)] ring-4 ring-[hsl(var(--admin-accent)/0.15)]"
                                                         : "bg-transparent border-[var(--guor-cream)] text-[hsl(var(--admin-accent)/0.3)]")
                                             }
                                         >
@@ -143,7 +138,7 @@ export default function ConfeccionStepper({
                     </div>
                 </div>
 
-                {/* ── Vertical: mobile ── */}
+                {/* Vista Vertical Mobile */}
                 <div className="sm:hidden px-6 py-6">
                     {ETAPAS_CONFECCION_ORDENADAS.map((etapa, idx) => {
                         const estado = estadoDe(idx);
@@ -157,7 +152,7 @@ export default function ConfeccionStepper({
                                             (estado === "completado"
                                                 ? "bg-[hsl(var(--admin-accent))] border-[hsl(var(--admin-accent))] text-white"
                                                 : estado === "activo"
-                                                    ? "bg-white border-[hsl(var(--admin-accent))] text-[var(--guor-dark)] ring-4 ring-[hsl(var(--admin-accent)/0.15)] motion-safe:animate-pulse"
+                                                    ? "bg-white border-[hsl(var(--admin-accent))] text-[var(--guor-dark)] ring-4 ring-[hsl(var(--admin-accent)/0.15)]"
                                                     : "bg-transparent border-[var(--guor-cream)] text-[hsl(var(--admin-accent)/0.3)]")
                                         }
                                     >
@@ -173,29 +168,17 @@ export default function ConfeccionStepper({
                                             style={{
                                                 backgroundImage:
                                                     idx < indexActual
-                                                        ? "repeating-linear-gradient(180deg, hsl(var(--admin-accent)) 0 6px, transparent 6px 11px)"
+                                                        ? "repeating-linear-gradient(180deg, AppWorkspace 0 6px, transparent 6px 11px)"
                                                         : "repeating-linear-gradient(180deg, var(--guor-cream) 0 6px, transparent 6px 11px)",
                                             }}
                                         />
                                     )}
                                 </div>
                                 <div className={esUltima ? "pb-1" : "pb-5"}>
-                                    <p
-                                        className={
-                                            "text-xs font-black uppercase tracking-wide " +
-                                            (estado === "pendiente" ? "text-[hsl(var(--admin-accent)/0.4)]" : "text-[var(--guor-dark)]")
-                                        }
-                                    >
+                                    <p className={"text-xs font-black uppercase tracking-wide " + (estado === "pendiente" ? "text-[hsl(var(--admin-accent)/0.4)]" : "text-[var(--guor-dark)]")}>
                                         {labelDe(etapa)}
                                     </p>
-                                    <p
-                                        className={
-                                            "text-[10px] font-semibold " +
-                                            (estado === "pendiente"
-                                                ? "text-[hsl(var(--admin-accent)/0.4)]"
-                                                : "text-[hsl(var(--admin-accent))]")
-                                        }
-                                    >
+                                    <p className={"text-[10px] font-semibold " + (estado === "pendiente" ? "text-[hsl(var(--admin-accent)/0.4)]" : "text-[hsl(var(--admin-accent))]")}>
                                         {estado === "completado" ? "Terminado" : estado === "activo" ? "En desarrollo" : "En cola"}
                                     </p>
                                 </div>
@@ -204,7 +187,7 @@ export default function ConfeccionStepper({
                     })}
                 </div>
 
-                {/* Footer de Control: Barra Dinámica para Cambiar de Etapa */}
+                {/* Footer de Control Interactivo */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-t border-[hsl(var(--admin-accent)/0.1)] bg-gray-50 px-6 sm:px-8 py-5">
                     <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--admin-accent)/0.15)] border border-[hsl(var(--admin-accent)/0.2)]">
@@ -216,12 +199,11 @@ export default function ConfeccionStepper({
                         </div>
                     </div>
 
-                    {/* Botón de acción inteligente para avanzar */}
                     {siguienteEtapa ? (
                         <button
                             onClick={handleAvanzarEtapa}
                             disabled={loading}
-                            className="flex items-center justify-center gap-2 rounded-xl bg-[hsl(var(--admin-accent))] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md shadow-[hsl(var(--admin-accent)/0.2)] transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 rounded-xl bg-[hsl(var(--admin-accent))] px-4 py-2.5 text-xs font-black uppercase tracking-wider text-white shadow-md transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
                         >
                             {loading ? "Actualizando..." : `Avanzar a: ${labelDe(siguienteEtapa)}`}
                             <ArrowRight size={14} className="stroke-[3]" />
@@ -232,7 +214,6 @@ export default function ConfeccionStepper({
                         </span>
                     )}
                 </div>
-
             </div>
         </div>
     );

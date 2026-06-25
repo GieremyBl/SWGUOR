@@ -31,9 +31,11 @@ function buildStockWhere(query: ReporteInventarioQuery): Prisma.almacen_stockWhe
   }
 
   if (query.categoria_id !== REPORTE_INVENTARIO_FILTRO_TODOS) {
-    where.insumo = { categoria_id: query.categoria_id };
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : []),
+      { insumo: { categoria_id: query.categoria_id } } as Prisma.almacen_stockWhereInput,
+    ];
   }
-
   return where;
 }
 
@@ -74,7 +76,12 @@ async function fetchStockRows(query: ReporteInventarioQuery) {
           stock_minimo: true,
           stock_maximo: true,
           precio_unitario: true,
-          categoria_insumo: { select: { id: true, nombre: true } },
+          categoria_id: true,
+          categoria_insumo: {
+            select: {
+              nombre: true,
+            },
+          },
         },
       },
       materiales: {
@@ -92,25 +99,26 @@ async function fetchStockRows(query: ReporteInventarioQuery) {
 function mapStockToAlerta(row: StockRow): ReporteInventarioAlerta | null {
   const cantidad = Number(row.cantidad ?? 0);
 
-  if (row.insumo_id && row.insumo) {  // ✅ Added && row.insumo check
-    const stockMinimo = resolverStockMinimo(row.stock_minimo, row.insumo.stock_minimo);
-    if (!estaBajoStockMinimo(cantidad, stockMinimo)) return null;
+  if (row.insumo_id && row.insumo) {
+    const insumo = row.insumo;
 
-    const stockMaximo = resolverStockMaximo(row.insumo.stock_maximo, stockMinimo);
+    const stockMinimo = resolverStockMinimo(row.stock_minimo, insumo.stock_minimo);
+    if (!estaBajoStockMinimo(cantidad, stockMinimo)) return null;
+    const stockMaximo = resolverStockMaximo(insumo.stock_maximo, stockMinimo);
 
     return {
-      stock_id: Number(row.id),
-      tipo: 'insumo',
-      item_id: Number(row.insumo.id),
-      nombre: row.insumo.nombre,
-      categoria: row.insumo.categoria_insumo?.nombre ?? null,
-      almacen_id: Number(row.almacen_id),
-      almacen_nombre: row.almacenes.nombre,
+      stock_id:         Number(row.id),
+      tipo:             'insumo',
+      item_id:          Number(insumo.id),
+      nombre:           insumo.nombre,
+      categoria:        insumo.categoria_insumo?.nombre ?? null,
+      almacen_id:       Number(row.almacen_id),
+      almacen_nombre:   row.almacenes.nombre,
       cantidad,
-      stock_minimo: stockMinimo,
-      stock_maximo: stockMaximo,
+      stock_minimo:     stockMinimo,
+      stock_maximo:     stockMaximo,
       porcentaje_stock: calcularPorcentajeStock(cantidad, stockMaximo),
-      deficit: calcularDeficit(cantidad, stockMinimo),
+      deficit:          calcularDeficit(cantidad, stockMinimo),
     };
   }
 
@@ -121,18 +129,18 @@ function mapStockToAlerta(row: StockRow): ReporteInventarioAlerta | null {
     const stockMaximo = resolverStockMaximo(null, stockMinimo);
 
     return {
-      stock_id: Number(row.id),
-      tipo: 'material',
-      item_id: Number(row.materiales.id),
-      nombre: row.materiales.nombre,
-      categoria: null,
-      almacen_id: Number(row.almacen_id),
-      almacen_nombre: row.almacenes.nombre,
+      stock_id:         Number(row.id),
+      tipo:             'material',
+      item_id:          Number(row.materiales.id),
+      nombre:           row.materiales.nombre,
+      categoria:        null,
+      almacen_id:       Number(row.almacen_id),
+      almacen_nombre:   row.almacenes.nombre,
       cantidad,
-      stock_minimo: stockMinimo,
-      stock_maximo: stockMaximo,
+      stock_minimo:     stockMinimo,
+      stock_maximo:     stockMaximo,
       porcentaje_stock: calcularPorcentajeStock(cantidad, stockMaximo),
-      deficit: calcularDeficit(cantidad, stockMinimo),
+      deficit:          calcularDeficit(cantidad, stockMinimo),
     };
   }
 

@@ -172,9 +172,9 @@ export const SeguimientoProduccionService = {
           iniciado_en: ahora,
           completado_en: null,
           duracion_minutos: 0,
-          datos_etapa: data.datos_etapa !== undefined && data.datos_etapa !== null
-            ? (data.datos_etapa as unknown as Prisma.InputJsonValue)
-            : Prisma.DbNull,
+          datos_etapa: data.datos_etapa != null
+            ? (data.datos_etapa as Prisma.InputJsonValue)
+            : {},
         },
         include: SEGUIMIENTO_INCLUDE,
       });

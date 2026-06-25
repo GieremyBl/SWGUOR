@@ -54,6 +54,20 @@ const STATUS_CONFIG: Record<EstadoPedido, {
     bg: '#faf5ff', color: '#7c3aed', border: '#e9d5ff',
     icon: <CheckCircle2 size={10} />, label: 'Pagado',
   },
+  preparando: {
+    bg: '',
+    color: '',
+    border: '',
+    icon: undefined,
+    label: ''
+  },
+  en_ruta: {
+    bg: '',
+    color: '',
+    border: '',
+    icon: undefined,
+    label: ''
+  }
 };
 
 const FALLBACK = {

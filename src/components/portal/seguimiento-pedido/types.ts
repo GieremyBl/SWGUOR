@@ -1,4 +1,4 @@
-import type { EstadoPedido } from '@/lib/services/seguimiento-pedido.service';
+import type { EstadoPedido } from '@prisma/client';
 
 export type EtapaConfig = {
     id: EstadoPedido;

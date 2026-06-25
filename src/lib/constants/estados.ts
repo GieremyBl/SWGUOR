@@ -129,6 +129,8 @@ export const ESTADOS_PEDIDO: Record<EstadoPedido, { label: string; color: string
   entregado: { label: 'Entregado', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
   cancelado: { label: 'Cancelado', color: 'text-red-700', bgColor: 'bg-red-100' },
   pagado: { label: 'Pagado', color: 'text-green-700', bgColor: 'bg-green-100' },
+  en_ruta: { label: 'En Ruta', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  preparando: { label: 'Preparando', color: 'text-amber-700', bgColor: 'bg-amber-100' },
 };
 
 export const ESTADOS_GUIA_REMISION: Record<EstadoGuiaRemision, { label: string, color: string, bgColor: string }> = {

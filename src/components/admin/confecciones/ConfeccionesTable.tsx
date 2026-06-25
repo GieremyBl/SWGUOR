@@ -7,7 +7,7 @@ import { ESTADO_CONFECCION } from "@/lib/schemas/confecciones";
 import ConfeccionRow from "@/components/admin/confecciones/ConfeccionesRow";
 import type { EtapaConfeccion } from "@prisma/client";
 import ConfeccionStepper from "./ConfeccionStepper";
-import FormularioAvance from "./FormularioAvance";
+import FormularioAvance from "./etapa/FormularioAvance";
 
 const LABELS_TRADUCCION = {
   "recepcion_cortes": "Recepción de Cortes",
