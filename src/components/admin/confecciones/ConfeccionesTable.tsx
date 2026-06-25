@@ -6,8 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ESTADO_CONFECCION } from "@/lib/schemas/confecciones";
 import ConfeccionRow from "@/components/admin/confecciones/ConfeccionesRow";
 import type { EtapaConfeccion } from "@prisma/client";
-import ConfeccionStepper from "./ConfeccionStepper";
-import FormularioAvance from "./etapa/FormularioAvance";
 
 const LABELS_TRADUCCION = {
   "recepcion_cortes": "Recepción de Cortes",
@@ -188,22 +186,6 @@ function ConfeccionesTable({
                         onRefresh={onRefresh}
                       />
                     </tr>
-
-                    {/* Fila Desplegable: Aloja el Stepper que nos compartiste */}
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={7} className="bg-white border-x border-b border-slate-100/70 rounded-b-2xl p-6 shadow-inner transition-all animate-in fade-in slide-in-from-top-2 duration-200">
-                          <div className="max-w-4xl mx-auto">
-                            <ConfeccionStepper
-                              etapaActual={estadoTallerValido}
-                              prendaNombre={orden.prenda}
-                              cantidadPrendas={orden.cantidad}
-                              onCambiarEtapa={(proxima) => handleIntentarCambioEtapa(orden, proxima)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </React.Fragment>
                 );
               })
@@ -211,25 +193,6 @@ function ConfeccionesTable({
           </tbody>
         </table>
       </div>
-
-      {/* Modal interceptor global */}
-      <FormularioAvance
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        etapaAnteriorLabel={
-          ordenSeleccionada
-            ? LABELS_TRADUCCION[
-            (ordenSeleccionada.estado === "pendiente" || ordenSeleccionada.estado === "en_proceso"
-              ? "recepcion_cortes"
-              : ordenSeleccionada.estado === "completada"
-                ? "entregado_a_guor"
-                : ordenSeleccionada.estado) as EtapaConfeccion
-            ] || ordenSeleccionada.estado
-            : ""
-        }
-        etapaNuevaLabel={proximaEtapa ? LABELS_TRADUCCION[proximaEtapa] : ""}
-        onConfirmar={handleConfirmarServidor}
-      />
     </>
   );
 }

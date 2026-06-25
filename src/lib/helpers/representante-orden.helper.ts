@@ -1,5 +1,6 @@
-import type { EstadoConfeccion } from '@prisma/client';
+import type { EstadoConfeccion, EtapaConfeccion } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/utils/serialize';
 
 const TRANSICIONES_CONFECCION: Partial<
   Record<EstadoConfeccion, EstadoConfeccion[]>
@@ -18,7 +19,12 @@ export function puedeTransicionarConfeccion(
   ) ?? false;
 }
 
-export async function obtenerOrdenRepresentante(ordenId: bigint) {
+/**
+ * Obtiene una orden mapeando de forma segura los BigInt a Strings para Next.js Client
+ */
+export async function obtenerOrdenRepresentante(ordenIdStr: string) {
+  const ordenId = BigInt(ordenIdStr);
+  
   const orden = await prisma.ordenes_produccion.findUnique({
     where: { id: ordenId },
     include: {
@@ -67,16 +73,24 @@ export async function obtenerOrdenRepresentante(ordenId: bigint) {
     },
   });
 
-  return { orden, talleresActivos };
+  // Retornamos los datos serializados previniendo errores de BigInt en componentes cliente
+  return serializeBigInt({ orden, talleresActivos });
 }
 
+/**
+ * Reasigna el taller externo encargado tanto en la orden como en la confección
+ */
 export async function reasignarTallerOrden(params: {
-  ordenId: bigint;
-  tallerId: bigint;
-  usuarioId: bigint;
+  ordenId: string;
+  tallerId: string;
+  usuarioId: string;
 }) {
+  const idOrden = BigInt(params.ordenId);
+  const idTaller = BigInt(params.tallerId);
+  const idUsuario = BigInt(params.usuarioId);
+
   const orden = await prisma.ordenes_produccion.findUnique({
-    where: { id: params.ordenId },
+    where: { id: idOrden },
     include: { confecciones: { take: 1 } },
   });
 
@@ -85,7 +99,7 @@ export async function reasignarTallerOrden(params: {
   }
 
   const taller = await prisma.talleres.findFirst({
-    where: { id: params.tallerId, estado: 'activo' },
+    where: { id: idTaller, estado: 'activo' },
   });
 
   if (!taller) {
@@ -94,24 +108,32 @@ export async function reasignarTallerOrden(params: {
 
   await prisma.$transaction(async (tx) => {
     await tx.ordenes_produccion.update({
-      where: { id: params.ordenId },
-      data: { taller_id: params.tallerId, updated_at: new Date() },
+      where: { id: idOrden },
+      data: { taller_id: idTaller, updated_at: new Date() },
     });
 
     const conf = orden.confecciones[0];
     if (conf) {
       await tx.confecciones.update({
         where: { id: conf.id },
-        data: { taller_id: params.tallerId, updated_at: new Date() },
+        data: { taller_id: idTaller, updated_at: new Date() },
       });
+
+      // Se consulta el último seguimiento para heredar la etapa física real actual
+      const ultimoSeguimiento = await tx.seguimiento_confeccion.findFirst({
+        where: { confeccion_id: conf.id },
+        orderBy: { created_at: 'desc' },
+      });
+
+      const etapaActual = (ultimoSeguimiento?.etapa_nueva || 'recepcion_cortes') as EtapaConfeccion;
 
       await tx.seguimiento_confeccion.create({
         data: {
           confeccion_id: conf.id,
-          estado_anterior: conf.estado,
-          estado_nuevo: conf.estado,
+          etapa_anterior: etapaActual,
+          etapa_nuevo: etapaActual, // Mantiene la misma etapa, solo documenta el cambio de locación
           notas: `Taller reasignado a ${taller.nombre}`,
-          responsable_id: params.usuarioId,
+          responsable_id: idUsuario,
         },
       });
     }
@@ -120,26 +142,41 @@ export async function reasignarTallerOrden(params: {
   return taller.nombre;
 }
 
+/**
+ * Avanza el estado maestro transaccionalmente evaluando las reglas del negocio
+ */
 export async function avanzarEstadoConfeccion(params: {
-  ordenId: bigint;
+  ordenId: string;
   nuevoEstado: EstadoConfeccion;
-  usuarioId: bigint;
+  usuarioId: string;
   notas?: string;
 }) {
+  const idOrden = BigInt(params.ordenId);
+  const idUsuario = BigInt(params.usuarioId);
+
   const orden = await prisma.ordenes_produccion.findUnique({
-    where: { id: params.ordenId },
-    include: { confecciones: { take: 1 } },
+    where: { id: idOrden },
+    include: { 
+      confecciones: {
+        include: {
+          seguimiento_confeccion: {
+            orderBy: { created_at: 'desc' },
+            take: 1
+          }
+        }
+      } 
+    },
   });
 
-  if (!orden?.confecciones[0]) {
-    throw new Error('No hay confección asociada a esta orden');
+  if (!orden || !orden.confecciones[0]) {
+    throw new Error('No hay confección asociada a esta orden de producción');
   }
 
   const conf = orden.confecciones[0];
 
   if (!puedeTransicionarConfeccion(conf.estado, params.nuevoEstado)) {
     throw new Error(
-      `Transición no permitida: ${conf.estado} → ${params.nuevoEstado}`,
+      `Transición macro no permitida: ${conf.estado} → ${params.nuevoEstado}`,
     );
   }
 
@@ -149,33 +186,33 @@ export async function avanzarEstadoConfeccion(params: {
       data: {
         estado: params.nuevoEstado,
         updated_at: new Date(),
-        ...(params.nuevoEstado === 'completada'
-          ? { fecha_fin: new Date() }
-          : {}),
-        ...(params.nuevoEstado === 'en_proceso' && !conf.fecha_inicio
-          ? { fecha_inicio: new Date() }
-          : {}),
+        ...(params.nuevoEstado === 'completada' ? { fecha_fin: new Date() } : {}),
+        ...(params.nuevoEstado === 'en_proceso' && !conf.fecha_inicio ? { fecha_inicio: new Date() } : {}),
       },
     });
+
+    // Resolvemos las etapas basándonos en tu mapeo operativo
+    const etapaPrevia = (conf.seguimiento_confeccion[0]?.etapa_nueva || 'recepcion_cortes') as EtapaConfeccion;
+    const etapaSiguiente: EtapaConfeccion = params.nuevoEstado === 'completada' ? 'entregado_a_guor' : etapaPrevia;
 
     await tx.seguimiento_confeccion.create({
       data: {
         confeccion_id: conf.id,
-        estado_anterior: conf.estado,
-        estado_nuevo: params.nuevoEstado,
-        notas: params.notas?.trim() || null,
-        responsable_id: params.usuarioId,
+        etapa_anterior: etapaPrevia,
+        etapa_nueva: etapaSiguiente,
+        notas: params.notas?.trim() || `Estado cambiado a ${params.nuevoEstado}`,
+        responsable_id: idUsuario,
       },
     });
 
     if (params.nuevoEstado === 'completada') {
       await tx.ordenes_produccion.update({
-        where: { id: params.ordenId },
+        where: { id: idOrden },
         data: { estado: 'completada', updated_at: new Date() },
       });
     } else if (params.nuevoEstado === 'en_proceso') {
       await tx.ordenes_produccion.update({
-        where: { id: params.ordenId },
+        where: { id: idOrden },
         data: { estado: 'en_produccion', updated_at: new Date() },
       });
     }

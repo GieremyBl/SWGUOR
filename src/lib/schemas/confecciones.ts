@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EtapaConfeccion } from "@prisma/client"; // ← nuevo import
 
 export const ESTADO_CONFECCION = [
   "pendiente",
@@ -11,10 +12,7 @@ export const ESTADO_CONFECCION = [
 export const PRIORIDAD_CONFECCION = ["baja", "media", "alta", "urgente"] as const;
 
 export const confeccionSchema = z.object({
-  // pedido_id eliminado — no existe en la tabla confecciones.
-  // La relación con pedidos es indirecta: orden_produccion_id → ordenes_produccion → pedidos
   orden_produccion_id: z.number().optional(),
-
   taller_id: z.string().min(1, "Debe seleccionar un taller"),
   prenda: z.string().min(3, "Nombre de prenda requerido"),
   cantidad: z.number({ message: "Cantidad inválida" }).min(1, "Mínimo 1 unidad"),
@@ -57,6 +55,9 @@ export const crearConfeccionInputSchema = z.object({
   orden_produccion_id: z.union([z.number(), z.string()]).nullable().optional(),
 });
 
+// PUT /api/admin/confecciones/[id]
+// Solo campos estructurales. `estado` y `etapa` se excluyen deliberadamente:
+// el estado lo deriva el trigger desde la etapa; los overrides van por DELETE.
 export const actualizarConfeccionInputSchema = z.object({
   taller_id: idFlexible.optional(),
   prenda: z.string().trim().min(3).optional(),
@@ -64,11 +65,20 @@ export const actualizarConfeccionInputSchema = z.object({
   costo_unitario: z.number().min(0).nullable().optional(),
   fecha_entrega: z.string().nullable().optional(),
   prioridad: z.enum(PRIORIDAD_CONFECCION).optional(),
-  estado: z.enum(ESTADO_CONFECCION).optional(),
+  // estado y etapa_nueva eliminados: no son responsabilidad del PUT.
   notas: z.string().nullable().optional(),
   orden_produccion_id: z.union([z.number(), z.string()]).nullable().optional(),
 });
 
+// PATCH /api/admin/confecciones/[id]
+export const avanzarEtapaConfeccionSchema = z.object({
+  etapa_nueva: z.nativeEnum(EtapaConfeccion, {
+    error: () => ({ message: 'Etapa no válida' }),
+  }),
+  notas: z.string().nullable().optional(),
+});
+
+// DELETE /api/admin/confecciones/[id] 
 export const cambiarEstadoConfeccionSchema = z.object({
   estado: z.enum(ESTADO_CONFECCION),
   notas: z.string().nullable().optional(),
@@ -76,6 +86,7 @@ export const cambiarEstadoConfeccionSchema = z.object({
 
 export type CrearConfeccionInput = z.infer<typeof crearConfeccionInputSchema>;
 export type ActualizarConfeccionInput = z.infer<typeof actualizarConfeccionInputSchema>;
+export type AvanzarEtapaInput = z.infer<typeof avanzarEtapaConfeccionSchema>;
 
 export interface ConfeccionFila {
   id: number | string;

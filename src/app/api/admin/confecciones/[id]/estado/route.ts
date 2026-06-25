@@ -1,41 +1,66 @@
 export const runtime = 'nodejs';
-import { ConfeccionesService } from '@/lib/services/confecciones.service';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
 import { CONFECCIONES_ROLES_ESCRITURA } from '@/lib/constants/confecciones';
-import { cambiarEstadoConfeccionSchema } from '@/lib/schemas/confecciones';
+import { registrarAvanceTaller } from '@/components/admin/confecciones/actions';
 import { ZodError } from 'zod';
+import { z } from 'zod';
+import type { EtapaConfeccion } from '@prisma/client';
+
+const cambiarEtapaSchema = z.object({
+  etapaAnterior: z.enum(['recepcion_cortes', 'confeccion_y_remalle', 'acabado_y_limpieza', 'planchado_y_empaque', 'entregado_a_guor']),
+  etapaNueva: z.enum(['recepcion_cortes', 'confeccion_y_remalle', 'acabado_y_limpieza', 'planchado_y_empaque', 'entregado_a_guor']),
+  notas: z.string().nullable().optional(),
+});
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireServerRole(CONFECCIONES_ROLES_ESCRITURA);
+  
+  // Discriminamos la unión: Si no es success, TypeScript sabe que existen 'error' y 'status'
   if (!auth.success) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   try {
-    const { id } = await params;
+    const { id: confeccionId } = await params;
     const body = await req.json();
-    const validated = cambiarEstadoConfeccionSchema.parse(body);
+    const validated = cambiarEtapaSchema.parse(body);
 
-    const data = await ConfeccionesService.actualizarEstado(id, {
-      estado: validated.estado,
-      notas: validated.notas ?? undefined,
-      responsable_id: auth.user.id?.toString(),
+    const resultado = await registrarAvanceTaller({
+      confeccionId: confeccionId,
+      etapaAnterior: validated.etapaAnterior as EtapaConfeccion,
+      etapaNueva: validated.etapaNueva as EtapaConfeccion,
+      notas: validated.notas ?? '',
+      // Aquí auth ya está tipado como exitoso por descarte
+      responsableId: auth.user.id.toString(),
     });
 
-    return NextResponse.json({ success: true, data });
+    // Discriminamos el resultado del Server Action de forma clara
+    if (!resultado.success) {
+      return NextResponse.json(
+        { error: 'error' in resultado ? resultado.error : 'Error en la transacción' },
+        { status: 422 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      nuevoEstadoSincronizado: 'nuevoEstado' in resultado ? resultado.nuevoEstado : undefined,
+    });
+
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: 'Datos inválidos', details: error.issues },
+        { error: 'Estructura de payload inválida', details: error.issues },
         { status: 400 },
       );
     }
+
     console.error('[POST /api/admin/confecciones/[id]/estado]', error);
-    const message = error instanceof Error ? error.message : 'Error interno';
+    const message = error instanceof Error ? error.message : 'Error interno crítico';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

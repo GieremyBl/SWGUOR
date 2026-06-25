@@ -4,6 +4,8 @@ import { EstadoConfeccion, EtapaConfeccion, Prisma } from '@prisma/client';
 
 export const ConfeccionesService = {
 
+  // ─── Sin cambios ────────────────────────────────────────────────────────────
+
   async listar(params?: {
     estado?: string;
     taller_id?: string;
@@ -18,26 +20,16 @@ export const ConfeccionesService = {
 
     const where: Prisma.confeccionesWhereInput = {};
 
-    if (estado && estado !== 'todos') {
-      where.estado = estado as EstadoConfeccion;
-    }
-    if (taller_id && taller_id !== 'todos') {
-      where.taller_id = BigInt(taller_id);
-    }
-    if (orden_produccion_id) {
-      where.orden_produccion_id = BigInt(orden_produccion_id);
-    }
-    if (prioridad && prioridad !== 'todas') {
-      where.prioridad = prioridad;
-    }
+    if (estado && estado !== 'todos') where.estado = estado as EstadoConfeccion;
+    if (taller_id && taller_id !== 'todos') where.taller_id = BigInt(taller_id);
+    if (orden_produccion_id) where.orden_produccion_id = BigInt(orden_produccion_id);
+    if (prioridad && prioridad !== 'todas') where.prioridad = prioridad;
     if (search) {
       where.OR = [
         { prenda: { contains: search, mode: 'insensitive' } },
         { talleres: { nombre: { contains: search, mode: 'insensitive' } } },
       ];
-      if (!isNaN(Number(search))) {
-        where.OR.push({ id: BigInt(search) });
-      }
+      if (!isNaN(Number(search))) where.OR.push({ id: BigInt(search) });
     }
 
     const [total, confecciones, prioridadRaw] = await Promise.all([
@@ -56,15 +48,9 @@ export const ConfeccionesService = {
             },
           },
         },
-        orderBy: [
-          { prioridad: 'desc' },
-          { created_at: 'desc' },
-        ],
+        orderBy: [{ prioridad: 'desc' }, { created_at: 'desc' }],
       }),
-      prisma.confecciones.groupBy({
-        by: ['prioridad'],
-        _count: { _all: true },
-      }),
+      prisma.confecciones.groupBy({ by: ['prioridad'], _count: { _all: true } }),
     ]);
 
     const prioridadCounts = { baja: 0, media: 0, alta: 0, urgente: 0 };
@@ -139,8 +125,7 @@ export const ConfeccionesService = {
         talleres: { select: { id: true, nombre: true } },
         ordenes_produccion: {
           select: {
-            id: true,
-            estado: true,
+            id: true, estado: true,
             pedidos: { select: { id: true, estado: true } },
           },
         },
@@ -149,21 +134,24 @@ export const ConfeccionesService = {
     return serializeBigInt(confeccion);
   },
 
-  async actualizarDatos(
+  // ─── Métodos corregidos ──────────────────────────────────────────────────────
+
+  /**
+   * Actualiza únicamente campos estructurales del lote.
+   * NUNCA toca `etapa` ni `estado` — eso lo gobierna exclusivamente el motor de triggers.
+   */
+  async actualizarDatosEstructurales(
     id: string,
     data: {
-      etapa_nueva: EtapaConfeccion;
       taller_id?: string;
       prenda?: string;
       cantidad?: number;
       costo_unitario?: number | null;
       fecha_entrega?: string | null;
       prioridad?: string;
-      estado?: EstadoConfeccion;
       notas?: string | null;
       orden_produccion_id?: string | number | null;
     },
-    responsable_id?: string,
   ) {
     const actual = await prisma.confecciones.findUnique({ where: { id: BigInt(id) } });
     if (!actual) throw new Error('Confección no encontrada');
@@ -171,21 +159,6 @@ export const ConfeccionesService = {
       throw new Error('No se puede editar una confección cerrada');
     }
 
-    // 🌟 FLUJO DE TRIGGERS: Si cambia la etapa o estado, insertamos en el historial.
-    // El trigger `trg_sync_confeccion_etapa` actualizará automáticamente el modelo "confecciones".
-    if (data.etapa_nueva !== actual.etapa || (data.estado && data.estado !== actual.estado)) {
-      await prisma.seguimiento_confeccion.create({
-        data: {
-          confeccion_id: BigInt(id),
-          etapa_anterior: actual.etapa,
-          etapa_nueva: data.etapa_nueva,
-          notas: data.notas ?? null,
-          responsable_id: responsable_id ? BigInt(responsable_id) : null,
-        }
-      });
-    }
-
-    // Actualizamos el resto de propiedades puras de la confección
     const confeccion = await prisma.confecciones.update({
       where: { id: BigInt(id) },
       data: {
@@ -199,18 +172,16 @@ export const ConfeccionesService = {
         ...(data.prioridad !== undefined && { prioridad: data.prioridad }),
         ...(data.notas !== undefined && { notas: data.notas }),
         ...(data.orden_produccion_id !== undefined && {
-          orden_produccion_id: data.orden_produccion_id ? BigInt(data.orden_produccion_id) : null,
+          orden_produccion_id: data.orden_produccion_id
+            ? BigInt(data.orden_produccion_id)
+            : null,
         }),
-        // Si el estado cambió, lo mutamos (por si el trigger de etapa no cambia estados terminales como 'completada')
-        ...(data.estado !== undefined && { estado: data.estado }),
-        ...(data.estado === 'completada' && !actual.fecha_fin && { fecha_fin: new Date() }),
       },
       include: {
         talleres: { select: { id: true, nombre: true } },
         ordenes_produccion: {
           select: {
-            id: true,
-            estado: true,
+            id: true, estado: true,
             pedidos: { select: { id: true, estado: true } },
           },
         },
@@ -219,53 +190,114 @@ export const ConfeccionesService = {
     return serializeBigInt(confeccion);
   },
 
-  async cambiarEstadoYEtapa(id: string, data: {
-    etapa_nueva: EtapaConfeccion;
-    estado: EstadoConfeccion;
-    notas?: string;
-    responsable_id?: string;
-  }) {
+  /**
+   * Avanza la etapa de producción.
+   *
+   * Solo inserta en `seguimiento_confeccion`. El trigger
+   * `trg_sync_confeccion_etapa → fn_sync_confeccion_etapa` se encarga de:
+   *   - Actualizar `confecciones.etapa = NEW.etapa_nueva`
+   *   - Derivar `confecciones.estado` a partir de la nueva etapa
+   *
+   * La capa de servicio no debe tocar `estado` directamente en este flujo.
+   */
+  async avanzarEtapa(
+    id: string,
+    data: {
+      etapa_nueva: EtapaConfeccion;
+      notas?: string | null;
+    },
+    responsable_id?: string,
+  ) {
     const actual = await prisma.confecciones.findUnique({ where: { id: BigInt(id) } });
     if (!actual) throw new Error('Confección no encontrada');
+    if (['cancelada', 'rechazada', 'completada'].includes(actual.estado)) {
+      throw new Error('No se puede avanzar una confección cerrada');
+    }
 
-    // 1. Insertamos el seguimiento
+    // Solo insertamos; el trigger sincroniza etapa y estado automáticamente.
     await prisma.seguimiento_confeccion.create({
       data: {
         confeccion_id: BigInt(id),
         etapa_anterior: actual.etapa,
         etapa_nueva: data.etapa_nueva,
         notas: data.notas ?? null,
-        responsable_id: data.responsable_id ? BigInt(data.responsable_id) : null,
+        responsable_id: responsable_id ? BigInt(responsable_id) : null,
       },
     });
 
-    // 2. Forzamos la actualización del estado (por si acaso el trigger de la BD solo sincroniza etapas)
-    const confeccion = await prisma.confecciones.update({
+    // Re-fetch post-trigger para devolver el estado ya sincronizado.
+    const confeccion = await prisma.confecciones.findUnique({
       where: { id: BigInt(id) },
-      data: {
-        estado: data.estado,
-        ...(['cancelada', 'rechazada', 'completada'].includes(data.estado) && { fecha_fin: new Date() }),
-      },
       include: {
         talleres: { select: { id: true, nombre: true } },
+        ordenes_produccion: {
+          select: {
+            id: true, estado: true,
+            pedidos: { select: { id: true, estado: true } },
+          },
+        },
       },
     });
-
-    return serializeBigInt(confeccion);
+    return confeccion ? serializeBigInt(confeccion) : null;
   },
 
-  async cancelar(id: string, data: { estado: 'cancelada' | 'rechazada'; etapa_nueva: EtapaConfeccion; notas?: string | null }, responsable_id?: string) {
+  /**
+   * Cancela o rechaza administrativamente una confección.
+   * Es el ÚNICO override manual de `estado` permitido en todo el sistema.
+   *
+   * Usa `$transaction` con orden deliberado:
+   *   1. INSERT en seguimiento_confeccion → el trigger puede poner un estado intermedio.
+   *   2. UPDATE confecciones.estado → terminal ('cancelada' | 'rechazada'), gana siempre.
+   *
+   * La etapa queda "congelada" (etapa_nueva === etapa_anterior): el lote se cierra
+   * en el punto exacto donde fue anulado, sin avanzar ficticiamente.
+   */
+  async cancelar(
+    id: string,
+    data: {
+      estado: 'cancelada' | 'rechazada';
+      notas?: string | null;
+    },
+    responsable_id?: string,
+  ) {
     const actual = await prisma.confecciones.findUnique({ where: { id: BigInt(id) } });
     if (!actual) throw new Error('Confección no encontrada');
     if (['cancelada', 'rechazada', 'completada'].includes(actual.estado)) {
       throw new Error('La confección ya está cerrada');
     }
 
-    return await this.cambiarEstadoYEtapa(id, {
-      estado: data.estado,
-      etapa_nueva: data.etapa_nueva,
-      notas: data.notas ?? undefined,
-      responsable_id,
+    return prisma.$transaction(async (tx) => {
+      // 1. Historial de cierre (etapa congelada).
+      //    El trigger fn_sync_confeccion_etapa puede setear un estado intermedio aquí.
+      await tx.seguimiento_confeccion.create({
+        data: {
+          confeccion_id: BigInt(id),
+          etapa_anterior: actual.etapa,
+          etapa_nueva: actual.etapa, // sin avance: congelamos en el punto de cierre
+          notas: data.notas ?? null,
+          responsable_id: responsable_id ? BigInt(responsable_id) : null,
+        },
+      });
+
+      // 2. Override terminal: se ejecuta después del trigger, así que siempre gana.
+      const confeccion = await tx.confecciones.update({
+        where: { id: BigInt(id) },
+        data: {
+          estado: data.estado,
+          fecha_fin: new Date(),
+        },
+        include: {
+          talleres: { select: { id: true, nombre: true } },
+          ordenes_produccion: {
+            select: {
+              id: true, estado: true,
+              pedidos: { select: { id: true, estado: true } },
+            },
+          },
+        },
+      });
+
+      return serializeBigInt(confeccion);
     });
   },
 };

@@ -5,14 +5,15 @@ import { ArrowLeft, Scissors, Clock, FileText } from "lucide-react";
 import Link from "next/link";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { ConfeccionHeader } from "./ConfeccionHeader";
-import ConfeccionSeguimientoTab from "../ConfeccionSeguimientoTab";
+import ConfeccionSeguimientoTab from "../etapa/ConfeccionSeguimientoTab";
 import { ConfeccionInfoTab } from "./ConfeccionInfoTab";
 import { useConfeccionDetalle } from "@/lib/hooks/useConfecciones";
 import { useSeguimientoConfeccion } from "@/lib/hooks/useSeguimientoConfeccion";
+import { EtapaConfeccion } from "@/components/admin/confecciones/etapa/ConfeccionStepper"; 
 
 const TABS = [
-  { id: "info", label: "Información Básica", icon: FileText },
-  { id: "seguimiento", label: "Seguimiento y Taller", icon: Clock },
+  { id: "info", label: "Información General", icon: FileText },
+  { id: "seguimiento", label: "Seguimiento del Taller Externo", icon: Clock },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -20,8 +21,10 @@ type TabId = typeof TABS[number]["id"];
 export default function ConfeccionDetalle({ confeccion }: { confeccion: any }) {
   const [activeTab, setActiveTab] = useState<TabId>("info");
 
-  // Este estado local controla de forma reactiva en qué fase de taller está la prenda
-  const [etapaActual, setEtapaActual] = useState<string>(confeccion.estado || "1_recepcion_cortes");
+  // Forzamos que el estado maneje explícitamente el tipo de la unión de etapas físicas
+  const [etapaActual, setEtapaActual] = useState<EtapaConfeccion>(
+    (confeccion.etapa_actual || confeccion.estado || "recepcion_cortes") as EtapaConfeccion
+  );
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
   const { can, hasRole } = usePermissions();
@@ -38,7 +41,8 @@ export default function ConfeccionDetalle({ confeccion }: { confeccion: any }) {
     setIsUpdating(true);
     try {
       await updateEstado(nuevoEstado);
-      setEtapaActual(nuevoEstado);
+      // Al actualizar el estado macro, si es una etapa válida la guardamos en el estado local
+      setEtapaActual(nuevoEstado as EtapaConfeccion);
     } catch (error) {
       console.error("Error al mutar estado:", error);
     } finally {

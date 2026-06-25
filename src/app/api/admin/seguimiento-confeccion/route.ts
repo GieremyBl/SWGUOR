@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     const seguimiento = await SeguimientoConfeccionService.registrarCambioEstado({
       confeccion_id:   String(body.confeccion_id),
-      etapa_nueva:     body.etapa_nuevo as EtapaConfeccion,   // ← cuerpo usa etapa_nuevo (DB)
+      etapa_nueva:     body.etapa_nuevo as EtapaConfeccion,
       etapa_anterior:  body.etapa_anterior as EtapaConfeccion ?? null,
       notas:           body.notas ?? null,
       responsable_id:  body.responsable_id,

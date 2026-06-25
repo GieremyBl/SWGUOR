@@ -19,10 +19,9 @@ import Link from "next/link";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { ETAPA_LABELS_CONFECCION, ETAPAS_CONFECCION_ORDENADAS, EtapaConfeccion } from "@/components/admin/confecciones/etapa/ConfeccionStepper";
 import FormularioAvance from "@/components/admin/confecciones/etapa/FormularioAvance";
-import { registrarAvanceTaller } from "@/components/admin/confecciones/actions";
+import { obtenerFlujoTalleres, registrarAvanceTaller } from "@/components/admin/confecciones/actions";
 import { toast } from "sonner";
 
-// Configuración de estilos y layouts para cada columna según el Enum de PostgreSQL
 const COLUMNAS_CONFIG: Record<EtapaConfeccion, { icon: any; color: string }> = {
   recepcion_cortes: { icon: Scissors, color: "border-t-slate-500 text-slate-600 bg-slate-50/50" },
   confeccion_y_remalle: { icon: Shirt, color: "border-t-blue-500 text-blue-600 bg-blue-50/30" },
@@ -40,29 +39,24 @@ export default function ConfeccionesEtapasPage() {
   const { hasRole, can } = usePermissions();
   const [confecciones, setConfecciones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Estado para controlar la apertura del FormularioAvance compartido
   const [movimiento, setMovimiento] = useState<MovimientoPendiente | null>(null);
 
   const puedeActualizar =
     hasRole(["administrador", "gerente", "representante_taller"]) ||
     can("update_status", "confecciones");
 
-  // Fetch inicial sincronizado con el backend
+  // Fetch real sincronizado con la Base de Datos vía Server Actions
   const cargarFlujoDeTalleres = async () => {
     setLoading(true);
     try {
-      // Reemplazar por tu llamada real (ej. Supabase o API route)
-      // select id, prenda, cantidad, prioridad, etapa, taller, responsable from confecciones
-      const respuestaMock = [
-        { id: 1044, prenda: "Polos Camiseros Pima", cantidad: 450, prioridad: "urgente", etapa: "recepcion_cortes", taller: "Taller Hermanos Castro" },
-        { id: 1045, prenda: "Poleras Oversize Mockup", cantidad: 200, prioridad: "alta", etapa: "confeccion_y_remalle", taller: "Maquila Textil Sur" },
-        { id: 1042, prenda: "Pantalones Cargo Drill", cantidad: 150, prioridad: "media", etapa: "acabado_y_limpieza", taller: "Taller Hermanos Castro" },
-        { id: 1039, prenda: "Casacas Impermeables", cantidad: 300, prioridad: "baja", etapa: "entregado_a_guor", taller: "Confecciones Alianza" },
-      ];
-      setConfecciones(respuestaMock);
+      const res = await obtenerFlujoTalleres();
+      if (res.success && res.data) {
+        setConfecciones(res.data);
+      } else {
+        toast.error(res.error || "Error al sincronizar el flujo de producción.");
+      }
     } catch (error) {
-      toast.error("Error al sincronizar el flujo de producción.");
+      toast.error("Error crítico de comunicación con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -72,42 +66,54 @@ export default function ConfeccionesEtapasPage() {
     cargarFlujoDeTalleres();
   }, []);
 
-  // Prepara el cambio de etapa abriendo el FormularioAvance
   const iniciarCambioEtapa = (confeccion: any, etapaNueva: EtapaConfeccion) => {
+    if (!puedeActualizar) {
+      toast.error("No dispones de los privilegios necesarios para alterar las etapas físicas del taller.");
+      return;
+    }
     setMovimiento({ confeccion, etapaNueva });
   };
 
-  // Ejecuta la acción del servidor (registrarAvanceTaller) al confirmar en el modal
+  // Mutación optimista en el cliente integrada con tu base de datos por Prisma
   const handleConfirmarAvance = async (notas: string) => {
     if (!movimiento) return;
     const { confeccion, etapaNueva } = movimiento;
 
+    const estadoPrevioGuardado = [...confecciones];
+
+    // Transición optimista visual instantánea
+    setConfecciones(prev =>
+      prev.map(c => c.id === confeccion.id ? { ...c, etapa: etapaNueva } : c)
+    );
+    setMovimiento(null);
+
     try {
       const res = await registrarAvanceTaller({
-        confeccionId: Number(confeccion.id),
+        confeccionId: confeccion.id, // Ya es un string compatible
         etapaAnterior: confeccion.etapa,
         etapaNueva: etapaNueva,
-        notas: notas || `Cambio de fase optimizado desde el Pipeline General.`,
-        responsableId: 1, // Reemplazar dinámicamente con la sesión del usuario
+        notas: notas || `Transición automática desde el Pipeline General de Talleres.`,
+        responsableId: "1", // Reemplazar dinámicamente con el ID de la sesión del usuario conectado
       });
 
-      if (res?.success) {
-        toast.success(`Orden #${confeccion.id} movida con éxito.`);
-        // Mutación optimista en el cliente para evitar recargas lentas
-        setConfecciones(prev =>
-          prev.map(c => c.id === confeccion.id ? { ...c, etapa: etapaNueva } : c)
-        );
-      }
-    } catch (error) {
+      if (res.success) {
+        toast.success("Progreso y estado físico sincronizados.");
+        } else {
+        const errorMsg = "error" in res ? res.error : "Error desconocido en el taller";
+        toast.error(errorMsg);
+        }
+    } catch (error: any) {
       console.error(error);
-      toast.error("Error de servidor al guardar la transición.");
+      toast.error(`No se pudo guardar: ${error.message || "Error interno"}. Revirtiendo cambios.`);
+      setConfecciones(estadoPrevioGuardado); // Rollback automático ante fallas
     }
   };
 
   const getPrioridadEstilo = (p: string) => {
-    if (p === "urgente") return "bg-red-100 text-red-800 border-red-200";
-    if (p === "alta") return "bg-orange-100 text-orange-800 border-orange-200";
-    if (p === "media") return "bg-sky-100 text-sky-800 border-sky-200";
+    const prioridad = p.toLowerCase();
+    if (prioridad === "urgente") return "bg-red-100 text-red-800 border-red-200";
+    if (prioridad === "alta") return "bg-orange-100 text-orange-800 border-orange-200";
+    if (prioridad === "media") return "bg-sky-100 text-sky-800 border-sky-200";
     return "bg-slate-100 text-slate-700 border-slate-200";
   };
 
@@ -115,7 +121,7 @@ export default function ConfeccionesEtapasPage() {
     <div className="min-h-screen bg-slate-50/60 p-4 md:p-8">
       <div className="max-w-[1600px] mx-auto space-y-6">
         
-        {/* ENCABEZADO CONTROL OPERATIVO */}
+        {/* ENCABEZADO */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <Link
@@ -130,11 +136,11 @@ export default function ConfeccionesEtapasPage() {
                 <Layers size={20} />
               </div>
               <div>
-                <h1 className="text-xl md:text-2xl font-black text-[var(--guor-dark)] tracking-tight">
+                <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
                   Pipeline General de Confección
                 </h1>
                 <p className="text-xs text-slate-400">
-                  Monitoreo de carga física y control de transiciones por taller externo
+                  Monitoreo en tiempo real de la carga física en base de datos por taller externo
                 </p>
               </div>
             </div>
@@ -150,7 +156,7 @@ export default function ConfeccionesEtapasPage() {
           </button>
         </div>
 
-        {/* TABLERO KANBAN RESPONSIVO */}
+        {/* KANBAN */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-start overflow-x-auto pb-4">
           {ETAPAS_CONFECCION_ORDENADAS.map((etapaId, idx) => {
             const config = COLUMNAS_CONFIG[etapaId];
@@ -158,7 +164,6 @@ export default function ConfeccionesEtapasPage() {
             const itemsEnEtapa = confecciones.filter((c) => c.etapa === etapaId);
             const totalUnidades = itemsEnEtapa.reduce((acc, curr) => acc + (curr.cantidad || 0), 0);
 
-            // Identificar la siguiente fase lógica en la BD
             const siguienteEtapaAsignable = idx < ETAPAS_CONFECCION_ORDENADAS.length - 1 
               ? ETAPAS_CONFECCION_ORDENADAS[idx + 1] 
               : null;
@@ -168,7 +173,6 @@ export default function ConfeccionesEtapasPage() {
                 key={etapaId} 
                 className="rounded-2xl border border-slate-100 bg-white shadow-sm flex flex-col max-h-[75vh] min-w-[280px]"
               >
-                {/* Cabecera Columna */}
                 <div className={`p-4 border-t-4 ${config.color} border-b border-slate-100 rounded-t-2xl flex items-center justify-between`}>
                   <div className="flex items-center gap-2">
                     <ColumnIcon size={16} />
@@ -181,7 +185,6 @@ export default function ConfeccionesEtapasPage() {
                   </span>
                 </div>
 
-                {/* Volumen total acumulado */}
                 {itemsEnEtapa.length > 0 && (
                   <div className="bg-slate-50/70 px-4 py-1.5 border-b border-slate-100 flex justify-between text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
                     <span>Carga total:</span>
@@ -189,12 +192,11 @@ export default function ConfeccionesEtapasPage() {
                   </div>
                 )}
 
-                {/* Tarjetas */}
                 <div className="p-3 overflow-y-auto space-y-3 flex-1 min-h-[180px] bg-slate-50/40">
                   {loading ? (
                     <div className="flex flex-col items-center justify-center py-8 text-slate-300">
                       <RefreshCw size={16} className="animate-spin mb-1" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Cargando...</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Cargando base de datos...</span>
                     </div>
                   ) : itemsEnEtapa.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-slate-100 rounded-xl bg-white/50">
@@ -231,7 +233,6 @@ export default function ConfeccionesEtapasPage() {
                             <span className="truncate font-semibold text-slate-500">{confeccion.taller}</span>
                           </div>
 
-                          {/* Control Avanzar de Etapa Interactivo */}
                           {puedeActualizar && siguienteEtapaAsignable && (
                             <button
                               onClick={() => iniciarCambioEtapa(confeccion, siguienteEtapaAsignable)}
@@ -244,7 +245,6 @@ export default function ConfeccionesEtapasPage() {
                           )}
                         </div>
 
-                        {/* Link técnico al detalle completo */}
                         <Link
                           href={`/admin/Panel-Administrative/confecciones/${confeccion.id}`}
                           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex items-center justify-center p-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 hover:text-pink-600 hover:bg-white shadow-sm transition-all"
@@ -261,7 +261,7 @@ export default function ConfeccionesEtapasPage() {
         </div>
       </div>
 
-      {/* MODAL DE INCIDENCIAS INTEGRADO */}
+      {/* MODAL DE INCIDENCIAS */}
       {movimiento && (
         <FormularioAvance
           isOpen={!!movimiento}

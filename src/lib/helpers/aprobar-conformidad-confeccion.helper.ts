@@ -5,6 +5,7 @@ import {
 } from '@/lib/helpers/crear-notificacion.helper';
 import { precargarDireccionDespachoPedido } from '@/lib/helpers/pedido-direccion.helper';
 import { validarTransicionEstadoPedido } from '@/lib/helpers/pedido-transiciones.helper';
+import type { EtapaConfeccion } from '@prisma/client';
 
 const NOTA_CONFORMIDAD = 'Conformidad aprobada por ayudante';
 
@@ -85,11 +86,16 @@ export async function aprobarConformidadConfeccion(params: {
 
   validarTransicionEstadoPedido(pedido.estado, 'listo_para_despacho');
 
+  // Mapeamos la etapa anterior usando el campo correcto en minúsculas y snake_case de tu BD
+  const etapaPrevia = (conf.etapa || 'planchado_y_empaque') as EtapaConfeccion;
+  const etapaFinal: EtapaConfeccion = 'entregado_a_guor';
+
   await prisma.$transaction(async (tx) => {
     await tx.confecciones.update({
       where: { id: params.confeccionId },
       data: {
         estado: 'completada',
+        etapa: etapaFinal,
         fecha_fin: new Date(),
         updated_at: new Date(),
       },
@@ -98,8 +104,8 @@ export async function aprobarConformidadConfeccion(params: {
     await tx.seguimiento_confeccion.create({
       data: {
         confeccion_id: params.confeccionId,
-        estado_anterior: conf.estado,
-        estado_nuevo: 'completada',
+        etapa_anterior: etapaPrevia,
+        etapa_nuevo: etapaFinal,
         notas: NOTA_CONFORMIDAD,
         responsable_id: params.usuarioId,
       },

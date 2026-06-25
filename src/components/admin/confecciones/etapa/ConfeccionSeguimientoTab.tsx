@@ -6,24 +6,24 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSeguimientoConfeccion } from "@/lib/hooks/useSeguimientoConfeccion";
 import { nombreResponsableSeguimiento } from "@/lib/helpers/seguimiento-confeccion-helpers";
-import ConfeccionStepper, { ETAPA_LABELS_CONFECCION } from "./ConfeccionStepper"; // Importaciones cruzadas limpias
-import { registrarAvanceTaller } from "./actions";
+import ConfeccionStepper, { ETAPA_LABELS_CONFECCION, EtapaConfeccion } from "./ConfeccionStepper";
+import { registrarAvanceTaller } from "../actions";
 import { toast } from "sonner";
 
 // MAPEO DE COLORES DE RELIEVE VISUAL PARA CADA ETAPA DE TU ENUM REAL
 const ETAPA_COLORS: Record<string, { pill: string; dot: string }> = {
-  recepcion_cortes: { pill: "bg-slate-100 text-slate-700", dot: "bg-slate-400" },
-  confeccion_y_remalle: { pill: "bg-blue-100 text-blue-700", dot: "bg-blue-500" },
-  acabado_y_limpieza: { pill: "bg-amber-100 text-amber-700", dot: "bg-amber-500" },
-  planchado_y_empaque: { pill: "bg-violet-100 text-violet-700", dot: "bg-violet-500" },
+  recepcion_cortes: { pill: "bg-slate-100   text-slate-700", dot: "bg-slate-400" },
+  confeccion_y_remalle: { pill: "bg-blue-100    text-blue-700", dot: "bg-blue-500" },
+  acabado_y_limpieza: { pill: "bg-amber-100   text-amber-700", dot: "bg-amber-500" },
+  planchado_y_empaque: { pill: "bg-violet-100  text-violet-700", dot: "bg-violet-500" },
   entregado_a_guor: { pill: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
 };
 
 interface Props {
   confeccion: any;
-  etapaActual: string;
+  etapaActual: EtapaConfeccion; // Forzamos el tipo estricto del Enum de Prisma
   puedeActualizar: boolean;
-  onEtapaChanged?: (nuevaEtapa: string) => void;
+  onEtapaChanged?: (nuevaEtapa: EtapaConfeccion) => void;
 }
 
 export default function ConfeccionSeguimientoTab({
@@ -40,20 +40,22 @@ export default function ConfeccionSeguimientoTab({
   const [isMutationLoading, setIsMutationLoading] = useState(false);
 
   // Manejador del avance físico de etapas conectando el stepper con actions.ts
-  const handleAvanzarEtapaTaller = async (nuevaEtapa: any) => {
+  const handleAvanzarEtapaTaller = async (nuevaEtapa: EtapaConfeccion) => {
     setIsMutationLoading(true);
     try {
       const res = await registrarAvanceTaller({
-        confeccionId: Number(confeccion.id),
-        etapaAnterior: etapaActual,
+        confeccionId: confeccionId,
+        etapaAnterior: etapaActual, 
         etapaNueva: nuevaEtapa,
         notas: `Cambio de fase de producción realizado desde el panel de control del taller.`,
-        responsableId: 1, // Reemplazar dinámicamente con tu sesión de usuario logueado en el ERP
+        responsableId: "1",
       });
 
       if (res?.success) {
         toast.success("Progreso guardado en la bitácora.");
         if (onEtapaChanged) onEtapaChanged(nuevaEtapa);
+      } else {
+        toast.error("Error al registrar avance físico en la base de datos.");
       }
     } catch (error) {
       console.error("Error al registrar avance físico:", error);
@@ -87,7 +89,7 @@ export default function ConfeccionSeguimientoTab({
 
       {/* 1. CONTROLADOR GRÁFICO DE ETAPAS (STEPPER) EN LA CABECERA DE LA PESTAÑA */}
       <ConfeccionStepper
-        etapaActual={etapaActual as any}
+        etapaActual={etapaActual}
         prendaNombre={confeccion.prenda}
         cantidadPrendas={confeccion.cantidad || 0}
         onCambiarEtapa={handleAvanzarEtapaTaller}

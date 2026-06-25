@@ -10,7 +10,7 @@ import type {
   ReferenciaMovimiento,
   ReferenciaNotificacion,
   TipoNotificacion,
-  EstadoConfeccion,
+  EtapaConfeccion,
 } from "@prisma/client";
 
 type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[];
@@ -223,8 +223,8 @@ export async function obtenerStockDisponible(
 
 export async function registrarCambioEstadoConfeccion(
   confeccionId: number,
-  estadoAnterior: string,
-  estadoNuevo: string,
+  etapaAnterior: string,
+  etapaNueva: string,
   notasCambio?: string
 ): Promise<void> {
   try {
@@ -232,8 +232,8 @@ export async function registrarCambioEstadoConfeccion(
     await prisma.seguimiento_confeccion.create({
       data: {
         confeccion_id: confeccionId,
-        estado_anterior: estadoAnterior as EstadoConfeccion,
-        estado_nuevo: estadoNuevo as EstadoConfeccion,
+        etapa_anterior: etapaAnterior as EtapaConfeccion,
+        etapa_nueva: etapaNueva as EtapaConfeccion,
         notas: notasCambio,
       },
     });
