@@ -142,7 +142,7 @@ const ConfeccionRow = memo(({ orden, talleres, onRefresh }: ConfeccionRowProps) 
             <Button
               variant="outline"
               size="icon"
-              onClick={() => router.push(`/admin/Panel-Administrativo/confecciones/${orden.id}/etapas`)}
+              onClick={() => router.push(`/admin/Panel-Administrativo/confecciones/${orden.id}/etapa`)}
             >
               <Layers size={16} />
             </Button>
