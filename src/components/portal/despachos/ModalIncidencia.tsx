@@ -12,12 +12,14 @@ interface ModalIncidenciaProps {
   onClose: () => void;
 }
 
-const TIPO_INCIDENCIA_OPCIONES = {
-  defecto_confeccion: 'Defecto en confección / costura',
-  pedido_incompleto: 'Faltan prendas o tallas en el bulto',
-  error_direccion: 'Problema con la dirección de entrega',
-  retraso_logistico: 'Demora prolongada en el trayecto',
-  producto_danado: 'Empaque violentado o mercancía dañada',
+const TIPO_INCIDENCIA_OPCIONES: Record<TipoIncidenciaCliente, string> = {
+  defecto_confeccion:  'Defecto en confección / costura',
+  pedido_equivocado:   'Me llegó un pedido equivocado',
+  talla_incorrecta:    'Talla incorrecta',
+  cantidad_incorrecta: 'Cantidad incorrecta (faltan o sobran prendas)',
+  dano_en_transporte:  'Producto dañado durante el transporte',
+  empaque_defectuoso:  'Empaque defectuoso o violentado',
+  otro:                'Otro',
 };
 
 const SEVERIDAD_OPCIONES = {

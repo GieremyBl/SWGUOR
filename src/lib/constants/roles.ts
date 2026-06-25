@@ -320,14 +320,21 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
 
   almacenero: [
     'ver_dashboard',
-    'ver_inventario', 'ver_movimiento_inventario', 'ajustar_stock',
-    'ver_insumo', 'crear_insumo', 'editar_insumo',
-    'ver_materiales', 'crear_materiales', 'editar_materiales',
-    'ver_almacenes', 'ver_notificaciones', 'ver_perfil', 'editar_perfil',
-    'ver_movimiento_inventario', 'actualizar_stock_almacen',
-    'ver_proveedores',
-    'ver_ordenes_compra', 'crear_ordenes_compra', 'editar_ordenes_compra', 'cancelar_ordenes_compra',
+   'ver_inventario', 'ver_movimiento_inventario', 'ajustar_stock',
+   'ver_insumo', 'crear_insumo', 'editar_insumo',
+   'ver_materiales', 'crear_materiales', 'editar_materiales',
+   'ver_almacenes', 'ver_notificaciones', 'ver_perfil', 'editar_perfil',
+   'ver_movimiento_inventario', 'actualizar_stock_almacen',
+   'ver_proveedores',
+   'ver_ordenes_compra', 'crear_ordenes_compra', 'editar_ordenes_compra', 'cancelar_ordenes_compra',
+   'ver_devoluciones_cliente',
+   'crear_devoluciones_cliente',
+   'exportar_devoluciones_cliente',
+   'cancelar_devoluciones_cliente',
+   'editar_devoluciones_cliente',
+   'ver_detalle_devoluciones_cliente',
   ],
+
 
   cliente: [
     'ver_productos',

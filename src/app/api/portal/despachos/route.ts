@@ -62,7 +62,12 @@ export async function GET(req: NextRequest) {
             orderBy: { id: 'desc' },
         });
 
-        return NextResponse.json(grupos);
+        const seguro = JSON.parse(
+            JSON.stringify(grupos, (_key, value) =>
+                typeof value === 'bigint' ? value.toString() : value
+            )
+        );
+        return NextResponse.json(seguro);
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Error interno';
         return NextResponse.json({ error: message }, { status: 500 });

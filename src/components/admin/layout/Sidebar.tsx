@@ -75,6 +75,13 @@ const GESTION_OPERATIVA: NavGroup = {
       resource: 'dashboard' as RecursoKey,
     },
 
+    {
+      title: 'Incidencias de Clientes',
+      href: '/admin/Panel-Administrativo/reportes/incidencias-cliente',
+      icon: Bell,
+      resource: 'dashboard' as RecursoKey,
+    },
+
   ],
 },
     {
@@ -120,7 +127,7 @@ const GESTION_LOGISTICA: NavGroup = {
     {
       title: 'Inventario',
       icon: Boxes,
-      roles: ['gerente', 'administrador', 'cortador', 'ayudante'],
+      roles: ['gerente', 'administrador', 'cortador', 'ayudante', 'almacenero'],
       subItems: [
         { title: 'Almacenes', href: '/admin/Panel-Administrativo/almacenes', icon: Boxes, resource: 'almacenes' as RecursoKey },
         { title: 'Inventario', href: '/admin/Panel-Administrativo/inventario', icon: Boxes, resource: 'inventario' as RecursoKey },
@@ -134,24 +141,8 @@ const GESTION_LOGISTICA: NavGroup = {
       icon: ShoppingBag,
       roles: ['gerente', 'administrador', 'almacenero'],
       subItems: [
-        {
-          title: 'Proveedores',
-          href: '/admin/Panel-Administrativo/proveedores',
-          icon: Building2,
-          resource: 'proveedores' as RecursoKey,
-        },
-        {
-          title: 'Órdenes de Compra',
-          href: '/admin/Panel-Administrativo/ordenes-compra',
-          icon: ShoppingBag,
-          resource: 'ordenes_compra' as RecursoKey,
-        },
-        {
-          title: 'Proveedores Cotizaciones',
-          href: '/admin/Panel-Administrativo/cotizaciones-proveedor',
-          icon: FileText,
-          resource: 'cotizaciones_proveedor' as RecursoKey,
-        },
+        { title: 'Proveedores', href: '/admin/Panel-Administrativo/proveedores', icon: Building2, resource: 'proveedores' as RecursoKey },
+        { title: 'Órdenes de Compra', href: '/admin/Panel-Administrativo/ordenes-compra', icon: ShoppingBag, resource: 'ordenes_compra' as RecursoKey },
       ],
     },
     {
@@ -160,6 +151,20 @@ const GESTION_LOGISTICA: NavGroup = {
       roles: ['gerente', 'administrador', 'ayudante', 'recepcionista'],
       subItems: [
         { title: 'Despachos', href: '/admin/Panel-Administrativo/despachos', icon: Truck, resource: 'despachos' as RecursoKey },
+      ],
+    },
+    // ✅ NUEVA SECCIÓN - DEVOLUCIONES (visible para almacenero)
+    {
+      title: 'Devoluciones',
+      icon: Package,
+      roles: ['gerente', 'administrador', 'almacenero'],
+      subItems: [
+        { 
+          title: 'Devoluciones Clientes', 
+          href: '/admin/devoluciones', 
+          icon: Truck, 
+          resource: 'devoluciones_clientes' as RecursoKey 
+        },
       ],
     },
   ]

@@ -170,28 +170,17 @@ export function PortalProvider({ children }: { children: ReactNode }) {
             if (pedidosError) throw pedidosError;
             setPedidosSeguimiento((pedidosData as any) || []);
 
-            // 2. OBTENER DESPACHOS
-            const { data: despachosData, error: despachosError } = await supabase
-                .from('despachos')
-                .select(`
-                    id, pedido_id, fecha_despacho, direccion_entrega, fecha_entrega, estado, created_at, updated_at,
-                    vinculo_grupo:despachos_grupo_pedidos (
-                        grupo:despachos_grupos (
-                            historial:seguimiento_despachos ( id, grupo_despacho_id, status, notas, created_at )
-                        )
-                    )
-                `)
-                .eq('pedidos.cliente_id', clienteId)
-                .not('estado', 'eq', 'entregado');
+            // 2. OBTENER DESPACHOS (usando la API que serializa BigInt correctamente)
+            const despachosResp = await fetch('/api/portal/despachos');
+            const despachosData = await despachosResp.json();
 
-            if (despachosError) throw despachosError;
-
-            // Formateo seguro de despachos
-            const despachosFormateados = (despachosData || []).map((d: any) => ({
+            const despachosFormateados = (Array.isArray(despachosData) ? despachosData : []).map((d: any) => ({
                 ...d,
-                historial_grupo: d.vinculo_grupo?.[0]?.grupo?.historial || []
+                pedido_id: Number(d.despachos_grupo_pedidos?.[0]?.pedido_id),
+                despacho_id: Number(d.despachos_grupo_pedidos?.[0]?.despacho_id),
+                historial_grupo: d.seguimiento_despachos || []
             }));
-
+            
             setDespachosActivos(despachosFormateados);
 
         } catch (error) {
@@ -262,7 +251,7 @@ export function PortalProvider({ children }: { children: ReactNode }) {
                     // Ejecutar carga paralela de stats y data de despachos
                     const [cotRes, ordRes, dspRes] = await Promise.all([
                         supabase.from('cotizaciones').select('id', { count: 'exact', head: true }).eq('cliente_id', datosCliente.id).in('estado', ['borrador', 'enviada', 'aprobada']),
-                        supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('cliente_id', datosCliente.id).not('estado', 'in', '(finalizado,cancelado)'),
+                        supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('cliente_id', datosCliente.id).not('estado', 'in', '(entregado,cancelado)'),
                         supabase.from('despachos').select('id', { count: 'exact', head: true }).eq('estado', 'en_ruta'), // General o filtrado por cliente
                     ]);
 
