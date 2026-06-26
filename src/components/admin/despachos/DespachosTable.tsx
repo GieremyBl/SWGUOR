@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Loader2, MapPin, Route, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { labelEstado } from '@/lib/helpers/despachos-helpers';
+import { resolverEstadoVisualPedido } from '@/lib/helpers/pedido-estado-visual.helper';
 
 const ESTADO_STYLING: Record<string, string> = {
   pendiente: 'bg-gray-50 text-gray-700',
@@ -46,7 +46,8 @@ function labelEstadoDespacho(despachoEstado: string, pedidoEstado: string | null
   if (despachoEstado === 'pendiente') {
     return LABEL_PEDIDO_PENDIENTE[pedidoEstado ?? ''] ?? 'Sin empacar';
   }
-  return labelEstado(despachoEstado);
+  const visual = resolverEstadoVisualPedido(pedidoEstado, despachoEstado);
+  return visual.label;
 }
 
 interface Props {
@@ -149,7 +150,9 @@ export function DespachoTable({
                     <td className="py-4 px-4">
                       <span
                         className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                          ESTADO_STYLING[desp.estado] ?? 'bg-gray-100 text-gray-700'
+                          ESTADO_STYLING[
+                            resolverEstadoVisualPedido(desp.pedido_estado, desp.estado).key
+                          ] ?? ESTADO_STYLING[desp.estado] ?? 'bg-gray-100 text-gray-700'
                         }`}
                       >
                         {labelEstadoDespacho(desp.estado, desp.pedido_estado)}

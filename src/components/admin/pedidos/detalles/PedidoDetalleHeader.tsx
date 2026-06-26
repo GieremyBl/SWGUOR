@@ -29,10 +29,11 @@ interface PedidoDetalleHeaderProps {
 
 export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
   const { hasRole } = usePermissions();
-  const puedeEmpaque = hasRole(['administrador', 'gerente']);
+  const puedeEmpaque = hasRole(['administrador', 'gerente', 'ayudante']);
   const puedeConfirmarEntrega = hasRole('ayudante');
 
-  const estadoCfg    = ESTADO_CONFIG[pedido.estado]       ?? { label: pedido.estado,    color: 'bg-stone-50 text-stone-500 border-stone-200', icon: undefined };
+  const estadoKey = pedido.estado_visual ?? pedido.estado;
+  const estadoCfg    = ESTADO_CONFIG[estadoKey] ?? { label: pedido.estado_label ?? pedido.estado, color: 'bg-stone-50 text-stone-500 border-stone-200', icon: undefined };
   const prioridadCfg = PRIORIDAD_CONFIG[pedido.prioridad] ?? { label: pedido.prioridad, color: 'bg-stone-50 text-stone-500 border-stone-200' };
   const EstadoIcon   = estadoCfg.icon;
 
@@ -72,9 +73,9 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
           </div>
         </div>
 
-        {(puedeEmpaque || puedeConfirmarEntrega) && pedido.estado === 'listo_para_despacho' && (
+        {(puedeEmpaque || puedeConfirmarEntrega) && (
           <div className="flex flex-wrap gap-2 sm:justify-end">
-            {puedeEmpaque && (
+            {puedeEmpaque && pedido.estado === 'listo_para_despacho' && pedido.despacho_estado !== 'preparando' && pedido.despacho_estado !== 'en_ruta' && (
               <Link
                 href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/empaque`}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
@@ -82,7 +83,7 @@ export function PedidoDetalleHeader({ pedido }: PedidoDetalleHeaderProps) {
                 <Package size={14} /> Empaque y despacho
               </Link>
             )}
-            {puedeConfirmarEntrega && (
+            {puedeConfirmarEntrega && pedido.despacho_estado === 'en_ruta' && pedido.estado !== 'entregado' && (
               <Link
                 href={`/admin/Panel-Administrativo/pedidos/${pedido.id}/entrega`}
                 prefetch={false}

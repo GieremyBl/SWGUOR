@@ -78,7 +78,7 @@ export function PedidoEmpaqueForm({ pedidoId, direccionInicial }: Props) {
       toast.success('Despacho creado correctamente');
       router.push(
         hasRole('ayudante')
-          ? `/admin/Panel-Administrativo/pedidos/${pedidoId}/entrega`
+          ? '/admin/Panel-Administrativo/despachos'
           : `/admin/Panel-Administrativo/pedidos/${pedidoId}`,
       );
       router.refresh();

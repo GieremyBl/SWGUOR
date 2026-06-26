@@ -307,7 +307,8 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_productos', 'ver_variantes',
     'ver_orden_produccion', 'ver_detalle_orden_produccion', 'actualizar_etapas_produccion',
     'ver_seguimiento_confeccion', 'ver_seguimiento_produccion',
-    'ver_despachos', 'actualizar_estado_despachos', 'confirmar_entrega_pedido',
+    'ver_pedidos',
+    'ver_despachos', 'actualizar_estado_despachos', 'exportar_despachos', 'confirmar_entrega_pedido',
     'ver_notificaciones', 'ver_perfil', 'editar_perfil',
   ],
 

@@ -10,6 +10,10 @@ import {
   mapPedidoItemRow,
 } from '@/lib/helpers/pedido-items-display.helper';
 import { obtenerDocumentosPedidoAdmin } from '@/lib/services/comprobante-documento.service';
+import {
+  enriquecerConEstadoDespacho,
+  obtenerDespachoActivoPedido,
+} from '@/lib/helpers/pedido-despacho-estado.helper';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,11 +110,14 @@ export default async function PedidoDetallePage({ params }: PageProps) {
         : [];
 
   const documentos = await obtenerDocumentosPedidoAdmin(pedido.id);
+  const despachoActivo = await obtenerDespachoActivoPedido(pedido.id);
+  const estadoDespacho = enriquecerConEstadoDespacho(pedido.estado, despachoActivo?.estado);
 
   const serializado = serializeBigInt(pedido) as Record<string, unknown>;
 
   const pedidoFormateado: DetallePedidoData = {
     ...(serializado as unknown as DetallePedidoData),
+    ...estadoDespacho,
     pedido_items: itemsDisplay,
     documentos,
     seguimiento_pedido: (

@@ -2,16 +2,11 @@ export const runtime = 'nodejs';
 import { PedidosService } from '@/lib/services/pedidos.service';
 import { NextResponse } from 'next/server';
 import { requireServerRole } from '@/lib/auth/server';
-import type { RolUsuario } from '@/lib/constants/roles';
-
-const PEDIDOS_ROLES: RolUsuario[] = [
-  'administrador', 'gerente', 'recepcionista',
-  'disenador', 'cortador', 'representante_taller'
-];
+import { ROLES_PEDIDOS_CONSULTA } from '@/lib/constants/pedidos-logistica';
 
 // GET /api/admin/pedidos/seguimiento?pedido_id=xxx
 export async function GET(req: Request) {
-  const auth = await requireServerRole(PEDIDOS_ROLES);
+  const auth = await requireServerRole(ROLES_PEDIDOS_CONSULTA);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
@@ -36,7 +31,7 @@ export async function GET(req: Request) {
 
 // POST /api/admin/pedidos/seguimiento
 export async function POST(req: Request) {
-  const auth = await requireServerRole(PEDIDOS_ROLES);
+  const auth = await requireServerRole(ROLES_PEDIDOS_CONSULTA);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {

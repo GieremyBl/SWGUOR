@@ -6,6 +6,10 @@ import { validarTransicionEstadoPedido } from '@/lib/helpers/pedido-transiciones
 import { resolverEstadoVisualPedido } from '@/lib/helpers/pedido-estado-visual.helper';
 import { precargarDireccionDespachoPedido } from '@/lib/helpers/pedido-direccion.helper';
 import { crearDespachoPlaceholderPagoPedido } from '@/lib/helpers/crear-despacho-pedido.helper';
+import {
+  enriquecerConEstadoDespacho,
+  obtenerDespachoActivoPedido,
+} from '@/lib/helpers/pedido-despacho-estado.helper';
 
 /** Estados desde los que ya tiene sentido que logística vea el pedido, aunque el
  * cambio se haya hecho manualmente (no vía pasarela de pago, p. ej. crédito B2B). */
@@ -72,7 +76,12 @@ export const PedidosService = {
         },
       },
     });
-    return pedido ? serializeBigInt(pedido) : null;
+    if (!pedido) return null;
+
+    const despacho = await obtenerDespachoActivoPedido(BigInt(id));
+    const enriquecido = enriquecerConEstadoDespacho(pedido.estado, despacho?.estado);
+
+    return serializeBigInt({ ...pedido, ...enriquecido });
   },
 
   async actualizar(id: string, data: {

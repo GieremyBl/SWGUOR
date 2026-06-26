@@ -204,6 +204,7 @@ const GESTION_LOGISTICA: NavGroup = {
       icon: Truck,
       roles: ['gerente', 'administrador', 'ayudante', 'recepcionista'],
       subItems: [
+        { title: 'Pedidos', href: '/admin/Panel-Administrativo/pedidos', icon: ShoppingCart, resource: 'pedidos' as RecursoKey },
         { title: 'Despachos', href: '/admin/Panel-Administrativo/despachos', icon: Truck, resource: 'despachos' as RecursoKey },
         { title: 'Guías de Remisión', href: '/admin/Panel-Administrativo/guias-remision', icon: FileText, resource: 'despachos' as RecursoKey },
       ],

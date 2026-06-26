@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { notificarTransicionEstadoPedido } from '@/lib/helpers/crear-notificacion.helper';
 import { requireServerAuth } from '@/lib/auth/server';
 import { tienePermiso } from '@/lib/constants/roles';
+import { enriquecerConEstadoDespacho, registrarSeguimientoLogisticaPedido } from '@/lib/helpers/pedido-despacho-estado.helper';
 
 const ESTADOS_VALIDOS = ['pendiente', 'en_ruta', 'entregado', 'preparando', 'incidencia'] as const;
 
@@ -67,6 +68,7 @@ export async function GET(req: Request) {
           d.pedidos?.saldo_pendiente ?? (Number(d.pedidos?.total ?? 0) - Number(d.pedidos?.monto_pagado ?? 0)),
         ),
         pedido_estado: d.pedidos?.estado ?? null,
+        ...enriquecerConEstadoDespacho(d.pedidos?.estado, d.estado),
       };
     });
 
@@ -204,7 +206,24 @@ export async function PATCH(req: Request) {
       if (data.estado === 'entregado' && existing.pedidos) {
         await tx.pedidos.update({
           where: { id: existing.pedido_id },
-          data: { estado: 'entregado' },
+          data: { estado: 'entregado', updated_at: new Date() },
+        });
+
+        await tx.seguimiento_pedido.create({
+          data: {
+            pedido_id: existing.pedido_id,
+            status: 'entregado',
+            notas: 'Pedido entregado al cliente.',
+            creado_por: auth.user.authId ?? null,
+          },
+        });
+      }
+
+      if (data.estado === 'en_ruta' && existing.pedidos) {
+        await registrarSeguimientoLogisticaPedido(tx, {
+          pedidoId: existing.pedido_id,
+          notas: 'Pedido en camino — despacho en ruta.',
+          creadoPor: auth.user.authId ?? null,
         });
       }
 

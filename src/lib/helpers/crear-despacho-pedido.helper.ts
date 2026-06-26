@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { mergeNotasEmpaque } from '@/lib/helpers/pedido-notas-json.helper';
+import { registrarSeguimientoLogisticaPedido } from '@/lib/helpers/pedido-despacho-estado.helper';
 
 export interface ResultadoCrearDespacho {
   despachoId: bigint;
@@ -149,6 +150,12 @@ export async function crearDespachoPedido(params: {
         notas: params.notasEmpaque?.trim() || 'Despacho creado — empaque registrado.',
         creado_por: params.creadoPorAuthId ?? null,
       },
+    });
+
+    await registrarSeguimientoLogisticaPedido(tx, {
+      pedidoId: params.pedidoId,
+      notas: 'Empaque registrado — despacho en preparación.',
+      creadoPor: params.creadoPorAuthId ?? null,
     });
 
     return { despachoId: despacho.id, grupoId: grupo.id };

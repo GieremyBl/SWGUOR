@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import type { EstadoDespacho } from '@prisma/client';
+import { registrarSeguimientoLogisticaPedido } from '@/lib/helpers/pedido-despacho-estado.helper';
 
 const ESTADO_EN_RUTA = 'en_ruta' satisfies EstadoDespacho;
 
@@ -29,7 +30,7 @@ export async function iniciarRutaDespacho(params: {
 
   const linksGrupo = await prisma.despachos_grupo_pedidos.findMany({
     where: { grupo_despacho_id: grupoId },
-    select: { despacho_id: true, numero_parada: true, id: true },
+    select: { despacho_id: true, numero_parada: true, id: true, pedido_id: true },
     orderBy: { numero_parada: 'asc' },
   });
 
@@ -65,6 +66,18 @@ export async function iniciarRutaDespacho(params: {
         creado_por: params.creadoPorAuthId ?? null,
       },
     });
+
+    const pedidoIds = [...new Set(linksGrupo.map((l) => l.pedido_id))];
+    for (const pedidoId of pedidoIds) {
+      await registrarSeguimientoLogisticaPedido(tx, {
+        pedidoId,
+        notas:
+          despachoIdsGrupo.length > 1
+            ? 'Pedido en camino — ruta grupal iniciada.'
+            : 'Pedido en camino — transportista en ruta.',
+        creadoPor: params.creadoPorAuthId ?? null,
+      });
+    }
   });
 
   return { despachoId: params.despachoId, grupoId };

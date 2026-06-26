@@ -14,4 +14,15 @@ export const ROLES_LOGISTICA_DESPACHO: RolUsuario[] = [
 export const ROLES_CONFIRMAR_ENTREGA_PEDIDO: RolUsuario[] = ['ayudante'];
 
 /** Roles que pueden registrar empaque y crear despacho (back-office). */
-export const ROLES_EMPAQUE_PEDIDO: RolUsuario[] = ['administrador', 'gerente'];
+export const ROLES_EMPAQUE_PEDIDO: RolUsuario[] = ['administrador', 'gerente', 'ayudante'];
+
+/** Roles con acceso de consulta al módulo de pedidos (listado y detalle). */
+export const ROLES_PEDIDOS_CONSULTA: RolUsuario[] = [
+  'administrador',
+  'gerente',
+  'recepcionista',
+  'disenador',
+  'cortador',
+  'representante_taller',
+  'ayudante',
+];

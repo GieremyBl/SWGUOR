@@ -2,18 +2,13 @@ export const runtime = 'nodejs';
 import { PedidosService } from '@/lib/services/pedidos.service';
 import { requireServerRole } from '@/lib/auth/server';
 import { AccionAuditoria } from '@prisma/client';
-import type { RolUsuario } from '@/lib/constants/roles';
+import { ROLES_PEDIDOS_CONSULTA } from '@/lib/constants/pedidos-logistica';
 import { NextResponse } from 'next/server';
 import { auditoriaService } from '@/lib/services/auditoria.service';
 
-const PEDIDOS_ROLES: RolUsuario[] = [
-  'administrador', 'gerente', 'recepcionista',
-  'disenador', 'cortador', 'representante_taller'
-];
-
 // GET /api/admin/pedidos
 export async function GET(_req: Request) {
-  const auth = await requireServerRole(PEDIDOS_ROLES);
+  const auth = await requireServerRole(ROLES_PEDIDOS_CONSULTA);
   if (!auth.success) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -28,7 +23,7 @@ export async function GET(_req: Request) {
 
 // PUT /api/admin/pedidos
 export async function PUT(req: Request) {
-  const auth = await requireServerRole(PEDIDOS_ROLES);
+  const auth = await requireServerRole(ROLES_PEDIDOS_CONSULTA);
   if (!auth.success) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }

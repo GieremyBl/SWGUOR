@@ -1,4 +1,4 @@
-import { Clock, FileText, CheckCircle2, RefreshCw, Truck, XCircle } from 'lucide-react';
+import { Clock, FileText, CheckCircle2, RefreshCw, Truck, XCircle, Package } from 'lucide-react';
 import type { ElementType } from 'react';
 
 // ─── Tipos de datos ───────────────────────────────────────────────────────────
@@ -43,6 +43,9 @@ export interface SeguimientoPedido {
 export interface DetallePedidoData {
   id:                 string;
   estado:             string;
+  despacho_estado?:   string | null;
+  estado_visual?:     string;
+  estado_label?:      string;
   prioridad:          string;
   cotizacion_id?:     string | null;
   notas_cliente:      string | null;
@@ -106,6 +109,8 @@ export const ESTADO_CONFIG: Record<string, EstadoConfig> = {
   aprobado:            { label: 'Aprobado',             color: 'bg-violet-50 text-violet-700 border-violet-200',   icon: CheckCircle2 },
   en_produccion:       { label: 'En Producción',        color: 'bg-indigo-50 text-indigo-700 border-indigo-200',   icon: RefreshCw    },
   listo_para_despacho: { label: 'Listo para Despacho',  color: 'bg-emerald-50 text-emerald-700 border-emerald-200',icon: Truck        },
+  preparando:          { label: 'Preparando envío',       color: 'bg-yellow-50 text-yellow-700 border-yellow-200', icon: Package      },
+  en_ruta:             { label: 'En camino',            color: 'bg-blue-50 text-blue-700 border-blue-200',       icon: Truck        },
   entregado:           { label: 'Entregado',            color: 'bg-stone-100 text-stone-600 border-stone-200',     icon: CheckCircle2 },
   cancelado:           { label: 'Cancelado',            color: 'bg-red-50 text-red-700 border-red-200',            icon: XCircle      },
 };

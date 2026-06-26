@@ -3,17 +3,15 @@ import { PedidosService } from '@/lib/services/pedidos.service';
 import { NextResponse } from 'next/server';
 import { requireServerRole, requireServerPermission } from '@/lib/auth/server';
 import { auditoriaService } from '@/lib/services/auditoria.service';
-import { AccionAuditoria } from '@prisma/client'; // ← agregar
-import type { RolUsuario } from '@/lib/constants/roles';
-
-const PEDIDOS_ROLES: RolUsuario[] = ['administrador', 'gerente', 'recepcionista', 'disenador', 'cortador', 'representante_taller'];
+import { AccionAuditoria } from '@prisma/client';
+import { ROLES_PEDIDOS_CONSULTA } from '@/lib/constants/pedidos-logistica';
 
 // GET /api/admin/pedidos/[id]
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireServerRole(PEDIDOS_ROLES);
+  const auth = await requireServerRole(ROLES_PEDIDOS_CONSULTA);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
@@ -40,7 +38,7 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireServerRole(PEDIDOS_ROLES);
+  const auth = await requireServerRole(ROLES_PEDIDOS_CONSULTA);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   try {
