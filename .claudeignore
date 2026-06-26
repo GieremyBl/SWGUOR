@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.git/
+dist/
+build/
+*.ods
+*.png
+*.mp3
+package-lock.json

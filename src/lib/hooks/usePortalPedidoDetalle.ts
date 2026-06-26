@@ -35,6 +35,9 @@ export function usePortalPedidoDetalle(pedidoId: string) {
           moneda: data.moneda ?? 'PEN',
           monto_pagado: Number(data.monto_pagado ?? 0),
           saldo_pendiente: Number(data.saldo_pendiente ?? 0),
+          subtotal: Number(data.subtotal ?? 0),
+          monto_descuento: Number(data.monto_descuento ?? 0),
+          igv: Number(data.igv ?? 0),
           direccion_envio: data.direccion_despacho ?? null,
           notas: data.notas_cliente ?? data.notas_pedido ?? null,
         });

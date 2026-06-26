@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { Route, XCircle } from 'lucide-react';
 import { usePermissions } from '@/lib/hooks/usePermissions';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import { DespachosStats } from '@/components/admin/despachos/DespachosStats';
 import { DespachosToolbar } from '@/components/admin/despachos/DespachosToolbar';
 import { DespachoTable } from '@/components/admin/despachos/DespachosTable';
+import { DespachoPagination } from '@/components/admin/despachos/DespachoPaginacion';
 import {
   AgruparDespachosModal,
   type DespachoAgrupable,
@@ -29,6 +31,10 @@ export interface Despacho {
   total_paradas_grupo?: number;
   es_ruta_agrupada?: boolean;
   estado_entrega_parada?: string;
+  total: number;
+  monto_pagado: number;
+  saldo_pendiente: number;
+  pedido_estado: string | null;
 }
 
 const PAGE_SIZE = 10;
@@ -45,12 +51,14 @@ export default function DespachosPage() {
   const [modalAgruparOpen, setModalAgruparOpen] = useState(false);
 
   const canView = can('view', 'despachos');
-  const puedeGestionar = can('update', 'despachos');
+  const puedeGestionar = can('update_status', 'despachos');
   const puedeConfirmarEntrega = hasRole('ayudante');
 
-  const cargarDatos = useCallback(async () => {
+  // `silent`: refresco en segundo plano (polling/realtime) — no muestra spinner,
+  // no borra la selección del usuario ni emite toasts por fallos transitorios.
+  const cargarDatos = useCallback(async (silent = false) => {
     if (!canView) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const response = await fetch('/api/admin/despachos');
       if (!response.ok) throw new Error('Error al cargar despachos');
@@ -75,13 +83,17 @@ export default function DespachosPage() {
           total_paradas_grupo: Number(item.total_paradas_grupo ?? 1),
           es_ruta_agrupada: Boolean(item.es_ruta_agrupada),
           estado_entrega_parada: String(item.estado_entrega_parada ?? 'en_espera'),
+          total: Number(item.total ?? 0),
+          monto_pagado: Number(item.monto_pagado ?? 0),
+          saldo_pendiente: Number(item.saldo_pendiente ?? 0),
+          pedido_estado: (item.pedido_estado as string | null) ?? null,
         })),
       );
-      setSeleccionados(new Set());
+      if (!silent) setSeleccionados(new Set());
     } catch {
-      toast.error('No se pudieron sincronizar los despachos');
+      if (!silent) toast.error('No se pudieron sincronizar los despachos');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [canView]);
 
@@ -117,6 +129,41 @@ export default function DespachosPage() {
   useEffect(() => {
     if (!authLoading) cargarDatos();
   }, [authLoading, cargarDatos]);
+
+  // Refresca la lista cuando cambia el pago/estado de un pedido o se crea/actualiza
+  // un despacho, para que el ayudante vea el pago del cliente sin recargar manualmente.
+  const cargarDatosRef = useRef(cargarDatos);
+  cargarDatosRef.current = cargarDatos;
+
+  useEffect(() => {
+    if (!canView) return;
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel('despachos-pagos-changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'pedidos' },
+        () => cargarDatosRef.current(true),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'despachos' },
+        () => cargarDatosRef.current(true),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [canView]);
+
+  // Respaldo: si el canal Realtime no conecta (proxy/red bloqueando el websocket),
+  // esto garantiza que la lista igual se mantenga al día.
+  useEffect(() => {
+    if (!canView) return;
+    const interval = setInterval(() => cargarDatosRef.current(true), 10000);
+    return () => clearInterval(interval);
+  }, [canView]);
 
   const filtered = useMemo(
     () =>
@@ -186,7 +233,7 @@ export default function DespachosPage() {
             setCurrentPage(0);
           }}
           loading={loading}
-          onRefresh={cargarDatos}
+          onRefresh={() => cargarDatos()}
         />
 
         {puedeGestionar && (
@@ -219,11 +266,12 @@ export default function DespachosPage() {
           onIniciarRuta={handleIniciarRuta}
         />
 
-        {totalPages > 1 && (
-          <p className="text-center text-xs text-gray-400">
-            Página {currentPage + 1} de {totalPages}
-          </p>
-        )}
+        <DespachoPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       <AgruparDespachosModal

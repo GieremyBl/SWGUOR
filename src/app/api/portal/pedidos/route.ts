@@ -13,8 +13,8 @@ import { resolverCostoEnvioPedido } from '@/lib/helpers/portal-costo-envio.helpe
 import { resolverItemsPedido } from '@/lib/helpers/portal-pedido-items.helper';
 import { descontarStockLineaPedido } from '@/lib/helpers/producto-stock-transaction.helper';
 import { notificarClienteSobrePedido } from '@/lib/helpers/pedido-seguimiento.helper';
-
-const IGV_RATE = 0.18;
+import { calcularDescuentosEscalaAutomaticos } from '@/lib/services/descuento-escala-automatico.service';
+import { multiplyMoney, roundMoney } from '@/lib/helpers/money.helper';
 
 async function obtenerClienteSesion() {
   const auth = await requireServerAuth();
@@ -140,9 +140,29 @@ export async function POST(req: Request) {
       select: { id: true, moq: true, precio: true },
     });
     const moqPorProducto = new Map(productos.map((p) => [Number(p.id), p.moq]));
+    const precioBasePorProducto = new Map(
+      productos.map((p) => [Number(p.id), Number(p.precio)]),
+    );
+
+    const varianteIds = [...new Set(lineas.map((i) => BigInt(i.variante_id)))];
+    const variantes = await prisma.variantes_producto.findMany({
+      where: { id: { in: varianteIds } },
+      select: { id: true, precio_adicional: true },
+    });
+    const adicionalPorVariante = new Map(
+      variantes.map((v) => [Number(v.id), Number(v.precio_adicional ?? 0)]),
+    );
+
+    // Precio unitario calculado en servidor (precio base + ajuste de variante),
+    // nunca confiando en el precio que pudiera venir manipulado desde el carrito.
+    const lineasConPrecio = lineas.map((item) => {
+      const precioBase = precioBasePorProducto.get(Number(item.producto_id)) ?? 0;
+      const adicional = adicionalPorVariante.get(Number(item.variante_id)) ?? 0;
+      return { ...item, precio_unitario: roundMoney(precioBase + adicional) };
+    });
 
     const bajoMoq: { producto_id: number; moq: number; cantidad: number }[] = [];
-    for (const item of lineas) {
+    for (const item of lineasConPrecio) {
       const moq = moqPorProducto.get(Number(item.producto_id)) ?? 400;
       if (Number(item.cantidad) < moq) {
         bajoMoq.push({
@@ -171,19 +191,30 @@ export async function POST(req: Request) {
         costo_envio: costo_envio_body,
       });
 
-    const subtotalBruto = lineas.reduce(
-      (acc, i) => acc + Number(i.precio_unitario ?? 0) * Number(i.cantidad),
-      0,
-    );
-    const totalUnidades = lineas.reduce((acc, i) => acc + Number(i.cantidad), 0);
-    const igv = subtotalBruto * IGV_RATE;
-    const total = subtotalBruto + igv + costoEnvio;
+    const totalUnidades = lineasConPrecio.reduce((acc, i) => acc + Number(i.cantidad), 0);
     const moqAplicado = productos.length
       ? Math.max(...productos.map((p) => p.moq))
       : 400;
 
+    // CUS_27 — descuento por escala leído desde la matriz de reglas_descuento,
+    // aplicado y calculado formalmente sobre el pedido (no es libre/manual).
+    const descuento = await calcularDescuentosEscalaAutomaticos(
+      lineasConPrecio.map((i) => ({
+        producto_id: i.producto_id,
+        cantidad: Number(i.cantidad),
+        precio_unitario: i.precio_unitario,
+      })),
+      { costoEnvio, moq: moqAplicado },
+    );
+    const detallePorProducto = new Map(
+      descuento.detallePorProducto.map((d) => [d.producto_id, d]),
+    );
+    const subtotalBruto = descuento.subtotalBruto;
+    const igv = descuento.igv;
+    const total = descuento.total;
+
     if (reservar_stock) {
-      for (const item of lineas) {
+      for (const item of lineasConPrecio) {
         const check = await stockDisponibleVariante(
           BigInt(item.variante_id),
           Number(item.cantidad),
@@ -212,7 +243,7 @@ export async function POST(req: Request) {
           igv: new Prisma.Decimal(igv),
           total: new Prisma.Decimal(total),
           total_estimado: new Prisma.Decimal(total),
-          monto_descuento: new Prisma.Decimal(0),
+          monto_descuento: new Prisma.Decimal(descuento.montoDescuento),
           costo_envio: new Prisma.Decimal(costoEnvio),
           total_unidades: totalUnidades,
           moq_aplicado: moqAplicado || 400,
@@ -223,14 +254,24 @@ export async function POST(req: Request) {
           metodo_pago: metodo_pago ?? null,
           saldo_pendiente: new Prisma.Decimal(total),
           pedido_items: {
-            create: lineas.map((item) => ({
-              producto_id: BigInt(item.producto_id),
-              variante_id: BigInt(item.variante_id),
-              cantidad: Number(item.cantidad),
-              especificaciones: {                              // ← agregar
-                precio_unitario: Number(item.precio_unitario ?? 0),
-              },
-            })),
+            create: lineasConPrecio.map((item) => {
+              const detalle = detallePorProducto.get(String(item.producto_id));
+              const porcentajeDescuento = detalle?.porcentaje_descuento ?? 0;
+              const montoDescuentoLinea = roundMoney(
+                multiplyMoney(item.precio_unitario, item.cantidad) * (porcentajeDescuento / 100),
+              );
+              return {
+                producto_id: BigInt(item.producto_id),
+                variante_id: BigInt(item.variante_id),
+                cantidad: Number(item.cantidad),
+                especificaciones: {
+                  precio_unitario: item.precio_unitario,
+                  descuento_porcentaje: porcentajeDescuento,
+                  descuento_monto: montoDescuentoLinea,
+                  descuento_regla_id: detalle?.regla_id ?? null,
+                },
+              };
+            }),
           },
         },
         include: { pedido_items: true },
@@ -239,7 +280,7 @@ export async function POST(req: Request) {
       // reservar_stock omitido al confirmar: el descuento inmediato hace redundante
       // la reserva y el trigger de reservas_stock falla (referencia_id en movimientos_inventario).
 
-      for (const item of lineas) {
+      for (const item of lineasConPrecio) {
         await descontarStockLineaPedido(tx, {
           producto_id: item.producto_id,
           variante_id: item.variante_id,
