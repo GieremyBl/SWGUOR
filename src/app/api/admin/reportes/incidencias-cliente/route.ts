@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 import {
-  tipoIncidenciaSchema,
+  TipoIncidenciaClienteEnum,
   severidadSchema,
 } from '@/lib/schemas/incidencias-cliente';
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const foto = form.get('foto');
 
     // ─── 3. Validar los datos ─────────────────────────────────────────────
-    const tipo = tipoIncidenciaSchema.safeParse(tipoRaw);
+    const tipo = TipoIncidenciaClienteEnum.safeParse(tipoRaw);
     const severidad = severidadSchema.safeParse(severidadRaw);
 
     if (!pedidoIdRaw) {
