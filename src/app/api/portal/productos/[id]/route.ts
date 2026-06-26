@@ -2,6 +2,7 @@ export const runtime = 'nodejs';
 import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { NextResponse } from 'next/server';
+import { obtenerEscalasPrecioProducto } from '@/lib/services/escalas-precio-producto.service';
 
 // Orden canónico de tallas
 const ORDEN_TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34'];
@@ -110,7 +111,10 @@ export async function GET(
       0
     );
 
-    // ── 6. Construir respuesta ──
+    // ── 6. CUS_27 — escalas de precio por cantidad vigentes para este producto ──
+    const escalasPrecio = await obtenerEscalasPrecioProducto(productoId);
+
+    // ── 7. Construir respuesta ──
     const imagenPrincipal = normalizarImagen(producto.imagen);
 
     const data = {
@@ -140,6 +144,7 @@ export async function GET(
         sku: v.sku,
         imagen_url: normalizarImagen(v.imagen_url) || imagenPrincipal,
       })),
+      escalas_precio: escalasPrecio?.escalas ?? [],
     };
 
     return NextResponse.json({ success: true, data }, {

@@ -5,6 +5,11 @@ import { notificarTransicionEstadoPedido } from '@/lib/helpers/crear-notificacio
 import { validarTransicionEstadoPedido } from '@/lib/helpers/pedido-transiciones.helper';
 import { resolverEstadoVisualPedido } from '@/lib/helpers/pedido-estado-visual.helper';
 import { precargarDireccionDespachoPedido } from '@/lib/helpers/pedido-direccion.helper';
+import { crearDespachoPlaceholderPagoPedido } from '@/lib/helpers/crear-despacho-pedido.helper';
+
+/** Estados desde los que ya tiene sentido que logística vea el pedido, aunque el
+ * cambio se haya hecho manualmente (no vía pasarela de pago, p. ej. crédito B2B). */
+const ESTADOS_VISIBLES_LOGISTICA: EstadoPedido[] = ['pagado', 'en_produccion', 'listo_para_despacho'];
 
 export const PedidosService = {
 
@@ -106,6 +111,15 @@ export const PedidosService = {
       });
     }
 
+    if (data.estado && ESTADOS_VISIBLES_LOGISTICA.includes(data.estado)) {
+      await prisma.$transaction(async (tx) => {
+        await crearDespachoPlaceholderPagoPedido(tx, {
+          id: pedido.id,
+          direccion_despacho: pedido.direccion_despacho,
+        });
+      });
+    }
+
     if (
       antes?.cliente_id &&
       data.estado &&
@@ -130,7 +144,7 @@ export const PedidosService = {
   }) {
     const antes = await prisma.pedidos.findUnique({
       where: { id: BigInt(data.pedido_id) },
-      select: { estado: true, cliente_id: true },
+      select: { estado: true, cliente_id: true, direccion_despacho: true },
     });
 
     if (!antes) {
@@ -153,6 +167,13 @@ export const PedidosService = {
         where: { id: BigInt(data.pedido_id) },
         data:  { estado: data.status, updated_at: new Date() },
       });
+
+      if (ESTADOS_VISIBLES_LOGISTICA.includes(data.status)) {
+        await crearDespachoPlaceholderPagoPedido(tx, {
+          id: BigInt(data.pedido_id),
+          direccion_despacho: antes.direccion_despacho,
+        });
+      }
 
       return registro;
     });

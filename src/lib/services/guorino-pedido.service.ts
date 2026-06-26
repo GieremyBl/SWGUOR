@@ -28,6 +28,8 @@ export interface GuorinoPedidoPreview {
     variante_id: number;
     nombre: string;
     sku: string | null;
+    talla: string;
+    color: string;
     cantidad: number;
     precio_unitario: number;
     subtotal: number;
@@ -154,6 +156,13 @@ export async function prepararPedidoGuorino(params: {
   });
   const productoMap = new Map(productos.map((p) => [Number(p.id), p]));
 
+  const varianteIds = [...new Set(itemsResueltos.items.map((i) => BigInt(i.variante_id)))];
+  const variantes = await prisma.variantes_producto.findMany({
+    where: { id: { in: varianteIds } },
+    select: { id: true, talla: true, color: true },
+  });
+  const varianteMap = new Map(variantes.map((v) => [Number(v.id), v]));
+
   const lineasPreview: GuorinoPedidoPreview['items'] = [];
 
   for (const item of itemsResueltos.items) {
@@ -193,11 +202,17 @@ export async function prepararPedidoGuorino(params: {
     }
 
     const precio = Number(producto.precio);
+    const variante = varianteMap.get(Number(item.variante_id));
+    const talla = item.talla_snapshot?.trim() || variante?.talla || '—';
+    const color = item.color_snapshot?.trim() || variante?.color || '—';
+
     lineasPreview.push({
       producto_id: Number(producto.id),
       variante_id: Number(item.variante_id),
       nombre: producto.nombre,
       sku: producto.sku,
+      talla,
+      color,
       cantidad,
       precio_unitario: precio,
       subtotal: precio * cantidad,
@@ -325,18 +340,10 @@ export async function confirmarPedidoGuorino(params: {
       },
     });
 
-    const expira = new Date(Date.now() + 30 * 60 * 1000);
+    // No creamos reservas_stock aquí: el pedido se confirma y el stock se descuenta
+    // de inmediato. Un INSERT en reservas_stock dispara un trigger de BD que aún
+    // referencia movimientos_inventario.referencia_id (columna eliminada del esquema).
     for (const item of preview.items) {
-      await tx.reservas_stock.create({
-        data: {
-          variante_id: BigInt(item.variante_id),
-          pedido_id: pedido.id,
-          cantidad: item.cantidad,
-          expira_en: expira,
-          estado: 'activa',
-        },
-      });
-
       await descontarStockLineaPedido(tx, {
         producto_id: item.producto_id,
         variante_id: item.variante_id,

@@ -16,6 +16,13 @@ interface PedidoItemDB {
   variantes_producto: { talla: string; color: string } | null;
 }
 
+/** Detalle por línea calculado por CUS_27 (descuento por escala) al confirmar la compra. */
+function leerDescuentoLinea(espec: Record<string, unknown> | null) {
+  const porcentaje = Number(espec?.descuento_porcentaje ?? 0);
+  const monto = Number(espec?.descuento_monto ?? 0);
+  return { porcentaje, monto, aplica: porcentaje > 0 };
+}
+
 function ItemSkeleton() {
   return (
     <div className="grid grid-cols-12 p-3 items-center gap-2 animate-pulse">
@@ -128,8 +135,12 @@ export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalle
       currency: pedido.moneda || 'PEN',
     }).format(amount);
 
-  const subtotalNeto = pedido.total / 1.18;
-  const igvCalculado = pedido.total - subtotalNeto;
+  // CUS_27 — valores reales calculados al confirmar la compra (no aproximados).
+  const subtotalBruto = Number(pedido.subtotal ?? 0);
+  const montoDescuento = Number(pedido.monto_descuento ?? 0);
+  const igvCalculado = Number(pedido.igv ?? 0);
+  const subtotalConDescuento = subtotalBruto - montoDescuento;
+  const tieneDescuento = montoDescuento > 0;
 
   return (
     <div className="space-y-6 text-xs">
@@ -199,6 +210,7 @@ export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalle
             ) : items.length > 0 ? (
               items.map((item) => {
                 const precioUnitario = item.especificaciones?.precio_unitario as number | undefined;
+                const descuentoLinea = leerDescuentoLinea(item.especificaciones);
                 return (
                   <div
                     key={item.id}
@@ -212,11 +224,18 @@ export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalle
                       <p className="font-black uppercase text-[11px] truncate">
                         {item.productos?.nombre ?? 'Producto sin nombre'}
                       </p>
-                      {item.variantes_producto && (
-                        <span className="inline-flex items-center text-[10px] text-amber-600 font-bold uppercase tracking-wide bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
-                          Talla {item.variantes_producto.talla} · {item.variantes_producto.color}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {item.variantes_producto && (
+                          <span className="inline-flex items-center text-[10px] text-amber-600 font-bold uppercase tracking-wide bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                            Talla {item.variantes_producto.talla} · {item.variantes_producto.color}
+                          </span>
+                        )}
+                        {descuentoLinea.aplica && (
+                          <span className="inline-flex items-center text-[10px] text-emerald-700 font-black uppercase tracking-wide bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            Descuento por escala -{descuentoLinea.porcentaje}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="col-span-2 text-center font-black tabular-nums">
                       {item.cantidad}
@@ -224,6 +243,11 @@ export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalle
                     </div>
                     <div className="col-span-3 text-right tabular-nums opacity-70">
                       {precioUnitario != null ? formatMoney(precioUnitario) : '—'}
+                      {descuentoLinea.aplica && (
+                        <span className="block text-[9px] font-bold text-emerald-600">
+                          -{formatMoney(descuentoLinea.monto)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -266,9 +290,21 @@ export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalle
           style={{ borderColor: 'var(--guor-stone)' }}
         >
           <div className="flex justify-between text-[10px] opacity-60 font-bold" style={{ color: 'var(--guor-dark)' }}>
-            <span>Subtotal neto:</span>
-            <span className="tabular-nums">{formatMoney(subtotalNeto)}</span>
+            <span>Subtotal:</span>
+            <span className="tabular-nums">{formatMoney(subtotalBruto)}</span>
           </div>
+          {tieneDescuento && (
+            <div className="flex justify-between text-[10px] font-bold text-emerald-600">
+              <span>Descuento por escala:</span>
+              <span className="tabular-nums">-{formatMoney(montoDescuento)}</span>
+            </div>
+          )}
+          {tieneDescuento && (
+            <div className="flex justify-between text-[10px] opacity-60 font-bold" style={{ color: 'var(--guor-dark)' }}>
+              <span>Subtotal con descuento:</span>
+              <span className="tabular-nums">{formatMoney(subtotalConDescuento)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-[10px] opacity-60 font-bold" style={{ color: 'var(--guor-dark)' }}>
             <span>IGV (18%):</span>
             <span className="tabular-nums">{formatMoney(igvCalculado)}</span>

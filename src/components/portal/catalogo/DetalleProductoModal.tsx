@@ -1,6 +1,7 @@
 'use client';
 
-import { X, Info, Package } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Info, Package, TrendingDown } from 'lucide-react';
 import { ProductoPortal } from '@/components/portal/_contexts/PortalContext';
 import { formatCurrency } from '@/lib/helpers/format-helpers';
 import { COLOR_MAP } from '@/lib/constants/colores';
@@ -9,6 +10,12 @@ interface DetallesProductoModalProps {
     producto: ProductoPortal | null;
     isOpen: boolean;
     onClose: () => void;
+}
+
+interface EscalaPrecio {
+    cantidad_min: number;
+    porcentaje_descuento: number;
+    precio_unitario: number;
 }
 
 const formatearColor = (color: string) =>
@@ -34,6 +41,37 @@ function parsearAtributoSeguro(data: unknown): string[] {
 }
 
 export function DetallesProductoModal({ producto, isOpen, onClose }: DetallesProductoModalProps) {
+    const [escalas, setEscalas] = useState<EscalaPrecio[]>([]);
+    const [cargandoEscalas, setCargandoEscalas] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen || !producto) {
+            setEscalas([]);
+            return;
+        }
+
+        let cancelado = false;
+        setCargandoEscalas(true);
+
+        fetch(`/api/portal/productos/${producto.id}`)
+            .then((res) => res.json())
+            .then((json) => {
+                if (!cancelado && json?.success) {
+                    setEscalas(json.data?.escalas_precio ?? []);
+                }
+            })
+            .catch(() => {
+                if (!cancelado) setEscalas([]);
+            })
+            .finally(() => {
+                if (!cancelado) setCargandoEscalas(false);
+            });
+
+        return () => {
+            cancelado = true;
+        };
+    }, [isOpen, producto]);
+
     if (!isOpen || !producto) return null;
 
     // Ejecución del parseo seguro para evitar "colores.map is not a function"
@@ -195,6 +233,81 @@ export function DetallesProductoModal({ producto, isOpen, onClose }: DetallesPro
                             </div>
                         </div>
                     </section>
+
+                    {/* CUS_27 — Precios por escala de cantidad */}
+                    {(cargandoEscalas || escalas.length > 0) && (
+                        <section>
+                            <div
+                                className="flex items-center gap-2 mb-2"
+                                style={{ color: 'var(--guor-gold)' }}
+                            >
+                                <TrendingDown size={14} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    Precios por escala
+                                </span>
+                            </div>
+
+                            <div
+                                className="rounded-2xl border overflow-hidden"
+                                style={{ borderColor: 'var(--guor-stone)' }}
+                            >
+                                {cargandoEscalas ? (
+                                    <div className="p-4 text-xs italic text-slate-400 bg-white">
+                                        Calculando descuentos por volumen…
+                                    </div>
+                                ) : (
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr
+                                                className="text-[9px] font-black uppercase tracking-widest"
+                                                style={{ backgroundColor: 'var(--guor-cream-deep)', color: 'var(--guor-dark)', opacity: 0.7 }}
+                                            >
+                                                <th className="text-left px-4 py-2">Cantidad</th>
+                                                <th className="text-center px-4 py-2">Descuento</th>
+                                                <th className="text-right px-4 py-2">Precio unitario</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white">
+                                            <tr className="border-t" style={{ borderColor: 'var(--guor-stone)' }}>
+                                                <td className="px-4 py-2 font-bold" style={{ color: 'var(--guor-dark)' }}>
+                                                    {producto.moq ?? 1} – {escalas[0].cantidad_min - 1} uds
+                                                </td>
+                                                <td className="px-4 py-2 text-center opacity-40">—</td>
+                                                <td className="px-4 py-2 text-right font-black" style={{ color: 'var(--guor-dark)' }}>
+                                                    {formatCurrency(producto.precio)}
+                                                </td>
+                                            </tr>
+                                            {escalas.map((escala, idx) => {
+                                                const siguiente = escalas[idx + 1];
+                                                const rango = siguiente
+                                                    ? `${escala.cantidad_min} – ${siguiente.cantidad_min - 1} uds`
+                                                    : `${escala.cantidad_min}+ uds`;
+                                                return (
+                                                    <tr
+                                                        key={escala.cantidad_min}
+                                                        className="border-t"
+                                                        style={{ borderColor: 'var(--guor-stone)' }}
+                                                    >
+                                                        <td className="px-4 py-2 font-bold" style={{ color: 'var(--guor-dark)' }}>
+                                                            {rango}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                -{escala.porcentaje_descuento}%
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-2 text-right font-black" style={{ color: 'var(--guor-gold)' }}>
+                                                            {formatCurrency(escala.precio_unitario)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
         </div>

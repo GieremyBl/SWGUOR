@@ -26,6 +26,27 @@ export interface DespachoRow {
   total_paradas_grupo?: number;
   es_ruta_agrupada?: boolean;
   estado_entrega_parada?: string;
+  total: number;
+  monto_pagado: number;
+  saldo_pendiente: number;
+  pedido_estado: string | null;
+}
+
+/** Para un despacho `pendiente` (marcador, aún sin empacar), muestra en qué
+ * etapa real está el pedido en vez de un "Pendiente" sin contexto — así
+ * coincide con lo que ve el mismo pedido en /pedidos. */
+const LABEL_PEDIDO_PENDIENTE: Record<string, string> = {
+  pendiente: 'Sin empacar',
+  pagado: 'Sin empacar',
+  en_produccion: 'En producción',
+  listo_para_despacho: 'Listo para empacar',
+};
+
+function labelEstadoDespacho(despachoEstado: string, pedidoEstado: string | null): string {
+  if (despachoEstado === 'pendiente') {
+    return LABEL_PEDIDO_PENDIENTE[pedidoEstado ?? ''] ?? 'Sin empacar';
+  }
+  return labelEstado(despachoEstado);
 }
 
 interface Props {
@@ -69,7 +90,7 @@ export function DespachoTable({
                   Sel.
                 </th>
               )}
-              {['Despacho', 'Cliente', 'Dirección', 'Ruta', 'Estado', 'Entrega', 'Acciones'].map((h) => (
+              {['Despacho', 'Cliente', 'Dirección', 'Ruta', 'Estado', 'Pago', 'Entrega', 'Acciones'].map((h) => (
                 <th
                   key={h}
                   className="py-3 px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider"
@@ -82,7 +103,7 @@ export function DespachoTable({
           <tbody className="divide-y divide-gray-100">
             {despachos.length === 0 ? (
               <tr>
-                <td colSpan={puedeGestionar ? 8 : 7} className="py-12 text-center text-gray-400 italic">
+                <td colSpan={puedeGestionar ? 9 : 8} className="py-12 text-center text-gray-400 italic">
                   No se encontraron resultados
                 </td>
               </tr>
@@ -91,6 +112,7 @@ export function DespachoTable({
                 const esAgrupada = Boolean(desp.es_ruta_agrupada);
                 const puedeSeleccionar =
                   puedeGestionar && desp.estado === 'preparando' && !esAgrupada;
+                const pagado = desp.saldo_pendiente <= 0;
 
                 return (
                   <tr key={desp.id} className="hover:bg-gray-50 transition-colors">
@@ -130,10 +152,24 @@ export function DespachoTable({
                           ESTADO_STYLING[desp.estado] ?? 'bg-gray-100 text-gray-700'
                         }`}
                       >
-                        {labelEstado(desp.estado)}
+                        {labelEstadoDespacho(desp.estado, desp.pedido_estado)}
                       </span>
                       {desp.estado === 'en_ruta' && desp.estado_entrega_parada === 'siguiente' && (
                         <p className="text-[10px] text-blue-600 font-semibold mt-1">Siguiente parada</p>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          pagado ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
+                        {pagado ? 'Pagado' : 'Pendiente'}
+                      </span>
+                      {!pagado && (
+                        <p className="text-[10px] text-amber-700 font-semibold mt-1">
+                          Saldo S/ {desp.saldo_pendiente.toFixed(2)}
+                        </p>
                       )}
                     </td>
                     <td className="py-4 px-4 text-gray-700 text-sm">{desp.fecha_entrega}</td>

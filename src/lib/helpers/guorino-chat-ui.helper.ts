@@ -84,8 +84,8 @@ export function buildUiBlocksDesdePreview(preview: GuorinoPedidoPreview): Guorin
     type: 'decision',
     decision_id: `dec_pedido_${preview.id}`,
     titulo: 'Confirmar pedido propuesto',
-    descripcion:
-      'Revise la previsualización PDF. Si los productos y cantidades son correctos, acepte para registrar el pedido.',
+      descripcion:
+        'Revise el PDF (ver en pestaña o descargar). Si los productos y cantidades son correctos, acepte para registrar el pedido.',
     affirmative_label: 'Aceptar pedido',
     negative_label: 'Denegar',
     accion: 'confirmar_pedido',

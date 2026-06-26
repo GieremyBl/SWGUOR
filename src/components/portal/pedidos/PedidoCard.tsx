@@ -13,6 +13,9 @@ export interface Pedido {
   total_unidades: number; moneda: string;
   monto_pagado?: number;
   saldo_pendiente?: number;
+  subtotal?: number;
+  monto_descuento?: number;
+  igv?: number;
 }
 
 const ESTADO_META = {

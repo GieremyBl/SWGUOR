@@ -41,7 +41,7 @@ export async function GET(req: Request) {
           },
         },
       },
-      orderBy: { fecha_despacho: 'desc' },
+      orderBy: { pedido_id: 'desc' },
     });
 
     const data = despachos.map((d) => {
@@ -61,6 +61,12 @@ export async function GET(req: Request) {
         total_paradas_grupo: totalParadas,
         es_ruta_agrupada: esRutaAgrupada,
         estado_entrega_parada: link?.estado_entrega ?? 'en_espera',
+        total: Number(d.pedidos?.total ?? 0),
+        monto_pagado: Number(d.pedidos?.monto_pagado ?? 0),
+        saldo_pendiente: Number(
+          d.pedidos?.saldo_pendiente ?? (Number(d.pedidos?.total ?? 0) - Number(d.pedidos?.monto_pagado ?? 0)),
+        ),
+        pedido_estado: d.pedidos?.estado ?? null,
       };
     });
 

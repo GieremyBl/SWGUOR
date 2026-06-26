@@ -295,6 +295,15 @@ export const DashboardService = {
     const items = await prisma.insumo.findMany({
       where: { id: { in: ids } },
       orderBy: { stock_actual: 'asc' },
+      // select explícito: `ubicacion_almacen` está en el schema de Prisma pero
+      // ya no existe en la tabla real (columna eliminada en la base de datos).
+      select: {
+        id: true,
+        nombre: true,
+        stock_actual: true,
+        stock_minimo: true,
+        unidad_medida: true,
+      },
     });
 
     return items.map((i) => ({

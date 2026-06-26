@@ -31,6 +31,7 @@ import {
   assertIdempotenciaPagoPedidoEnTx,
   PedidoNoEncontradoPagoError,
 } from '@/lib/services/pago-idempotencia.service';
+import { crearDespachoPlaceholderPagoPedido } from '@/lib/helpers/crear-despacho-pedido.helper';
 
 export class CierreVentaCulqiError extends Error {
   readonly code: string;
@@ -187,6 +188,13 @@ export async function ejecutarCierreVentaPostCulqi(
         ...(esPagoQueSaldaDeuda ? { estado: ESTADO_PEDIDO_PAGO_COMPLETO } : {}),
       },
     });
+
+    if (esPagoQueSaldaDeuda) {
+      await crearDespachoPlaceholderPagoPedido(tx, {
+        id: pedido.id,
+        direccion_despacho: pedido.direccion_despacho,
+      });
+    }
 
     const tipoComprobante = determinarTipoComprobantePorDocumento(pedido.clientes.ruc);
     const serie = resolverSeriePorTipo(tipoComprobante);

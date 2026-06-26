@@ -18,6 +18,9 @@ export interface Pedido {
     moneda: string;
     monto_pagado?: number;
     saldo_pendiente?: number;
+    subtotal?: number;
+    monto_descuento?: number;
+    igv?: number;
     fecha_entrega_est?: string | null;
     notas_cliente?: string | null;
     clientes?: unknown;
