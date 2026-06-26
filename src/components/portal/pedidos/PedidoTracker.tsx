@@ -32,6 +32,12 @@ interface TrackerData {
   puede_editar_direccion: boolean;
   modo: 'cliente' | 'staff';
   pasos: PasoTrackerCalculado[];
+  flujo_interno?: Array<{
+    key: string;
+    label: string;
+    rol: string;
+    estadoVisual: 'completado' | 'actual' | 'pendiente';
+  }>;
   fecha_entrega_texto: string | null;
   fecha_entrega_pendiente: boolean;
   historial: HistorialItem[];
@@ -285,6 +291,39 @@ export function PedidoTracker({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {data.modo === 'staff' && (data.flujo_interno?.length ?? 0) > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">
+            Flujo interno del pedido (solo lectura)
+          </p>
+          <div className="space-y-2">
+            {data.flujo_interno!.map((paso) => {
+              const estadoClase =
+                paso.estadoVisual === 'completado'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : paso.estadoVisual === 'actual'
+                    ? 'border-blue-200 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 bg-slate-50 text-slate-500';
+
+              return (
+                <div
+                  key={paso.key}
+                  className={cn(
+                    'rounded-lg border px-3 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1',
+                    estadoClase,
+                  )}
+                >
+                  <p className="text-xs font-semibold">{paso.label}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                    {paso.rol}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

@@ -11,6 +11,11 @@ const cambiarEtapaSchema = z.object({
   etapaAnterior: z.enum(['recepcion_cortes', 'confeccion_y_remalle', 'acabado_y_limpieza', 'planchado_y_empaque', 'entregado_a_guor']),
   etapaNueva: z.enum(['recepcion_cortes', 'confeccion_y_remalle', 'acabado_y_limpieza', 'planchado_y_empaque', 'entregado_a_guor']),
   notas: z.string().nullable().optional(),
+  materialesRecibidos: z.object({
+    cortes: z.boolean(),
+    diseno: z.boolean(),
+    patronaje: z.boolean(),
+  }).optional(),
 });
 
 export async function POST(
@@ -34,6 +39,7 @@ export async function POST(
       etapaAnterior: validated.etapaAnterior as EtapaConfeccion,
       etapaNueva: validated.etapaNueva as EtapaConfeccion,
       notas: validated.notas ?? '',
+      materialesRecibidos: validated.materialesRecibidos,
       // Aquí auth ya está tipado como exitoso por descarte
       responsableId: auth.user.id.toString(),
     });

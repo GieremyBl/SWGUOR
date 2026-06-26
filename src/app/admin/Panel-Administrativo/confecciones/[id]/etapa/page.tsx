@@ -94,6 +94,10 @@ export default function ConfeccionesEtapasPage() {
         etapaNueva: etapaNueva,
         notas: notas || `Transición automática desde el Pipeline General de Talleres.`,
         responsableId: "1", // Reemplazar dinámicamente con el ID de la sesión del usuario conectado
+        materialesRecibidos:
+          confeccion.etapa === 'recepcion_cortes' && etapaNueva !== 'recepcion_cortes'
+            ? { cortes: true, diseno: true, patronaje: true }
+            : undefined,
       });
 
       if (res.success) {

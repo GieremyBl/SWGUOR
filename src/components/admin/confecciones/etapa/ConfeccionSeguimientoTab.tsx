@@ -49,6 +49,10 @@ export default function ConfeccionSeguimientoTab({
         etapaNueva: nuevaEtapa,
         notas: `Cambio de fase de producción realizado desde el panel de control del taller.`,
         responsableId: "1",
+        materialesRecibidos:
+          etapaActual === 'recepcion_cortes' && nuevaEtapa !== 'recepcion_cortes'
+            ? { cortes: true, diseno: true, patronaje: true }
+            : undefined,
       });
 
       if (res?.success) {

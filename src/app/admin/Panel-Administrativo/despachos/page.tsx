@@ -15,6 +15,7 @@ export interface Despacho {
   pedido_id:      string;
   cliente:        string;
   direccion:      string;
+  cantidad_pedida: number;
   estado:         'preparando' | 'en_ruta' | 'entregado' | 'incidencia';
   tracking:       string;
   fecha_despacho: string;
@@ -24,13 +25,14 @@ export interface Despacho {
 const PAGE_SIZE = 10;
 
 export default function DespachosPage() {
-  const { can, isLoading: authLoading } = usePermissions();
+  const { can, role, isLoading: authLoading } = usePermissions();
   const [despachos, setDespachos]       = useState<Despacho[]>([]);
   const [loading, setLoading]           = useState(true);
   const [searchTerm, setSearchTerm]     = useState('');
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [currentPage, setCurrentPage]   = useState(0);
   const [iniciandoId, setIniciandoId]   = useState<number | null>(null);
+  const [verificandoId, setVerificandoId] = useState<number | null>(null);
 
   const canView = can('view', 'despachos');
 
@@ -47,6 +49,7 @@ export default function DespachosPage() {
         pedido_id:      String(item.pedido_id),
         cliente:        item.cliente,
         direccion:      item.direccion,
+        cantidad_pedida: Number(item.cantidad_pedida ?? 0),
         estado:         item.estado,
         tracking:       item.tracking || 'S/N',
         fecha_despacho: item.fecha_despacho ? new Date(item.fecha_despacho).toLocaleDateString('es-PE') : '---',
@@ -75,6 +78,45 @@ export default function DespachosPage() {
       setIniciandoId(null);
     }
   }, [cargarDatos]);
+
+  const handleVerificarAlmacen = useCallback(async (despachoId: number) => {
+    const despacho = despachos.find((d) => d.id === despachoId);
+    if (!despacho) {
+      toast.error('No se encontró el despacho seleccionado');
+      return;
+    }
+
+    const input = window.prompt(
+      `Ingrese la cantidad verificada en almacén para ${despacho.despacho_id} (pedido: ${despacho.cantidad_pedida}):`,
+      String(despacho.cantidad_pedida),
+    );
+
+    if (input == null) return;
+
+    const cantidad = Number(input);
+    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+      toast.error('Debe ingresar una cantidad entera mayor a cero');
+      return;
+    }
+
+    setVerificandoId(despachoId);
+    try {
+      const res = await fetch(`/api/admin/despachos/${despachoId}/verificar-almacen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cantidad_verificada: cantidad }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'No se pudo registrar verificación de almacén');
+
+      toast.success('Verificación de almacén registrada correctamente');
+      await cargarDatos();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al verificar almacén');
+    } finally {
+      setVerificandoId(null);
+    }
+  }, [despachos, cargarDatos]);
 
   useEffect(() => { if (!authLoading) cargarDatos(); }, [authLoading, cargarDatos]);
 
@@ -127,8 +169,11 @@ export default function DespachosPage() {
         <DespachoTable
           despachos={paginated}
           loading={loading}
+          role={role}
           iniciandoId={iniciandoId}
+          verificandoId={verificandoId}
           onIniciarRuta={handleIniciarRuta}
+          onVerificarAlmacen={handleVerificarAlmacen}
         />
       </div>
     </div>

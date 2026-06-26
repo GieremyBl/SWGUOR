@@ -10,6 +10,11 @@ interface ActualizarEtapaInput {
   etapaNueva: EtapaConfeccion;
   notas: string;
   responsableId: string;
+  materialesRecibidos?: {
+    cortes: boolean;
+    diseno: boolean;
+    patronaje: boolean;
+  };
 }
 
 /**
@@ -32,6 +37,7 @@ export async function registrarAvanceTaller({
   etapaNueva,
   notas,
   responsableId,
+  materialesRecibidos,
 }: ActualizarEtapaInput) {
   try {
     const idConfeccion = BigInt(confeccionId);
@@ -57,6 +63,22 @@ export async function registrarAvanceTaller({
         );
       }
 
+      // Regla obligatoria: para salir de recepción, debe confirmarse la recepción de
+      // cortes, diseño y patronaje.
+      if (etapaAnterior === 'recepcion_cortes' && etapaNueva !== 'recepcion_cortes') {
+        const recibioTodo = Boolean(
+          materialesRecibidos?.cortes &&
+          materialesRecibidos?.diseno &&
+          materialesRecibidos?.patronaje,
+        );
+
+        if (!recibioTodo) {
+          throw new Error(
+            'Antes de avanzar la confección debes confirmar recepción de cortes, diseño y patronaje.',
+          );
+        }
+      }
+
       // 2. Determinar el nuevo estado maestro correspondiente a la etapa enviada
       const nuevoEstadoCalculado = mapearEtapaAEstado(etapaNueva);
 
@@ -73,12 +95,23 @@ export async function registrarAvanceTaller({
       });
 
       // 4. Crear el registro de auditoría obligatoria en 'seguimiento_confeccion'
+      const notaBase =
+        notas.trim() || `Avance de fase registrado: ${etapaAnterior} → ${etapaNueva}.`;
+      const notaConMateriales =
+        etapaAnterior === 'recepcion_cortes' && etapaNueva !== 'recepcion_cortes'
+          ? `${notaBase}\n[MATERIALES_RECIBIDOS] ${JSON.stringify({
+              cortes: Boolean(materialesRecibidos?.cortes),
+              diseno: Boolean(materialesRecibidos?.diseno),
+              patronaje: Boolean(materialesRecibidos?.patronaje),
+            })}`
+          : notaBase;
+
       const nuevoSeguimiento = await tx.seguimiento_confeccion.create({
         data: {
           confeccion_id: idConfeccion,
           etapa_anterior: etapaAnterior,
           etapa_nueva: etapaNueva,
-          notas: notas.trim() || `Avance de fase registrado: ${etapaAnterior} → ${etapaNueva}.`,
+          notas: notaConMateriales,
           responsable_id: idResponsable,
         },
       });

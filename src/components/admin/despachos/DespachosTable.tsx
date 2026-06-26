@@ -18,6 +18,7 @@ interface DespachoRow {
   pedido_id: string;
   cliente: string;
   direccion: string;
+  cantidad_pedida: number;
   estado: string;
   tracking: string;
   fecha_entrega: string;
@@ -26,15 +27,21 @@ interface DespachoRow {
 interface Props {
   despachos: DespachoRow[];
   loading: boolean;
+  role?: string | null;
   iniciandoId: number | null;
+  verificandoId: number | null;
   onIniciarRuta: (id: number) => void;
+  onVerificarAlmacen: (id: number) => void;
 }
 
 export function DespachoTable({
   despachos,
   loading,
+  role,
   iniciandoId,
+  verificandoId,
   onIniciarRuta,
+  onVerificarAlmacen,
 }: Props) {
   if (loading) {
     return (
@@ -92,20 +99,42 @@ export function DespachoTable({
                   <td className="py-4 px-4">
                     <div className="flex flex-wrap items-center gap-2">
                       {desp.estado === 'preparando' && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={iniciandoId === desp.id}
-                          onClick={() => onIniciarRuta(desp.id)}
-                          className="h-8 bg-indigo-600 hover:bg-indigo-700 text-[10px] font-black uppercase tracking-widest"
-                        >
-                          {iniciandoId === desp.id ? (
-                            <Loader2 size={14} className="animate-spin mr-1" />
-                          ) : (
-                            <Truck size={14} className="mr-1" />
+                        <>
+                          {['almacenero', 'administrador', 'gerente'].includes(String(role ?? '')) && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={verificandoId === desp.id}
+                              onClick={() => onVerificarAlmacen(desp.id)}
+                              className="h-8 border-amber-300 text-amber-700 hover:bg-amber-50 text-[10px] font-black uppercase tracking-widest"
+                            >
+                              {verificandoId === desp.id ? (
+                                <Loader2 size={14} className="animate-spin mr-1" />
+                              ) : (
+                                <MapPin size={14} className="mr-1" />
+                              )}
+                              Verificar almacén
+                            </Button>
                           )}
-                          Iniciar Ruta
-                        </Button>
+
+                          {['ayudante', 'administrador', 'gerente'].includes(String(role ?? '')) && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={iniciandoId === desp.id}
+                              onClick={() => onIniciarRuta(desp.id)}
+                              className="h-8 bg-indigo-600 hover:bg-indigo-700 text-[10px] font-black uppercase tracking-widest"
+                            >
+                              {iniciandoId === desp.id ? (
+                                <Loader2 size={14} className="animate-spin mr-1" />
+                              ) : (
+                                <Truck size={14} className="mr-1" />
+                              )}
+                              Iniciar Ruta
+                            </Button>
+                          )}
+                        </>
                       )}
                       {desp.estado === 'en_ruta' && (
                         <Link

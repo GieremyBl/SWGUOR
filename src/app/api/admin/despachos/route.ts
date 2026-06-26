@@ -36,6 +36,7 @@ export async function GET(req: Request) {
       despacho_id: `DSP-${String(d.id).padStart(6, '0')}`,
       cliente: d.pedidos?.clientes?.razon_social ?? 'N/A',
       direccion: d.direccion_entrega,
+      cantidad_pedida: Number(d.pedidos?.total_unidades ?? 0),
     }));
 
     return NextResponse.json({ data, count: data.length });
