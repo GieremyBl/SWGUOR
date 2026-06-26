@@ -9,12 +9,13 @@ const CANCEL_ROLES = ['administrador', 'gerente'] as const;
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireServerRole([...CANCEL_ROLES]);
   if (!auth.success) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const pedidoId = BigInt(params.id);
+  const { id } = await params;
+  const pedidoId = BigInt(id);
 
   try {
     const { motivo } = await req.json();

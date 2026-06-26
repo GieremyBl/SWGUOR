@@ -145,7 +145,7 @@ export async function generarOrdenesParaPedidosPagados(params?: { limite?: numbe
         await tx.seguimiento_confeccion.create({
           data: {
             confeccion_id: confeccion.id,
-            estado_nuevo: 'pendiente',
+            etapa_nueva: 'recepcion_cortes',
             notas: 'Orden de confección generada automáticamente tras pago verificado.',
             responsable_id: representanteId,
           },

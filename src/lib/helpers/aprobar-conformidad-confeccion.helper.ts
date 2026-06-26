@@ -105,7 +105,7 @@ export async function aprobarConformidadConfeccion(params: {
       data: {
         confeccion_id: params.confeccionId,
         etapa_anterior: etapaPrevia,
-        etapa_nuevo: etapaFinal,
+        etapa_nueva: etapaFinal,
         notas: NOTA_CONFORMIDAD,
         responsable_id: params.usuarioId,
       },

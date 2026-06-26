@@ -81,9 +81,9 @@ export async function obtenerOrdenRepresentante(ordenIdStr: string) {
  * Reasigna el taller externo encargado tanto en la orden como en la confección
  */
 export async function reasignarTallerOrden(params: {
-  ordenId: string;
-  tallerId: string;
-  usuarioId: string;
+  ordenId: string | bigint;
+  tallerId: string | bigint;
+  usuarioId: string | bigint;
 }) {
   const idOrden = BigInt(params.ordenId);
   const idTaller = BigInt(params.tallerId);
@@ -131,7 +131,7 @@ export async function reasignarTallerOrden(params: {
         data: {
           confeccion_id: conf.id,
           etapa_anterior: etapaActual,
-          etapa_nuevo: etapaActual, // Mantiene la misma etapa, solo documenta el cambio de locación
+          etapa_nueva: etapaActual, // Mantiene la misma etapa, solo documenta el cambio de locación
           notas: `Taller reasignado a ${taller.nombre}`,
           responsable_id: idUsuario,
         },
@@ -146,9 +146,9 @@ export async function reasignarTallerOrden(params: {
  * Avanza el estado maestro transaccionalmente evaluando las reglas del negocio
  */
 export async function avanzarEstadoConfeccion(params: {
-  ordenId: string;
+  ordenId: string | bigint;
   nuevoEstado: EstadoConfeccion;
-  usuarioId: string;
+  usuarioId: string | bigint;
   notas?: string;
 }) {
   const idOrden = BigInt(params.ordenId);
@@ -185,6 +185,7 @@ export async function avanzarEstadoConfeccion(params: {
       where: { id: conf.id },
       data: {
         estado: params.nuevoEstado,
+        etapa: params.nuevoEstado === 'completada' ? 'entregado_a_guor' : (conf.seguimiento_confeccion[0]?.etapa_nueva || conf.etapa || 'recepcion_cortes'),
         updated_at: new Date(),
         ...(params.nuevoEstado === 'completada' ? { fecha_fin: new Date() } : {}),
         ...(params.nuevoEstado === 'en_proceso' && !conf.fecha_inicio ? { fecha_inicio: new Date() } : {}),

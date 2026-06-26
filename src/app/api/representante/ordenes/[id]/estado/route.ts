@@ -31,9 +31,9 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     await avanzarEstadoConfeccion({
-      ordenId: BigInt(id),
+      ordenId: id,
       nuevoEstado: estado,
-      usuarioId: BigInt(auth.user.id),
+      usuarioId: String(auth.user.id),
       notas: typeof body.notas === 'string' ? body.notas : undefined,
     });
 

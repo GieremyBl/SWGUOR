@@ -25,9 +25,9 @@ export async function PATCH(req: Request, { params }: Params) {
     }
 
     const nombre = await reasignarTallerOrden({
-      ordenId: BigInt(id),
-      tallerId: BigInt(String(tallerId)),
-      usuarioId: BigInt(auth.user.id),
+      ordenId: id,
+      tallerId: String(tallerId),
+      usuarioId: String(auth.user.id),
     });
 
     return NextResponse.json({ success: true, data: { taller: nombre } });

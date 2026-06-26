@@ -288,7 +288,7 @@ export async function registrarCortePedidoCompletado(params: {
       await tx.seguimiento_confeccion.create({
         data: {
           confeccion_id: confeccion.id,
-          estado_nuevo: 'pendiente',
+          etapa_nueva: 'recepcion_cortes',
           notas: 'Orden de confección generada automáticamente tras el corte.',
           responsable_id: representanteId,
         },

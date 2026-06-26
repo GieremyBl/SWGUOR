@@ -146,7 +146,11 @@ export async function obtenerFlujoTalleres() {
           }
         },
         // Si tienes una relación o campo con el nombre del taller externo asignado
-        taller: true 
+        talleres: {
+          select: {
+            nombre: true
+          }
+        }
       },
       orderBy: { id: 'desc' }
     });
@@ -163,7 +167,7 @@ export async function obtenerFlujoTalleres() {
         cantidad: Number(c.cantidad) || 0,
         prioridad: c.prioridad || "media",
         etapa: etapaFisica as EtapaConfeccion,
-        taller: c.taller || "Taller no asignado"
+        taller: c.talleres?.nombre || "Taller no asignado"
       };
     });
 

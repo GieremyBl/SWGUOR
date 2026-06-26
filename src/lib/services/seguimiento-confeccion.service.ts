@@ -76,7 +76,7 @@ export const SeguimientoConfeccionService = {
         where: { id: idConfeccion },
         data: {
           estado: nuevoEstadoCalculado,
-          etapa_actual: params.etapa_nueva, // Mantenemos guardada la última etapa física
+          etapa: params.etapa_nueva, // Mantenemos guardada la última etapa física
           updated_at: new Date(),
           ...(params.etapa_nueva === 'recepcion_cortes' && !confeccionActual.fecha_inicio ? { fecha_inicio: new Date() } : {}),
           ...(params.etapa_nueva === 'entregado_a_guor' ? { fecha_fin: new Date() } : {}),
@@ -89,7 +89,7 @@ export const SeguimientoConfeccionService = {
         data: {
           confeccion_id: idConfeccion,
           etapa_anterior: params.etapa_anterior,
-          etapa_nuevo: params.etapa_nueva,
+          etapa_nueva: params.etapa_nueva,
           notas: params.notas ?? `Cambio de fase física registrado en taller.`,
           responsable_id: idResponsable,
         },
