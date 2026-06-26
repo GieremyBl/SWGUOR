@@ -61,3 +61,14 @@ export function evidenciaEntregaStoragePath(
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
   return `pedido-${pedidoId}/entrega-${Date.now()}-${safe}`;
 }
+
+export const STORAGE_BUCKET_EVIDENCIAS_CONFECCION =
+  process.env.SUPABASE_STORAGE_BUCKET_EVIDENCIAS_CONFECCION ?? 'evidencias-confeccion';
+
+export function evidenciaConfeccionStoragePath(
+  confeccionId: string | number,
+  fileName: string,
+): string {
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return `confeccion-${confeccionId}/${Date.now()}-${safe}`;
+}

@@ -29,8 +29,6 @@ export interface UsePermissionsReturn {
 export function usePermissions(): UsePermissionsReturn {
   const context = usePermissionsContext();
 
-  // Si el contexto existe, usamos sus valores. 
-  // Esto elimina el parpadeo de carga al navegar porque el estado ya viene del servidor.
   if (context) {
     return {
       usuario: context.usuario as Usuario | null,
@@ -43,8 +41,6 @@ export function usePermissions(): UsePermissionsReturn {
     };
   }
 
-  // Fallback seguro en caso de que el hook se use fuera del provider 
-  // (aunque en la zona admin siempre debería estar disponible)
   return {
     usuario: null,
     role: null,

@@ -12,6 +12,8 @@ export interface ReporteIncidenciaItem {
   fecha: string;
 
   estado: string;
+  
+  evidencia?: string[];
 }
 
 export interface ReporteIncidenciasStats {

@@ -334,8 +334,12 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_movimiento_inventario', 'actualizar_stock_almacen',
     'ver_proveedores',
     'ver_ordenes_compra', 'crear_ordenes_compra', 'editar_ordenes_compra', 'cancelar_ordenes_compra',
-    'ver_cotizaciones_proveedor', 'crear_cotizaciones_proveedor', 'editar_cotizaciones_proveedor',
-    'cancelar_cotizaciones_proveedor',
+    'ver_devoluciones_cliente',
+    'crear_devoluciones_cliente',
+    'exportar_devoluciones_cliente',
+    'cancelar_devoluciones_cliente',
+    'editar_devoluciones_cliente',
+    'ver_detalle_devoluciones_cliente',
   ],
 
   cliente: [

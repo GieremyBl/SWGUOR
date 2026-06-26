@@ -77,6 +77,13 @@ const GESTION_OPERATIVA: NavGroup = {
         },
 
         {
+          title: 'Incidencias de Clientes',
+          href: '/admin/Panel-Administrativo/reportes/incidencias-cliente',
+          icon: Bell,
+          resource: 'dashboard' as RecursoKey,
+        },
+
+        {
           title: 'Analítica Financiera',
           href: '/admin/Panel-Administrativo/reportes/analitica-financiera',
           icon: DollarSign,
@@ -126,7 +133,7 @@ const GESTION_OPERATIVA: NavGroup = {
         { title: 'Pedidos', href: '/admin/Panel-Administrativo/pedidos', icon: ShoppingCart, resource: 'pedidos' as RecursoKey },
         { title: 'Cotizaciones', href: '/admin/Panel-Administrativo/cotizaciones', icon: FileText, resource: 'cotizaciones' as RecursoKey },
         { title: 'Costos de Envío', href: '/admin/Panel-Administrativo/costo-envio', icon: Truck, resource: 'cotizaciones' as RecursoKey },
-        { title: 'Devoluciones', href: '/admin/Panel-Administrativo/devoluciones-cliente', icon: Truck, resource: 'devoluciones_cliente' as RecursoKey },
+        { title: 'Devoluciones Clientes', href: '/admin/Panel-Administrativo/devoluciones-cliente', icon: Truck, resource: 'devoluciones_cliente' as RecursoKey },
         { title: 'Últimos Pagos', href: '/admin/Panel-Administrativo/pagos', icon: DollarSign, resource: 'pagos' as RecursoKey },
         { title: 'Libro Diario', href: '/admin/Panel-Administrativo/asientos-contables', icon: FileText, resource: 'asientos_contables' as RecursoKey },
       ],
@@ -153,7 +160,7 @@ const GESTION_LOGISTICA: NavGroup = {
     {
       title: 'Inventario',
       icon: Boxes,
-      roles: ['gerente', 'administrador', 'cortador', 'ayudante'],
+      roles: ['gerente', 'administrador', 'cortador', 'ayudante', 'almacenero'],
       subItems: [
         { title: 'Almacenes', href: '/admin/Panel-Administrativo/almacenes', icon: Boxes, resource: 'almacenes' as RecursoKey },
         { title: 'Inventario', href: '/admin/Panel-Administrativo/inventario', icon: Boxes, resource: 'inventario' as RecursoKey },

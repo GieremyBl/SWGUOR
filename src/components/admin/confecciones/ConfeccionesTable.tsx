@@ -1,19 +1,10 @@
 "use client";
 
-import React, { memo, useState } from "react";
+import { memo } from "react";
 import { Scissors } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ESTADO_CONFECCION } from "@/lib/schemas/confecciones";
 import ConfeccionRow from "@/components/admin/confecciones/ConfeccionesRow";
-import type { EtapaConfeccion } from "@prisma/client";
-
-const LABELS_TRADUCCION = {
-  "recepcion_cortes": "Recepción de Cortes",
-  "confeccion_y_remalle": "Confección y Remalle",
-  "acabado_y_limpieza": "Acabado y Limpieza",
-  "planchado_y_empaque": "Planchado y Empaque",
-  "entregado_a_guor": "Entregado a GUOR",
-};
 
 export type ConfeccionRow_T = {
   id: number;
@@ -54,47 +45,6 @@ function ConfeccionesTable({
   talleres,
   onRefresh,
 }: ConfeccionesTableProps) {
-  // Estado para controlar qué fila expandir
-  const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
-
-  // Estados para el Modal Interceptor de notas
-  const [modalOpen, setModalOpen] = useState(false);
-  const [ordenSeleccionada, setOrdenSeleccionada] = useState<ConfeccionRow_T | null>(null);
-  const [proximaEtapa, setProximaEtapa] = useState<EtapaConfeccion | null>(null);
-
-  const toggleRow = (id: number) => {
-    setExpandedRowId(expandedRowId === id ? null : id);
-  };
-
-  // Intercepta el evento "onCambiarEtapa" del Stepper para abrir el formulario primero
-  const handleIntentarCambioEtapa = (orden: ConfeccionRow_T, nuevaEtapa: EtapaConfeccion) => {
-    setOrdenSeleccionada(orden);
-    setProximaEtapa(nuevaEtapa);
-    setModalOpen(true);
-  };
-
-  const handleConfirmarServidor = async (notas: string) => {
-    if (!ordenSeleccionada || !proximaEtapa) return;
-
-    try {
-      const res = await fetch(`/api/admin/confecciones/${ordenSeleccionada.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          estado: proximaEtapa,
-          notas: notas
-        }),
-      });
-
-      if (!res.ok) throw new Error();
-
-      setModalOpen(false);
-      onRefresh();
-    } catch (error) {
-      console.error(error);
-      throw new Error("No se pudo procesar el avance del taller.");
-    }
-  };
 
   return (
     <>
@@ -162,33 +112,17 @@ function ConfeccionesTable({
               </tr>
             ) : (
               data.map((orden) => {
-                const isExpanded = expandedRowId === orden.id;
-
-                // Conversión/Casteo seguro para que coincida con el tipado estricto del taller físico
-                const estadoTallerValido = (
-                  orden.estado === "pendiente" || orden.estado === "en_proceso"
-                    ? "1_recepcion_cortes"
-                    : orden.estado === "completada"
-                      ? "5_entregado_a_guor"
-                      : orden.estado
-                ) as EtapaConfeccion;
 
                 return (
-                  <React.Fragment key={orden.id}>
-                    {/* Fila Maestra de Datos */}
-                    <tr
-                      onClick={() => toggleRow(orden.id)}
-                      className="cursor-pointer transition-colors hover:bg-slate-50/80"
-                    >
-                      <ConfeccionRow
-                        orden={orden}
-                        talleres={talleres}
-                        onRefresh={onRefresh}
-                      />
-                    </tr>
-                  </React.Fragment>
+                  <ConfeccionRow
+                    key={orden.id}
+                    orden={orden}
+                    talleres={talleres}
+                    onRefresh={onRefresh}
+                  />
                 );
               })
+
             )}
           </tbody>
         </table>
