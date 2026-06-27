@@ -53,6 +53,15 @@ export async function GET(req: NextRequest) {
                         despacho_id: true,
                         pedido_id: true,
                         created_at: true,
+                        pedidos: {
+                            select: {
+                                zona_envio: {
+                                    select: {
+                                        zona: true,
+                                    },
+                                },
+                            },
+                        },
                     },
                 },
                 seguimiento_despachos: {

@@ -46,7 +46,7 @@ export const ZONAS_ENVIO: Record<ZonaEnvio, { label: string; costo: number }> = 
 export interface HitoSeguimientoPedido { id: number; pedido_id: number; status: string; notas: string | null; created_at: string; }
 export interface HitoSeguimientoDespacho { id: number; grupo_despacho_id: number; status: string; notas: string | null; created_at: string; }
 export interface PedidoSeguimiento { id: number; codigo_pedido: string; fecha_compra: string; monto_total: number; estado_pago: string; estado_pedido: string; items_count: number; historial: HitoSeguimientoPedido[]; }
-export interface DespachoPortal { id: number; pedido_id: number; fecha_despacho: string; direccion_entrega: string; fecha_entrega: string | null; estado: string; created_at: string; updated_at: string; historial_grupo: HitoSeguimientoDespacho[]; }
+export interface DespachoPortal { id: number; pedido_id: number; fecha_despacho: string; direccion_entrega: string; fecha_entrega: string | null; estado: string; created_at: string; updated_at: string; historial_grupo: HitoSeguimientoDespacho[]; zona_envio: string | null; }
 
 export interface PortalCtxProps {
     cliente: ClientePortal | null;

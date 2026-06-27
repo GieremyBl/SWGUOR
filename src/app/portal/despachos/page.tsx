@@ -1,9 +1,10 @@
 'use client';
 
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { Truck, AlertCircle, RefreshCw } from 'lucide-react';
 import CardDespacho from '@/components/portal/despachos/CardDespacho';
 import { PortalContext } from '@/components/portal/_contexts/PortalContext';
+import { etiquetaZonaEnvio } from '@/lib/constants/costo-envio';
 
 export default function DespachosPage() {
   // Consumimos directamente el estado global unificado del Portal B2B
@@ -26,11 +27,30 @@ export default function DespachosPage() {
     despachosActivos,
     loadingSeguimiento,
     refetchSeguimiento,
-    loading: loadingCliente
+    loading: loadingCliente,
   } = context;
 
   // Unificamos los estados de carga del contexto para no mostrar interfaces vacías
   const estaCargando = loadingCliente || loadingSeguimiento;
+
+  const despachosAgrupados = useMemo(() => {
+    const grupos = new Map<string, typeof despachosActivos>();
+
+    despachosActivos.forEach((despacho) => {
+      const clave = despacho.zona_envio ?? 'sin_zona';
+      const actual = grupos.get(clave) ?? [];
+      actual.push(despacho);
+      grupos.set(clave, actual);
+    });
+
+    const orden = ['cercana_sjl', 'media', 'lejana', 'sin_zona'];
+    return orden
+      .map((zona) => ({
+        zona,
+        despachos: grupos.get(zona) ?? [],
+      }))
+      .filter((grupo) => grupo.despachos.length > 0);
+  }, [despachosActivos]);
 
   return (
     <div className="space-y-10 pb-20">
@@ -88,9 +108,31 @@ export default function DespachosPage() {
             </div>
           </div>
         ) : (
-          despachosActivos.map((d) => (
-            <CardDespacho key={d.id} despacho={d} />
-          ))
+          <div className="space-y-8">
+            {despachosAgrupados.map((grupo) => (
+              <section key={grupo.zona} className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      Zona de envío
+                    </p>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      {grupo.zona === 'sin_zona' ? 'Sin zona asignada' : etiquetaZonaEnvio(grupo.zona)}
+                    </h2>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 shadow-sm">
+                    {grupo.despachos.length} despacho{grupo.despachos.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                  {grupo.despachos.map((d) => (
+                    <CardDespacho key={d.id} despacho={d} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         )}
       </div>
     </div>
