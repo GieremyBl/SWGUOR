@@ -8,7 +8,14 @@ export function mapGrupoDespachoToPortal(grupo: Record<string, unknown>): Despac
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
+  const pedidosConZona =
+    (grupo.despachos_grupo_pedidos as Array<{
+      pedido_id?: number | string;
+      pedidos?: { zona_envio?: { zona?: string | null } | null } | null;
+    }> | undefined) ?? [];
+
   const pedidoId = pedidosGrupo[0]?.pedido_id;
+  const zonaEnvio = pedidosConZona[0]?.pedidos?.zona_envio?.zona ?? null;
 
   return {
     id: Number(grupo.id),
@@ -19,6 +26,7 @@ export function mapGrupoDespachoToPortal(grupo: Record<string, unknown>): Despac
     estado: String(grupo.estado ?? 'pendiente'),
     created_at: String(grupo.created_at ?? ''),
     updated_at: String(grupo.updated_at ?? ''),
+    zona_envio: zonaEnvio,
     historial_grupo: seguimientos.map((h) => ({
       id: Number(h.id),
       grupo_despacho_id: Number(h.grupo_despacho_id),

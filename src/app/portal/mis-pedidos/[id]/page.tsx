@@ -12,6 +12,8 @@ export default function PedidoDetallePage() {
   const tabInicial =
     tabParam === 'documentos'
       ? 'documentos'
+      : tabParam === 'seguimiento'
+        ? 'seguimiento'
       : tabParam === 'asistencia'
         ? 'asistencia'
         : 'resumen';
