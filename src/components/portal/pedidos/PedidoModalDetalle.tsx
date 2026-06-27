@@ -6,6 +6,7 @@ import { PedidoDetalleResumen } from './PedidoDetalleResumen';
 import { PedidoDetalleTabs } from './PedidoDetalleTabs';
 
 export interface PedidoConDetalles extends Pedido {
+  ubigeo_envio: string;
   direccion_envio?: string | null;
   notas?: string | null;
 }

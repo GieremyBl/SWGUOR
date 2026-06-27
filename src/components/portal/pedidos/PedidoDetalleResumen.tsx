@@ -2,18 +2,27 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { FileText, MapPin } from 'lucide-react';
-import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { PedidoHistorialAbonos } from '@/components/portal/pedidos/PedidoHistorialAbonos';
 import { PedidoProgresoPago } from '@/components/portal/pedidos/PedidoProgresoPago';
 import type { PedidoConDetalles } from '@/components/portal/pedidos/PedidoModalDetalle';
-import type { AbonoPedido, PedidoPagosResumen } from '@/lib/schemas/portal-pedido-pagos';
+import type { AbonoPedido } from '@/lib/schemas/portal-pedido-pagos';
 
 interface PedidoItemDB {
   id: number;
   cantidad: number;
-  especificaciones: Record<string, unknown> | null;
-  productos: { sku: string; nombre: string } | null;
-  variantes_producto: { talla: string; color: string } | null;
+  especificaciones: Record<string, any> | null;
+  productos: {
+    id: number;
+    nombre: string;
+    categoria?: string | null;
+    precio_base?: number | null;
+  } | null;
+  variantes_producto: {
+    id: number;
+    talla?: string | null;
+    color?: string | null;
+    precio?: number | null;
+  } | null;
 }
 
 function ItemSkeleton() {
@@ -24,10 +33,12 @@ function ItemSkeleton() {
         <div className="h-3 w-40 bg-neutral-200 rounded" />
         <div className="h-4 w-24 bg-amber-100 rounded" />
       </div>
-      <div className="col-span-2 flex justify-center">
-        <div className="h-3 w-8 bg-neutral-200 rounded" />
+      <div className="col-span-2 flex flex-col items-center space-y-1">
+        <div className="h-2 w-8 bg-neutral-200 rounded" />
+        <div className="h-3 w-6 bg-neutral-200 rounded" />
       </div>
-      <div className="col-span-3 flex justify-end">
+      <div className="col-span-3 flex flex-col items-end space-y-1">
+        <div className="h-2 w-12 bg-neutral-200 rounded" />
         <div className="h-3 w-16 bg-neutral-200 rounded" />
       </div>
     </div>
@@ -36,226 +47,178 @@ function ItemSkeleton() {
 
 interface PedidoDetalleResumenProps {
   pedido: PedidoConDetalles;
-  onVerComprobante?: (pedidoId: number, comprobanteId: string) => void;
 }
 
-export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalleResumenProps) {
+export function PedidoDetalleResumen({ pedido }: PedidoDetalleResumenProps) {
+  const pedidoId = pedido.id;
+
   const [items, setItems] = useState<PedidoItemDB[]>([]);
-  const [loadingItems, setLoadingItems] = useState(false);
-  const [resumenPagos, setResumenPagos] = useState<PedidoPagosResumen | null>(null);
-  const [loadingPagos, setLoadingPagos] = useState(false);
-  const [errorPagos, setErrorPagos] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!pedido?.id) {
-      setItems([]);
-      return;
+  const [abonos, setAbonos] = useState<AbonoPedido[]>([]);
+  const [loadingPagos, setLoadingPagos] = useState(true);
+
+  const cargarItemsPedido = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/portal/pedidos/${pedidoId}/items`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: PedidoItemDB[] = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error('Error al cargar items del pedido:', err);
+    } finally {
+      setLoading(false);
     }
+  }, [pedidoId]);
 
-    const fetchItems = async () => {
-      setLoadingItems(true);
-      try {
-        const supabase = getSupabaseBrowserClient();
-        const { data } = await supabase
-          .from('pedido_items')
-          .select(`
-            id,
-            cantidad,
-            especificaciones,
-            productos ( sku, nombre ),
-            variantes_producto ( talla, color )
-          `)
-          .eq('pedido_id', pedido.id)
-          .order('id');
-
-        setItems((data as PedidoItemDB[]) ?? []);
-      } finally {
-        setLoadingItems(false);
-      }
-    };
-
-    fetchItems();
-  }, [pedido?.id]);
-
-  useEffect(() => {
-    if (!pedido?.id) {
-      setResumenPagos(null);
-      setErrorPagos(null);
-      return;
-    }
-
-    const fetchPagos = async () => {
+  const cargarDatosPagos = useCallback(async () => {
+    try {
       setLoadingPagos(true);
-      setErrorPagos(null);
-      try {
-        const res = await fetch(`/api/portal/pedidos/${pedido.id}/pagos`);
-        const json = await res.json();
+      const res = await fetch(`/api/portal/pedidos/${pedidoId}/abonos`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: AbonoPedido[] = await res.json();
+      setAbonos(data);
+    } catch (err) {
+      console.error('Error al cargar datos de pagos:', err);
+    } finally {
+      setLoadingPagos(false);
+    }
+  }, [pedidoId]);
 
-        if (!res.ok || !json.success) {
-          throw new Error(json.error ?? 'No se pudo cargar el historial de abonos');
-        }
-
-        setResumenPagos(json.data as PedidoPagosResumen);
-      } catch (err) {
-        setResumenPagos(null);
-        setErrorPagos(err instanceof Error ? err.message : 'Error al cargar abonos');
-      } finally {
-        setLoadingPagos(false);
-      }
-    };
-
-    fetchPagos();
-  }, [pedido?.id]);
-
-  const handleVerComprobanteAbono = useCallback(
-    (abono: AbonoPedido) => {
-      if (!pedido?.id || !abono.comprobante?.id || !onVerComprobante) return;
-      onVerComprobante(pedido.id, abono.comprobante.id);
-    },
-    [pedido?.id, onVerComprobante],
-  );
-
-  const montoPagado = resumenPagos?.monto_pagado ?? Number(pedido.monto_pagado ?? 0);
-  const saldoPendiente =
-    resumenPagos?.saldo_pendiente ??
-    Number(pedido.saldo_pendiente ?? Math.max(pedido.total - montoPagado, 0));
-  const monedaPagos = resumenPagos?.moneda ?? pedido.moneda ?? 'PEN';
-  const abonos = resumenPagos?.abonos ?? [];
+  useEffect(() => {
+    cargarItemsPedido();
+    cargarDatosPagos();
+  }, [cargarItemsPedido, cargarDatosPagos]);
 
   const formatMoney = (amount: number) =>
-    new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: pedido.moneda || 'PEN',
-    }).format(amount);
+    new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(amount);
 
-  const subtotalNeto = pedido.total / 1.18;
-  const igvCalculado = pedido.total - subtotalNeto;
+  const totalPedido = Number(pedido.total ?? 0);
+  const montoPagado = Number(pedido.monto_pagado ?? 0);
+  const saldoPendiente = Math.max(totalPedido - montoPagado, 0);
+
+  const subtotalNeto = totalPedido / 1.18;
+  const igvCalculado = totalPedido - subtotalNeto;
 
   return (
-    <div className="space-y-6 text-xs">
-      <PedidoProgresoPago
-        total={pedido.total}
-        montoPagado={montoPagado}
-        saldoPendiente={saldoPendiente}
-        moneda={monedaPagos}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div
-          className="p-3.5 rounded-xl border bg-neutral-50/50 space-y-1"
-          style={{ borderColor: 'var(--guor-stone)' }}
-        >
-          <span
-            className="text-[9px] font-black uppercase tracking-widest opacity-40 flex items-center gap-1"
-            style={{ color: 'var(--guor-dark)' }}
-          >
-            <MapPin size={11} /> Dirección de Envío
-          </span>
-          <p className="font-bold opacity-80 uppercase text-[11px]" style={{ color: 'var(--guor-dark)' }}>
-            {pedido.direccion_envio || 'Retiro en Almacén Central GUOR'}
-          </p>
-        </div>
-
-        <div
-          className="p-3.5 rounded-xl border bg-neutral-50/50 space-y-1"
-          style={{ borderColor: 'var(--guor-stone)' }}
-        >
-          <span
-            className="text-[9px] font-black uppercase tracking-widest opacity-40 flex items-center gap-1"
-            style={{ color: 'var(--guor-dark)' }}
-          >
-            <FileText size={11} /> Notas del Pedido
-          </span>
-          <p className="font-medium opacity-70 italic text-[11px]" style={{ color: 'var(--guor-dark)' }}>
-            {pedido.notas || 'Sin notas adicionales.'}
-          </p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
+    <div className="space-y-6">
+      {/* SECCIÓN A: Estado de Pago */}
+      <div>
         <span
-          className="text-[9px] font-black uppercase tracking-widest opacity-50 block"
+          className="text-[10px] font-black uppercase tracking-wider block mb-2"
           style={{ color: 'var(--guor-dark)' }}
         >
-          Artículos del Pedido
+          Estado financiero del pedido
         </span>
-
-        <div className="border rounded-xl overflow-hidden bg-white" style={{ borderColor: 'var(--guor-stone)' }}>
-          <div
-            className="grid grid-cols-12 bg-neutral-50 p-2.5 border-b font-black text-[9px] uppercase tracking-widest opacity-60"
-            style={{ borderColor: 'var(--guor-stone)', color: 'var(--guor-dark)' }}
-          >
-            <div className="col-span-7">Producto</div>
-            <div className="col-span-2 text-center">Cant.</div>
-            <div className="col-span-3 text-right">P. Unitario</div>
-          </div>
-
-          <div className="divide-y divide-neutral-100 max-h-52 overflow-y-auto">
-            {loadingItems ? (
-              <>
-                <ItemSkeleton />
-                <ItemSkeleton />
-              </>
-            ) : items.length > 0 ? (
-              items.map((item) => {
-                const precioUnitario = item.especificaciones?.precio_unitario as number | undefined;
-                return (
-                  <div
-                    key={item.id}
-                    className="grid grid-cols-12 p-3 items-center font-medium"
-                    style={{ color: 'var(--guor-dark)' }}
-                  >
-                    <div className="col-span-7 space-y-0.5">
-                      <span className="text-[9px] font-mono opacity-40 uppercase tracking-tight block">
-                        {item.productos?.sku ?? '—'}
-                      </span>
-                      <p className="font-black uppercase text-[11px] truncate">
-                        {item.productos?.nombre ?? 'Producto sin nombre'}
-                      </p>
-                      {item.variantes_producto && (
-                        <span className="inline-flex items-center text-[10px] text-amber-600 font-bold uppercase tracking-wide bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
-                          Talla {item.variantes_producto.talla} · {item.variantes_producto.color}
-                        </span>
-                      )}
-                    </div>
-                    <div className="col-span-2 text-center font-black tabular-nums">
-                      {item.cantidad}
-                      <span className="text-[9px] font-normal opacity-40"> uds</span>
-                    </div>
-                    <div className="col-span-3 text-right tabular-nums opacity-70">
-                      {precioUnitario != null ? formatMoney(precioUnitario) : '—'}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="py-8 text-center" style={{ color: 'var(--guor-dark)' }}>
-                <p className="text-[10px] opacity-40">No se encontraron artículos para este pedido.</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <PedidoProgresoPago
+          total={totalPedido}
+          montoPagado={montoPagado}
+          saldoPendiente={saldoPendiente}
+          moneda="PEN"
+        />
       </div>
 
-      <PedidoHistorialAbonos
-        abonos={abonos}
-        loading={loadingPagos}
-        error={errorPagos}
-        moneda={monedaPagos}
-        onVerComprobante={onVerComprobante ? handleVerComprobanteAbono : undefined}
-      />
+      {/* SECCIÓN B: Ítems del pedido */}
+      <div className="space-y-2">
+        <span
+          className="text-[10px] font-black uppercase tracking-wider block"
+          style={{ color: 'var(--guor-dark)' }}
+        >
+          Artículos y Productos Solicitados
+        </span>
 
+        {loading ? (
+          <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+            {Array.from({ length: 2 }).map((_, idx) => (
+              <ItemSkeleton key={idx} />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-6 border border-dashed rounded-xl bg-slate-50/50 text-xs text-slate-400 italic">
+            No se encontraron productos registrados en este pedido.
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden bg-white shadow-sm">
+            {items.map((item) => {
+              const esp = item.especificaciones || {};
+
+              // Datos reales de la BD > fallback a especificaciones JSON
+              const nombreProducto = item.productos?.nombre || esp.modelo || 'Prenda sin especificar';
+              const tipoPrenda = item.productos?.categoria || esp.prenda_tipo || 'General';
+              const talla = item.variantes_producto?.talla || esp.talla || '-';
+              const color = item.variantes_producto?.color || esp.color || '-';
+              const cantidad = item.cantidad || 0;
+              const precioUnitario =
+                Number(item.variantes_producto?.precio ?? item.productos?.precio_base ?? esp.precio_unitario ?? 0);
+              const subtotalItem = cantidad * precioUnitario;
+
+              return (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-12 p-3.5 items-center gap-2 hover:bg-slate-50/40 transition-colors"
+                >
+                  <div className="col-span-7 space-y-0.5">
+                    <span className="text-[9px] font-black text-pink-600 tracking-wider uppercase bg-pink-50 px-1.5 py-0.5 rounded">
+                      {tipoPrenda}
+                    </span>
+                    <h4 className="text-xs font-black text-slate-800 pt-1 leading-tight">
+                      {nombreProducto}
+                    </h4>
+                    <div className="flex gap-2 text-[10px] font-bold text-slate-500 pt-1">
+                      <span className="bg-slate-100 px-2 py-0.5 rounded-md">
+                        Talla: <strong className="text-slate-700">{talla}</strong>
+                      </span>
+                      <span className="bg-slate-100 px-2 py-0.5 rounded-md">
+                        Color: <strong className="text-slate-700">{color}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="col-span-2 text-center">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase block tracking-wider">
+                      Cant.
+                    </span>
+                    <p className="text-xs font-black text-slate-700 tabular-nums bg-slate-50 px-2 py-1 rounded-lg border mt-0.5">
+                      {cantidad} u.
+                    </p>
+                  </div>
+
+                  <div className="col-span-3 text-right">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase block tracking-wider">
+                      Monto
+                    </span>
+                    <p className="text-xs font-black text-slate-800 tabular-nums mt-0.5">
+                      {formatMoney(subtotalItem)}
+                    </p>
+                    {cantidad > 1 && precioUnitario > 0 && (
+                      <span className="text-[9px] text-slate-400 font-medium block tabular-nums">
+                        ({formatMoney(precioUnitario)} c/u)
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* SECCIÓN C: Resumen Fiscal */}
       <div
-        className="p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4"
-        style={{ backgroundColor: 'var(--guor-cream)', borderColor: 'var(--guor-stone)' }}
+        className="rounded-xl border p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between"
+        style={{ backgroundColor: 'var(--guor-cream-light)', borderColor: 'var(--guor-stone)' }}
       >
-        <div className="space-y-1">
-          <span
-            className="text-[9px] font-black uppercase tracking-widest opacity-50 block"
-            style={{ color: 'var(--guor-dark)' }}
-          >
-            Resumen fiscal
-          </span>
+        <div className="space-y-0.5 max-w-md">
+          <div className="flex items-center gap-2">
+            <FileText size={14} style={{ color: 'var(--guor-dark)' }} />
+            <span
+              className="text-xs font-black uppercase tracking-wider block"
+              style={{ color: 'var(--guor-dark)' }}
+            >
+              Resumen fiscal
+            </span>
+          </div>
           <p className="text-[10px] opacity-50" style={{ color: 'var(--guor-dark)' }}>
             Desglose del total del pedido (incluye IGV).
           </p>
@@ -278,12 +241,44 @@ export function PedidoDetalleResumen({ pedido, onVerComprobante }: PedidoDetalle
             style={{ borderColor: 'var(--guor-stone)', color: 'var(--guor-dark)' }}
           >
             <span className="text-[9px] uppercase tracking-wider opacity-60">Total:</span>
-            <span className="text-sm font-black" style={{ color: 'var(--guor-gold)' }}>
-              {formatMoney(pedido.total)}
+            <span className="text-base tabular-nums font-black" style={{ color: 'var(--guor-dark)' }}>
+              {formatMoney(totalPedido)}
             </span>
           </div>
         </div>
       </div>
+
+      {/* SECCIÓN D: Dirección de Despacho */}
+      <div className="rounded-xl border p-4 bg-white space-y-3 shadow-sm border-slate-100">
+        <div className="flex items-center gap-2 border-b border-slate-50 pb-2">
+          <MapPin size={14} className="text-slate-400" />
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-600">
+            Información del Destino de Despacho
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="space-y-1">
+            <p className="text-slate-400 font-bold text-[10px] uppercase">Dirección física:</p>
+            <p className="font-black text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
+              {pedido.direccion_envio || 'Retiro en almacén central / Sin especificar'}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-slate-400 font-bold text-[10px] uppercase">Ubigeo / Región:</p>
+            <p className="font-black text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
+              {pedido.ubigeo_envio || 'Lima Metropolitana'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN E: Historial de Abonos */}
+      <PedidoHistorialAbonos
+        abonos={abonos}
+        loading={loadingPagos}
+        error={null}
+        moneda="PEN"
+      />
     </div>
   );
 }

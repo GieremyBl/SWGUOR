@@ -130,7 +130,7 @@ export function PedidoDetallePageView({
           pedidoId={pedido.id}
           defaultTab={defaultTab}
           resumen={
-            <PedidoDetalleResumen pedido={pedido} onVerComprobante={onVerComprobante} />
+            <PedidoDetalleResumen pedido={pedido} />
           }
         />
       </div>
