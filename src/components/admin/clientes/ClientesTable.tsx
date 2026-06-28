@@ -33,11 +33,10 @@ function EstadoBadge({ estado }: { estado: string | null | undefined }) {
   return (
     <Badge
       variant="outline"
-      className={`rounded-full px-3 py-0.5 text-[10px] font-black uppercase tracking-wider border transition-colors ${
-        isActivo
+      className={`rounded-full px-3 py-0.5 text-[10px] font-black uppercase tracking-wider border transition-colors ${isActivo
           ? "bg-emerald-50 text-emerald-700 border-emerald-200"
           : "bg-[var(--guor-cream-deep)] text-[var(--guor-soft)] border-[var(--guor-stone-mid)]"
-      }`}
+        }`}
     >
       {estadoLimpio}
     </Badge>
@@ -176,7 +175,7 @@ function ClientesTable({ clientes, loading, onEdit, onSuspender }: Props) {
                     <ActionBtn
                       title="Ver detalle"
                       color="pink"
-                      onClick={() => router.push(`/admin/Panel-Administrativo/usuarios/clientes/${c.id}`)}
+                      onClick={() => router.push(`/admin/Panel-Administrativo/clientes/${c.id}`)}
                     >
                       <Eye size={15} />
                     </ActionBtn>

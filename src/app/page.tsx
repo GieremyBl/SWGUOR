@@ -6,7 +6,16 @@ import Image from "next/image";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import Testimonials from "@/components/landing/Testimonials";
-import { ArrowRight, Star, Shield, Truck, ChevronDown, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Star, Shield, Truck, ChevronDown, TrendingUp, Users, TrendingDown } from "lucide-react";
+
+/* ─────────────────────────────────────────────
+    TIPOS
+───────────────────────────────────────────── */
+interface ProductoDestacado {
+  id: number;
+  nombre: string;
+  image_url?: string | null;
+}
 
 /* ─────────────────────────────────────────────
     HOOK: Intersection Observer for scroll reveals
@@ -50,7 +59,7 @@ function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
 }
 
 /* ─────────────────────────────────────────────
-    3D TILT CARD (Optimizado con will-change)
+    3D TILT CARD
 ───────────────────────────────────────────── */
 function TiltCard({ children, className = "", style = {} }: {
   children: React.ReactNode; className?: string; style?: React.CSSProperties;
@@ -93,6 +102,54 @@ function FloatingOrbs() {
   );
 }
 
+/* ─────────────────────────────────────────────
+    PRODUCT CARD SKELETON
+───────────────────────────────────────────── */
+function ProductSkeleton() {
+  return (
+    <div style={{
+      borderRadius: "20px", overflow: "hidden",
+      border: "1px solid rgba(196,163,90,0.12)",
+      background: "#1a1410",
+    }}>
+      <div style={{ height: "260px", background: "rgba(196,163,90,0.06)", animation: "shimmer 1.5s ease-in-out infinite" }} />
+      <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{ height: "14px", width: "70%", background: "rgba(196,163,90,0.08)", borderRadius: "6px", marginBottom: "8px", animation: "shimmer 1.5s ease-in-out infinite" }} />
+        <div style={{ height: "10px", width: "40%", background: "rgba(196,163,90,0.06)", borderRadius: "6px", animation: "shimmer 1.5s ease-in-out infinite" }} />
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+    RANKING BADGE  (#1 → oro, #2 → plata, #3 → bronce)
+───────────────────────────────────────────── */
+const RANKING_COLORS: Record<number, { bg: string; color: string; label: string }> = {
+  1: { bg: "#c4a35a", color: "#0f0d0b", label: "#1" },
+  2: { bg: "rgba(192,192,192,0.9)", color: "#0f0d0b", label: "#2" },
+  3: { bg: "rgba(176,120,70,0.9)", color: "#fff", label: "#3" },
+};
+function RankBadge({ ranking }: { ranking: number }) {
+  const style = RANKING_COLORS[ranking] ?? { bg: "rgba(196,163,90,0.5)", color: "#fdf9f3", label: `#${ranking}` };
+  return (
+    <span style={{
+      position: "absolute", top: "12px", right: "12px",
+      padding: "4px 12px", borderRadius: "100px",
+      background: style.bg, color: style.color,
+      fontSize: "9px", fontWeight: 900, letterSpacing: "0.15em",
+    }}>
+      {style.label}
+    </span>
+  );
+}
+
+/* ─────────────────────────────────────────────
+    MES ACTUAL EN ESPAÑOL
+───────────────────────────────────────────── */
+function getMesActual() {
+  return new Date().toLocaleString("es-PE", { month: "long", year: "numeric" });
+}
+
 /* ═══════════════════════════════════════════
     LANDING PAGE
 ═══════════════════════════════════════════ */
@@ -100,6 +157,24 @@ export default function LandingPage() {
   const benefits1 = useScrollReveal();
   const products1 = useScrollReveal();
   const stats1 = useScrollReveal();
+
+  const [productos, setProductos] = useState<ProductoDestacado[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/productos-destacados")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setProductos(data);
+      })
+      .catch((err) => {
+
+      })
+      .finally(() => setLoadingProductos(false));
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: "#0f0d0b", color: "#fdf9f3" }}>
@@ -118,14 +193,12 @@ export default function LandingPage() {
       >
         <FloatingOrbs />
 
-        {/* Grid texture overlay */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 0, opacity: 0.04,
           backgroundImage: "linear-gradient(#c4a35a 1px, transparent 1px), linear-gradient(90deg, #c4a35a 1px, transparent 1px)",
           backgroundSize: "60px 60px",
         }} />
 
-        {/* PARALLAX OPTIMIZADO: Corregido usando CSS puro mediante background-attachment sin JS listeners */}
         <div style={{
           position: "absolute", right: 0, top: 0, width: "50%", height: "100%", zIndex: 1,
         }}>
@@ -139,8 +212,6 @@ export default function LandingPage() {
             background: "linear-gradient(0deg, #0f0d0b 0%, transparent 30%)",
             zIndex: 2,
           }} />
-
-          {/* CRÍTICO PARA EL LCP: Añadidos 'sizes' exactos para que no descargue la versión de pantalla completa */}
           <Image
             src="/fotohome.jpg"
             alt="GUOR Moda Femenina"
@@ -152,10 +223,7 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* HERO CONTENT */}
         <div style={{ position: "relative", zIndex: 10, maxWidth: "1200px", margin: "0 auto", padding: "8rem 2rem 6rem", width: "100%" }}>
-
-          {/* Badge */}
           <div className="hero-badge-anim" style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "2rem" }}>
             <span style={{
               display: "inline-flex", alignItems: "center", gap: "8px",
@@ -170,7 +238,6 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Headline */}
           <h1 className="hero-title-anim" style={{
             fontSize: "clamp(3rem, 7vw, 6rem)",
             fontWeight: 900,
@@ -195,40 +262,29 @@ export default function LandingPage() {
             en toda Latinoamérica.
           </p>
 
-          {/* CTA */}
           <div className="hero-cta-anim" style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
-            <Link
-              href="/registro-cliente"
-              className="hover:scale-105 transition-all duration-300"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "10px",
-                padding: "16px 32px", borderRadius: "100px",
-                background: "#c4a35a", color: "#0f0d0b",
-                fontWeight: 900, fontSize: "13px", letterSpacing: "0.05em",
-                textDecoration: "none",
-                boxShadow: "0 0 40px rgba(196,163,90,0.3)",
-              }}
-            >
+            <Link href="/registro-cliente" className="hover:scale-105 transition-all duration-300" style={{
+              display: "inline-flex", alignItems: "center", gap: "10px",
+              padding: "16px 32px", borderRadius: "100px",
+              background: "#c4a35a", color: "#0f0d0b",
+              fontWeight: 900, fontSize: "13px", letterSpacing: "0.05em",
+              textDecoration: "none",
+              boxShadow: "0 0 40px rgba(196,163,90,0.3)",
+            }}>
               Iniciar Alianza B2B <ArrowRight size={16} />
             </Link>
-
-            <Link
-              href="/login-cliente"
-              className="hover:bg-white/10 hover:border-white/40 transition-all duration-300"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "10px",
-                padding: "16px 32px", borderRadius: "100px",
-                background: "transparent", color: "#fdf9f3",
-                fontWeight: 700, fontSize: "13px",
-                border: "1px solid rgba(253,249,243,0.2)",
-                textDecoration: "none",
-              }}
-            >
+            <Link href="/login-cliente" className="hover:bg-white/10 hover:border-white/40 transition-all duration-300" style={{
+              display: "inline-flex", alignItems: "center", gap: "10px",
+              padding: "16px 32px", borderRadius: "100px",
+              background: "transparent", color: "#fdf9f3",
+              fontWeight: 700, fontSize: "13px",
+              border: "1px solid rgba(253,249,243,0.2)",
+              textDecoration: "none",
+            }}>
               Portal Socios
             </Link>
           </div>
 
-          {/* Descuento pill */}
           <div className="hero-discount-anim" style={{
             display: "inline-flex", alignItems: "center", gap: "8px",
             marginTop: "2.5rem", padding: "10px 20px", borderRadius: "12px",
@@ -241,7 +297,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Scroll indicator */}
         <div style={{
           position: "absolute", bottom: "2rem", left: "50%", transform: "translateX(-50%)",
           display: "flex", flexDirection: "column", alignItems: "center", gap: "8px",
@@ -255,13 +310,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════ STATS ══════════ */}
-      <div
-        ref={stats1.ref}
-        style={{
-          background: "#c4a35a",
-          padding: "3rem 2rem",
-        }}
-      >
+      <div ref={stats1.ref} style={{ background: "#c4a35a", padding: "3rem 2rem" }}>
         <div style={{
           maxWidth: "1200px", margin: "0 auto",
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -294,8 +343,6 @@ export default function LandingPage() {
       {/* ══════════ BENEFICIOS ══════════ */}
       <section style={{ background: "#0f0d0b", padding: "8rem 2rem" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-
-          {/* Section label */}
           <div style={{ textAlign: "center", marginBottom: "5rem" }}>
             <span style={{
               display: "inline-block", padding: "4px 16px", borderRadius: "100px",
@@ -311,45 +358,23 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div
-            ref={benefits1.ref}
-            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px" }}
-          >
+          <div ref={benefits1.ref} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "24px" }}>
             {[
-              {
-                icon: Shield,
-                title: "Calidad Premium Garantizada",
-                desc: "Control de calidad en cada etapa de producción. Materiales seleccionados que cumplen estándares internacionales de moda femenina.",
-                accent: "#c4a35a",
-              },
-              {
-                icon: Truck,
-                title: "Logística Inteligente",
-                desc: "Entrega puntual con seguimiento en tiempo real. Cobertura nacional e internacional para que tu negocio nunca se detenga.",
-                accent: "#c4a35a",
-              },
-              {
-                icon: TrendingUp,
-                title: "Soporte Estratégico B2B",
-                desc: "Asesoría personalizada, precios mayoristas competitivos y condiciones flexibles adaptadas al volumen de tu empresa.",
-                accent: "#c4a35a",
-              },
+              { icon: Shield, title: "Calidad Premium Garantizada", desc: "Control de calidad en cada etapa de producción. Materiales seleccionados que cumplen estándares internacionales de moda femenina." },
+              { icon: Truck, title: "Logística Inteligente", desc: "Entrega puntual con seguimiento en tiempo real. Cobertura nacional e internacional para que tu negocio nunca se detenga." },
+              { icon: TrendingUp, title: "Soporte Estratégico B2B", desc: "Asesoría personalizada, precios mayoristas competitivos y condiciones flexibles adaptadas al volumen de tu empresa." },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
-                <TiltCard
-                  key={item.title}
-                  style={{
-                    padding: "2.5rem",
-                    borderRadius: "24px",
-                    border: "1px solid rgba(196,163,90,0.15)",
-                    background: "rgba(255,255,255,0.02)",
-                    cursor: "default",
-                    opacity: benefits1.visible ? 1 : 0,
-                    transform: benefits1.visible ? "translateY(0)" : "translateY(40px)",
-                    transition: `all 0.7s ease ${i * 0.15}s`,
-                  }}
-                >
+                <TiltCard key={item.title} style={{
+                  padding: "2.5rem", borderRadius: "24px",
+                  border: "1px solid rgba(196,163,90,0.15)",
+                  background: "rgba(255,255,255,0.02)",
+                  cursor: "default",
+                  opacity: benefits1.visible ? 1 : 0,
+                  transform: benefits1.visible ? "translateY(0)" : "translateY(40px)",
+                  transition: `all 0.7s ease ${i * 0.15}s`,
+                }}>
                   <div style={{
                     width: "52px", height: "52px", borderRadius: "16px",
                     background: "rgba(196,163,90,0.12)", border: "1px solid rgba(196,163,90,0.2)",
@@ -358,12 +383,8 @@ export default function LandingPage() {
                   }}>
                     <Icon size={22} style={{ color: "#c4a35a" }} />
                   </div>
-                  <h3 style={{ fontSize: "1.15rem", fontWeight: 900, color: "#fdf9f3", marginBottom: "0.75rem" }}>
-                    {item.title}
-                  </h3>
-                  <p style={{ fontSize: "0.9rem", lineHeight: 1.7, color: "rgba(253,249,243,0.5)", margin: 0 }}>
-                    {item.desc}
-                  </p>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 900, color: "#fdf9f3", marginBottom: "0.75rem" }}>{item.title}</h3>
+                  <p style={{ fontSize: "0.9rem", lineHeight: 1.7, color: "rgba(253,249,243,0.5)", margin: 0 }}>{item.desc}</p>
                 </TiltCard>
               );
             })}
@@ -371,19 +392,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════ PRENDAS DESTACADAS (Optimizado con Clases de CSS) ══════════ */}
+      {/* ══════════ PRENDAS DESTACADAS — ranking mensual real ══════════ */}
       <section style={{ background: "#111009", padding: "8rem 2rem" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
           <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "4rem", flexWrap: "wrap", gap: "1rem" }}>
             <div ref={products1.ref}>
+              {/* Label dinámico con el mes actual */}
               <span style={{
-                display: "inline-block", padding: "4px 16px", borderRadius: "100px",
+                display: "inline-flex", alignItems: "center", gap: "6px",
+                padding: "4px 16px", borderRadius: "100px",
                 background: "rgba(196,163,90,0.1)", border: "1px solid rgba(196,163,90,0.3)",
                 color: "#c4a35a", fontSize: "10px", fontWeight: 900,
                 letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: "1rem",
               }}>
-                Colección 2026
+                <TrendingUp size={11} />
+                Más vendidos · {getMesActual()}
               </span>
               <h2 style={{
                 fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 900, color: "#fdf9f3",
@@ -395,71 +419,55 @@ export default function LandingPage() {
                 Prendas <span style={{ color: "#c4a35a", fontStyle: "italic" }}>destacadas</span>
               </h2>
             </div>
-            <Link
-              href="/colecciones"
-              className="hover:pl-2 transition-all duration-300"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "8px",
-                color: "#c4a35a", fontWeight: 700, fontSize: "13px",
-                textDecoration: "none",
-              }}
-            >
+            <Link href="/colecciones" className="hover:pl-2 transition-all duration-300" style={{
+              display: "inline-flex", alignItems: "center", gap: "8px",
+              color: "#c4a35a", fontWeight: 700, fontSize: "13px",
+              textDecoration: "none",
+            }}>
               Ver todo <ArrowRight size={14} />
             </Link>
           </div>
 
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "20px",
-          }}>
-            {[1, 2, 3, 4, 5].map((item, i) => (
-              <TiltCard
-                key={item}
-                className="group" // Agregamos 'group' para controlar el hover de la imagen sin JS
-                style={{
-                  borderRadius: "20px",
-                  overflow: "hidden",
-                  border: "1px solid rgba(196,163,90,0.12)",
-                  background: "#1a1410",
-                  cursor: "pointer",
-                  opacity: products1.visible ? 1 : 0,
-                  transform: products1.visible ? "translateY(0) scale(1)" : "translateY(30px) scale(0.97)",
-                  transition: `all 0.7s ease ${i * 0.1}s`,
-                }}
-              >
-                <div style={{ position: "relative", height: "260px", overflow: "hidden" }}>
-                  {/* OPTIMIZACIÓN: Transición controlada por hardware (GPU) usando Tailwind nativo */}
-                  <Image
-                    src={`/conjunto${item}.png`}
-                    alt={`Prenda ${item}`}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 20vw"
-                  />
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: "linear-gradient(to top, rgba(15,13,11,0.8) 0%, transparent 60%)",
-                  }} />
-                  <span style={{
-                    position: "absolute", top: "12px", right: "12px",
-                    padding: "4px 12px", borderRadius: "100px",
-                    background: "rgba(196,163,90,0.9)", color: "#0f0d0b",
-                    fontSize: "9px", fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase",
-                  }}>
-                    Nuevo
-                  </span>
-                </div>
-                <div style={{ padding: "1.25rem" }}>
-                  <h3 style={{ fontWeight: 900, fontSize: "0.95rem", color: "#fdf9f3", margin: "0 0 4px" }}>
-                    Prenda {item}
-                  </h3>
-                  <p style={{ fontSize: "11px", fontWeight: 700, color: "#c4a35a", margin: 0, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                    Colección 2026
-                  </p>
-                </div>
-              </TiltCard>
-            ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+            {loadingProductos
+              ? Array.from({ length: 5 }).map((_, i) => <ProductSkeleton key={i} />)
+              : productos.map((producto, i) => (
+                <TiltCard
+                  key={producto.id}
+                  className="group"
+                  style={{
+                    borderRadius: "20px",
+                    overflow: "hidden",
+                    border: "1px solid rgba(196,163,90,0.12)",
+                    background: "#1a1410",
+                    cursor: "pointer",
+                    opacity: products1.visible ? 1 : 0,
+                    transform: products1.visible ? "translateY(0) scale(1)" : "translateY(30px) scale(0.97)",
+                    transition: `all 0.7s ease ${i * 0.1}s`,
+                  }}
+                >
+                  <div style={{ position: "relative", height: "260px", overflow: "hidden" }}>
+                    <Image
+                      src={producto.image_url || ""}
+                      alt={producto.nombre}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 20vw"
+                    />
+                    {/* Gradiente inferior */}
+                    <div style={{
+                      position: "absolute", inset: 0,
+                      background: "linear-gradient(to top, rgba(15,13,11,0.85) 0%, transparent 60%)",
+                    }} />
+                  </div>
+
+                  <div style={{ padding: "1.25rem" }}>
+                    <h3 style={{ fontWeight: 900, fontSize: "0.95rem", color: "#fdf9f3", margin: "0 0 4px", lineHeight: 1.3 }}>
+                      {producto.nombre}
+                    </h3>
+                  </div>
+                </TiltCard>
+              ))}
           </div>
         </div>
       </section>
@@ -471,7 +479,6 @@ export default function LandingPage() {
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Decorative lines */}
         <div style={{
           position: "absolute", inset: 0, opacity: 0.05,
           backgroundImage: "radial-gradient(circle at 20% 50%, #c4a35a 1px, transparent 1px), radial-gradient(circle at 80% 50%, #c4a35a 1px, transparent 1px)",
@@ -511,32 +518,24 @@ export default function LandingPage() {
           </p>
 
           <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
-            <Link
-              href="/registro-cliente"
-              className="hover:scale-105 transition-all duration-300"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "10px",
-                padding: "18px 40px", borderRadius: "100px",
-                background: "#c4a35a", color: "#0f0d0b",
-                fontWeight: 900, fontSize: "13px", letterSpacing: "0.05em",
-                textDecoration: "none",
-                boxShadow: "0 0 40px rgba(196,163,90,0.3)",
-              }}
-            >
+            <Link href="/registro-cliente" className="hover:scale-105 transition-all duration-300" style={{
+              display: "inline-flex", alignItems: "center", gap: "10px",
+              padding: "18px 40px", borderRadius: "100px",
+              background: "#c4a35a", color: "#0f0d0b",
+              fontWeight: 900, fontSize: "13px", letterSpacing: "0.05em",
+              textDecoration: "none",
+              boxShadow: "0 0 40px rgba(196,163,90,0.3)",
+            }}>
               Crear Cuenta Gratis <ArrowRight size={16} />
             </Link>
-            <Link
-              href="/login-cliente"
-              className="hover:bg-white/10 hover:border-white/40 transition-all duration-300"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: "10px",
-                padding: "18px 40px", borderRadius: "100px",
-                background: "transparent", color: "#fdf9f3",
-                fontWeight: 700, fontSize: "13px",
-                border: "1px solid rgba(253,249,243,0.2)",
-                textDecoration: "none",
-              }}
-            >
+            <Link href="/login-cliente" className="hover:bg-white/10 hover:border-white/40 transition-all duration-300" style={{
+              display: "inline-flex", alignItems: "center", gap: "10px",
+              padding: "18px 40px", borderRadius: "100px",
+              background: "transparent", color: "#fdf9f3",
+              fontWeight: 700, fontSize: "13px",
+              border: "1px solid rgba(253,249,243,0.2)",
+              textDecoration: "none",
+            }}>
               Ya tengo cuenta
             </Link>
           </div>
@@ -550,96 +549,30 @@ export default function LandingPage() {
 
       <Footer />
 
-      {/* ══════════ GLOBAL STYLES (Optimizados sin @import bloqueante) ══════════ */}
+      {/* ══════════ GLOBAL STYLES ══════════ */}
       <style jsx global>{`
-        body {
-          font-family: var(--font-dm-sans), sans-serif;
-        }
+        body { font-family: var(--font-dm-sans), sans-serif; }
+        h1, h2, h3 { font-family: var(--font-playfair), serif; }
 
-        h1, h2, h3 {
-          font-family: var(--font-playfair), serif;
-        }
+        .orb { position: absolute; border-radius: 50%; filter: blur(80px); pointer-events: none; }
+        .orb-1 { width: 500px; height: 500px; top: -100px; right: 10%; background: rgba(196,163,90,0.07); animation: orbFloat1 12s ease-in-out infinite; }
+        .orb-2 { width: 350px; height: 350px; bottom: 10%; left: 5%; background: rgba(196,163,90,0.05); animation: orbFloat2 15s ease-in-out infinite; }
+        .orb-3 { width: 250px; height: 250px; top: 40%; left: 40%; background: rgba(196,163,90,0.04); animation: orbFloat1 20s ease-in-out infinite reverse; }
 
-        /* ── Orbs ── */
-        .orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(80px);
-          pointer-events: none;
-        }
-        .orb-1 {
-          width: 500px; height: 500px;
-          top: -100px; right: 10%;
-          background: rgba(196,163,90,0.07);
-          animation: orbFloat1 12s ease-in-out infinite;
-        }
-        .orb-2 {
-          width: 350px; height: 350px;
-          bottom: 10%; left: 5%;
-          background: rgba(196,163,90,0.05);
-          animation: orbFloat2 15s ease-in-out infinite;
-        }
-        .orb-3 {
-          width: 250px; height: 250px;
-          top: 40%; left: 40%;
-          background: rgba(196,163,90,0.04);
-          animation: orbFloat1 20s ease-in-out infinite reverse;
-        }
+        .hero-badge-anim    { opacity: 0; transform: translateY(20px); animation: revealUp 0.8s ease 0.2s forwards; }
+        .hero-title-anim    { opacity: 0; transform: translateY(30px); animation: revealUp 0.9s ease 0.4s forwards; }
+        .hero-line-anim     { opacity: 0; transform: scaleX(0); transform-origin: left; animation: revealLine 0.8s ease 0.6s forwards; }
+        .hero-text-anim     { opacity: 0; transform: translateY(20px); animation: revealUp 0.8s ease 0.7s forwards; }
+        .hero-cta-anim      { opacity: 0; transform: translateY(20px); animation: revealUp 0.8s ease 0.9s forwards; }
+        .hero-discount-anim { opacity: 0; animation: revealUp 0.8s ease 1.1s forwards; }
 
-        /* ── Hero animations ── */
-        .hero-badge-anim {
-          opacity: 0;
-          transform: translateY(20px);
-          animation: revealUp 0.8s ease 0.2s forwards;
-        }
-        .hero-title-anim {
-          opacity: 0;
-          transform: translateY(30px);
-          animation: revealUp 0.9s ease 0.4s forwards;
-        }
-        .hero-line-anim {
-          opacity: 0;
-          transform: scaleX(0);
-          transform-origin: left;
-          animation: revealLine 0.8s ease 0.6s forwards;
-        }
-        .hero-text-anim {
-          opacity: 0;
-          transform: translateY(20px);
-          animation: revealUp 0.8s ease 0.7s forwards;
-        }
-        .hero-cta-anim {
-          opacity: 0;
-          transform: translateY(20px);
-          animation: revealUp 0.8s ease 0.9s forwards;
-        }
-        .hero-discount-anim {
-          opacity: 0;
-          animation: revealUp 0.8s ease 1.1s forwards;
-        }
-
-        @keyframes revealUp {
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes revealLine {
-          to { opacity: 1; transform: scaleX(1); }
-        }
-        @keyframes orbFloat1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(30px, -40px) scale(1.05); }
-        }
-        @keyframes orbFloat2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-20px, 30px) scale(1.08); }
-        }
-        @keyframes float {
-          0%, 100% { transform: translateX(-50%) translateY(0); }
-          50% { transform: translateX(-50%) translateY(8px); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.8); }
-        }
+        @keyframes revealUp  { to { opacity: 1; transform: translateY(0); } }
+        @keyframes revealLine { to { opacity: 1; transform: scaleX(1); } }
+        @keyframes orbFloat1  { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-40px) scale(1.05); } }
+        @keyframes orbFloat2  { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-20px,30px) scale(1.08); } }
+        @keyframes float      { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+        @keyframes pulse      { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+        @keyframes shimmer    { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
       `}</style>
     </div>
   );
