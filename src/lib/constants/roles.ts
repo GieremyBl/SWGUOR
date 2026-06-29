@@ -60,12 +60,13 @@ export type PermissionKey =
   | 'ver_incidencias_taller' | 'crear_incidencias_taller' | 'exportar_incidencias_taller' | 'cancelar_incidencias_taller' | 'finalizar_incidencias_taller' | 'editar_incidencias_taller' | 'asignar_incidencias_taller' | 'ver_detalle_incidencias_taller'
   // Incidencias de Clientes
   | 'ver_incidencias_clientes' | 'crear_incidencias_clientes' | 'exportar_incidencias_clientes' | 'cancelar_incidencias_clientes' | 'finalizar_incidencias_clientes' | 'editar_incidencias_clientes' | 'asignar_incidencias_clientes' | 'ver_detalle_incidencias_clientes'
-  // Devoluciones
+  // Devoluciones de Clientes
   | 'ver_devoluciones_cliente' | 'crear_devoluciones_cliente' | 'exportar_devoluciones_cliente' | 'cancelar_devoluciones_cliente' | 'finalizar_devoluciones_cliente' | 'editar_devoluciones_cliente' | 'asignar_devoluciones_cliente' | 'ver_detalle_devoluciones_cliente'
+  // Devoluciones a Proveedores
   | 'ver_devoluciones_proveedor' | 'crear_devoluciones_proveedor' | 'exportar_devoluciones_proveedor' | 'cancelar_devoluciones_proveedor' | 'finalizar_devoluciones_proveedor' | 'editar_devoluciones_proveedor' | 'asignar_devoluciones_proveedor' | 'ver_detalle_devoluciones_proveedor'
-  // Pedidos
-  | 'ver_pedidos' | 'crear_pedidos' | 'editar_pedidos' | 'cancelar_pedidos' | 'cambiar_estado_pedidos'
-  // Variantes
+  // Pedidos 
+  | 'ver_pedidos' | 'crear_pedidos' | 'editar_pedidos' | 'cancelar_pedidos'
+  // Variantes de Productos
   | 'ver_variantes' | 'crear_variantes' | 'editar_variantes' | 'exportar_variantes'
   // Categorías
   | 'ver_categorias' | 'crear_categorias' | 'editar_categorias' | 'descontinuar_categorias' | 'exportar_categorias'
@@ -213,6 +214,7 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_incidencias_clientes', 'exportar_incidencias_clientes', 'ver_detalle_incidencias_clientes',
     'ver_feedback_cliente', 'exportar_feedback_cliente',
     'ver_notificaciones', 'ver_perfil', 'editar_perfil', 'ver_feedback_cliente', 'exportar_feedback_cliente',
+    'ver_pedidos',
   ],
 
   administrador: [
@@ -251,11 +253,12 @@ export const PERMISOS_POR_ROL: Record<RolUsuario, PermissionKey[]> = {
     'ver_notificaciones', 'crear_notificaciones', 'exportar_notificaciones',
     'ver_almacenes', 'crear_almacenes', 'editar_almacenes', 'exportar_almacenes',
     'ver_perfil', 'editar_perfil', 'ver_feedback_cliente', 'exportar_feedback_cliente',
+    'ver_pedidos', 'cancelar_pedidos',
   ],
 
   recepcionista: [
     'ver_dashboard',
-    'ver_pedidos', 'crear_pedidos', 'editar_pedidos', 'cancelar_pedidos', 'cambiar_estado_pedidos',
+    'ver_pedidos', 'editar_pedidos', 'cancelar_pedidos',
     'ver_inventario',
     'ver_productos', 'exportar_productos',
     'ver_variantes', 'exportar_variantes',

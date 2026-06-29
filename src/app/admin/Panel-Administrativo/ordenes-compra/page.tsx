@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FileSpreadsheet, FileText
+  FileSpreadsheet, FileText,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -210,7 +211,8 @@ export default function OrdenesCompraPage() {
               disabled={!canCreate}
               className="h-11 px-6 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-medium transition-all shadow-md hover:shadow-lg whitespace-nowrap"
             >
-              + Nueva orden
+              <Plus className="w-4 h-4 mr-2 text-white" />
+              Nueva orden
             </Button>
           </div>
         </div>

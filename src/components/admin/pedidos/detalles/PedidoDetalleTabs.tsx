@@ -1,27 +1,30 @@
 'use client';
 
-import { ShoppingBag, Clock, Factory, MessageCircle } from 'lucide-react';
+import { ShoppingBag, Clock, Factory, MessageCircle, FileText } from 'lucide-react';
 
 const TABS = [
-  { id: 'items',       label: 'Items',       icon: ShoppingBag },
-  { id: 'seguimiento', label: 'Seguimiento', icon: Clock       },
-  { id: 'produccion',  label: 'Producción',  icon: Factory     },
-  { id: 'asistencia',  label: 'Asistencia',  icon: MessageCircle },
+  { id: 'items', label: 'Items', icon: ShoppingBag },
+  { id: 'seguimiento', label: 'Seguimiento', icon: Clock },
+  { id: 'produccion', label: 'Producción', icon: Factory },
+  { id: 'asistencia', label: 'Asistencia', icon: MessageCircle },
+  { id: 'guia', label: 'Guía de Remisión', icon: FileText },
 ] as const;
 
 export type TabId = typeof TABS[number]['id'];
 
 interface PedidoDetalleTabsProps {
-  activeTab:    TabId;
+  activeTab: TabId;
   totalOrdenes: number;
   chatPendiente?: boolean;
-  onTabChange:  (tab: TabId) => void;
+  guiaPendiente?: boolean;
+  onTabChange: (tab: TabId) => void;
 }
 
 export function PedidoDetalleTabs({
   activeTab,
   totalOrdenes,
   chatPendiente = false,
+  guiaPendiente = false,
   onTabChange,
 }: PedidoDetalleTabsProps) {
   return (
@@ -31,18 +34,16 @@ export function PedidoDetalleTabs({
           key={id}
           type="button"
           onClick={() => onTabChange(id)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
-            activeTab === id
-              ? 'bg-pink-600 text-white shadow-sm'
-              : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${activeTab === id
+            ? 'bg-pink-600 text-white shadow-sm'
+            : 'text-gray-400 hover:text-gray-700 hover:bg-gray-50'
+            }`}
         >
           <Icon size={13} />
           {label}
           {id === 'produccion' && totalOrdenes > 0 && (
-            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-              activeTab === 'produccion' ? 'bg-white/20 text-white' : 'bg-pink-50 text-pink-600'
-            }`}>
+            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === 'produccion' ? 'bg-white/20 text-white' : 'bg-pink-50 text-pink-600'
+              }`}>
               {totalOrdenes}
             </span>
           )}
@@ -50,6 +51,12 @@ export function PedidoDetalleTabs({
             <span
               className="w-2 h-2 rounded-full bg-red-500 shrink-0"
               aria-label="Atención pendiente"
+            />
+          )}
+          {id === 'guia' && guiaPendiente && (
+            <span
+              className="w-2 h-2 rounded-full bg-red-500 shrink-0"
+              aria-label="Guía de Remisión"
             />
           )}
         </button>

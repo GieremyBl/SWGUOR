@@ -212,7 +212,6 @@ const GESTION_LOGISTICA: NavGroup = {
       roles: ['gerente', 'administrador', 'ayudante', 'recepcionista'],
       subItems: [
         { title: 'Despachos', href: '/admin/Panel-Administrativo/despachos', icon: Truck, resource: 'despachos' as RecursoKey },
-        { title: 'Guías de Remisión', href: '/admin/Panel-Administrativo/guias-remision', icon: FileText, resource: 'despachos' as RecursoKey },
       ],
     },
   ]

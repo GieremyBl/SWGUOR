@@ -1,12 +1,14 @@
 "use client";
 
 import StatCard from "../common/StatCard";
-import { ShoppingBag, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { ShoppingBag, Clock, Layers, CheckCircle2, XCircle, Wallet } from "lucide-react";
 
 interface PedidosStatsProps {
   stats: {
     total: number;
     pendientes: number;
+    enProceso: number;
+    pagados: number;      // ← agregado
     completados: number;
     cancelados: number;
   };
@@ -27,37 +29,53 @@ export default function PedidosStats({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
       <StatCard
-        title="TOTAL PEDIDOS"
+        title="Total Pedidos"
         value={stats.total}
         icon={ShoppingBag}
-        isActive={statusFilter === "todos"}
         color="pink"
+        isActive={statusFilter === "todos"}
         onClick={() => handleFilter("todos")}
       />
       <StatCard
-        title="PENDIENTES"
+        title="Pendientes"
         value={stats.pendientes}
         icon={Clock}
-        isActive={statusFilter === "solicitud"}
-        color="orange"
-        onClick={() => handleFilter("solicitud")}
+        color="amber"
+        isActive={statusFilter === "pendiente"}
+        onClick={() => handleFilter("pendiente")}
       />
       <StatCard
-        title="COMPLETADOS"
+        title="En Proceso"
+        value={stats.enProceso}
+        icon={Layers}
+        color="blue"
+        isActive={statusFilter === "en_produccion"}
+        onClick={() => handleFilter("en_produccion")}
+      />
+      <StatCard
+        title="Pagados"
+        value={stats.pagados}
+        icon={Wallet}
+        color="indigo"
+        isActive={statusFilter === "pagado"}
+        onClick={() => handleFilter("pagado")}
+      />
+      <StatCard
+        title="Completados"
         value={stats.completados}
         icon={CheckCircle2}
-        isActive={statusFilter === "finalizado"}
         color="emerald"
-        onClick={() => handleFilter("finalizado")}
+        isActive={statusFilter === "entregado"}
+        onClick={() => handleFilter("entregado")}
       />
       <StatCard
-        title="CANCELADOS"
+        title="Cancelados"
         value={stats.cancelados}
         icon={XCircle}
+        color="red"
         isActive={statusFilter === "cancelado"}
-        color="slate"
         onClick={() => handleFilter("cancelado")}
       />
     </div>

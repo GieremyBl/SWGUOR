@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Eye, Printer, Truck, Calendar, User, Hash, XCircle, Palette, Scissors } from "lucide-react";
+import { Eye, Printer, FileText, Calendar, User, Hash, XCircle, Palette, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,21 +14,21 @@ import { usePermissions } from "@/lib/hooks/usePermissions";
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface PedidosTableProps {
-  data:            any[];
-  onCancel?:       (pedido: any) => void;
+  data: any[];
+  onCancel?: (pedido: any) => void;
 }
 
 // ── Badge de estado usando el schema como fuente de verdad ───────────────────
 
 const STATUS_COLORS: Record<string, string> = {
-  pendiente:           "bg-amber-50 text-amber-600 border-amber-200",
-  en_produccion:       "bg-blue-50 text-blue-600 border-blue-200",
+  pendiente: "bg-amber-50 text-amber-600 border-amber-200",
+  en_produccion: "bg-blue-50 text-blue-600 border-blue-200",
   listo_para_despacho: "bg-violet-50 text-violet-600 border-violet-200",
-  preparando:          "bg-cyan-50 text-cyan-600 border-cyan-200",
-  en_ruta:             "bg-sky-50 text-sky-700 border-sky-200",
-  entregado:           "bg-emerald-50 text-emerald-600 border-emerald-200",
-  cancelado:           "bg-rose-50 text-rose-500 border-rose-200",
-  pagado:              "bg-emerald-50 text-emerald-700 border-emerald-200",
+  preparando: "bg-cyan-50 text-cyan-600 border-cyan-200",
+  en_ruta: "bg-sky-50 text-sky-700 border-sky-200",
+  entregado: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  cancelado: "bg-rose-50 text-rose-500 border-rose-200",
+  pagado: "bg-emerald-50 text-emerald-700 border-emerald-200",
 };
 
 function StatusBadge({
@@ -159,15 +159,18 @@ export default function PedidosTable({
                         <Eye size={16} />
                       </Button>
 
-                      {/* Imprimir */}
+                      {/* Ver Guía de Remisión */}
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => window.print()}
-                        className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-100 transition-all"
-                        title="Imprimir"
+                        onClick={() =>
+                          router.push(`/admin/Panel-Administrativo/pedidos/${pedido.id}?tab=guia`)
+                        }
+                        disabled={["pendiente", "en_produccion"].includes(pedido.estado)}
+                        className="h-9 w-9 rounded-xl border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Ver Guía de Remisión"
                       >
-                        <Printer size={16} />
+                        <FileText size={16} />
                       </Button>
 
                       {/* Cancelar */}

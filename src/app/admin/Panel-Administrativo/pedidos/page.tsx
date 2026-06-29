@@ -2,9 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   FileSpreadsheet, ChevronLeft, ChevronRight,
-  ShieldAlert} from "lucide-react";
+  ShieldAlert
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { exportToExcel } from "@/lib/utils/export-utils";
@@ -15,7 +16,7 @@ import AdminPageHeader from "@/components/admin/common/AdminPageHeader";
 import PedidosStats from "@/components/admin/pedidos/PedidosStats";
 import PedidosToolbar from "@/components/admin/pedidos/PedidosToolbar";
 
-const PedidosTable       = dynamic(() => import("@/components/admin/pedidos/PedidosTable"));
+const PedidosTable = dynamic(() => import("@/components/admin/pedidos/PedidosTable"));
 const CreatePedidoDialog = dynamic(() => import("@/components/admin/pedidos/CreatePedidoDialog"));
 const CancelPedidoDialog = dynamic(() => import("@/components/admin/pedidos/CancelPedidoDialog"));
 
@@ -23,46 +24,45 @@ export default function PedidosPage() {
   const { can, isLoading: authLoading } = usePermissions();
   const { pedidos, isLoading, refetch } = usePedidos();
 
-  const [searchTerm,     setSearchTerm]     = useState("");
-  const [isCreateOpen,   setIsCreateOpen]   = useState(false);
-  const [selectedPedido, setSelectedPedido] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [pedidoACancelar, setPedidoACancelar] = useState<any | null>(null);
-  const [statusFilter,   setStatusFilter]   = useState("todos");
-  const [dateFilter,     setDateFilter]     = useState<"todas" | "hoy" | "semana" | "mes">("todas");
-  const [currentPage,    setCurrentPage]    = useState(0);
+  const [statusFilter, setStatusFilter] = useState("todos");
+  const [dateFilter, setDateFilter] = useState<"todas" | "hoy" | "semana" | "mes">("todas");
+  const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 10;
 
   const stats = useMemo(() => ({
-    total:       pedidos.length,
-    pendientes:  pedidos.filter((p: any) =>
-      ["pendiente", "en_produccion", "listo_para_despacho"].includes(p.estado)
+    total: pedidos.length,
+    pendientes: pedidos.filter((p: any) => p.estado === "pendiente").length,
+    enProceso: pedidos.filter((p: any) =>
+      ["en_produccion", "listo_para_despacho", "en_ruta"].includes(p.estado)
     ).length,
-    completados: pedidos.filter((p: any) =>
-      ["entregado", "pagado"].includes(p.estado)
-    ).length,
-    cancelados:  pedidos.filter((p: any) => p.estado === "cancelado").length,
+    pagados: pedidos.filter((p: any) => p.estado === "pagado").length,
+    completados: pedidos.filter((p: any) => p.estado === "entregado").length,
+    cancelados: pedidos.filter((p: any) => p.estado === "cancelado").length,
   }), [pedidos]);
 
   const filteredPedidos = useMemo(() => {
     if (!pedidos.length) return [];
     return pedidos.filter((p: any) => {
-      const cliente    = (p.clientes?.razon_social ?? "Venta Directa").toLowerCase();
+      const cliente = (p.clientes?.razon_social ?? "Venta Directa").toLowerCase();
       const matchSearch = cliente.includes(searchTerm.toLowerCase()) || String(p.id).includes(searchTerm);
       const matchStatus = statusFilter === "todos" || p.estado === statusFilter;
 
-      const now         = new Date();
+      const now = new Date();
       const createdDate = new Date(p.created_at);
       const matchDate =
-        dateFilter === "hoy"    ? createdDate.toDateString() === now.toDateString() :
-        dateFilter === "semana" ? createdDate >= new Date(now.getTime() - 7 * 86400000) :
-        dateFilter === "mes"    ? createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear() :
-        true;
+        dateFilter === "hoy" ? createdDate.toDateString() === now.toDateString() :
+          dateFilter === "semana" ? createdDate >= new Date(now.getTime() - 7 * 86400000) :
+            dateFilter === "mes" ? createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear() :
+              true;
 
       return matchSearch && matchStatus && matchDate;
     });
   }, [pedidos, searchTerm, statusFilter, dateFilter]);
 
-  const totalPages    = Math.ceil(filteredPedidos.length / pageSize);
+  const totalPages = Math.ceil(filteredPedidos.length / pageSize);
   const paginatedData = filteredPedidos.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   const handleExport = () => {
@@ -70,10 +70,10 @@ export default function PedidosPage() {
     exportToExcel(
       filteredPedidos.map((p: any) => ({
         "N° Pedido": p.id,
-        "Fecha":     p.created_at ? new Date(p.created_at).toLocaleDateString() : "Sin fecha",
-        "Cliente":   p.clientes?.razon_social ?? "Desconocido",
-        "Total":     p.total ?? 0,
-        "Estado":    (p.estado_label ?? p.estado)?.toUpperCase() ?? "SIN ESTADO",
+        "Fecha": p.created_at ? new Date(p.created_at).toLocaleDateString() : "Sin fecha",
+        "Cliente": p.clientes?.razon_social ?? "Desconocido",
+        "Total": p.total ?? 0,
+        "Estado": (p.estado_label ?? p.estado)?.toUpperCase() ?? "SIN ESTADO",
       })),
       { filename: `Pedidos_GUOR_${new Date().toISOString().split("T")[0]}` }
     );
@@ -86,7 +86,7 @@ export default function PedidosPage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
         <AdminPageHeader
           title="Registro de Pedidos"
           description="Gestión integral de pedidos y órdenes de clientes"
@@ -101,14 +101,14 @@ export default function PedidosPage() {
           )}
         </AdminPageHeader>
 
-        <PedidosStats 
-          stats={stats} 
-          statusFilter={statusFilter} 
-          setStatusFilter={setStatusFilter} 
-          onPageReset={() => setCurrentPage(0)} 
+        <PedidosStats
+          stats={stats}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          onPageReset={() => setCurrentPage(0)}
         />
 
-        <PedidosToolbar 
+        <PedidosToolbar
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           dateFilter={dateFilter}
@@ -128,8 +128,8 @@ export default function PedidosPage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <PedidosTable
                 data={paginatedData}
-                onCancel={can("archive", "pedidos") 
-                  ? (p) => setPedidoACancelar(p) 
+                onCancel={can("cancel", "pedidos")
+                  ? (p) => setPedidoACancelar(p)
                   : undefined}
               />
             </div>

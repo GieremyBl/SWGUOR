@@ -27,7 +27,7 @@ export default async function PedidoDetallePage({ params }: PageProps) {
     notFound();
   }
 
-  const puedeAnular     = ROLES_ANULACION.includes(
+  const puedeAnular = ROLES_ANULACION.includes(
     auth.user.rol as (typeof ROLES_ANULACION)[number],
   );
 
@@ -124,9 +124,9 @@ export default async function PedidoDetallePage({ params }: PageProps) {
     })),
     cotizacion: serializado.cotizacion
       ? {
-          id: String((serializado.cotizacion as { id: unknown }).id),
-          numero: String((serializado.cotizacion as { numero: string }).numero),
-        }
+        id: String((serializado.cotizacion as { id: unknown }).id),
+        numero: String((serializado.cotizacion as { numero: string }).numero),
+      }
       : null,
   };
 
