@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, Plus } from 'lucide-react';
+import { RefreshCw, LayoutList, ArrowDownCircle, ArrowUpCircle, SlidersHorizontal } from 'lucide-react';
 import {
   MovimientosTable,
   MovimientosFilters,
@@ -14,6 +14,7 @@ import {
   type EstadisticasMovimientosType,
 } from '@/components/admin/movimientos';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
+import StatCard from '@/components/admin/common/StatCard';
 import {
   obtenerEstadisticasMovimientos,
   obtenerMovimientos,
@@ -55,7 +56,6 @@ export default function MovimientosInventarioPage() {
   const loadAll = useCallback(async () => {
     setIsLoading(true);
     const payload = mapUiFiltersToAction(filters);
-
     try {
       const [movRes, statsRes] = await Promise.all([
         obtenerMovimientos(payload),
@@ -88,9 +88,7 @@ export default function MovimientosInventarioPage() {
     }
   }, [filters]);
 
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const hasFilters =
     !!filters.busqueda ||
@@ -102,21 +100,56 @@ export default function MovimientosInventarioPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-6">
 
-        {/* Header */}
+        {/* ── Encabezado ── */}
         <AdminPageHeader
           title="Movimientos de Inventario"
           description="Registro y seguimiento detallado de entradas, salidas y ajustes de stock"
-          actionLabel="Nuevo Movimiento"
+          actionLabel="Nuevo movimiento"
           onAction={() => setDialogOpen(true)}
-          icon={Plus}
         />
 
-        {/* Estadísticas */}
+        {/* ── Stats principales (StatCard común, clickeables como filtro) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatCard
+            title="Total movimientos"
+            value={estadisticas.totalMovimientos}
+            icon={LayoutList}
+            color="slate"
+            isActive={!filters.tipoMovimiento}
+            onClick={() => setFilters(f => ({ ...f, tipoMovimiento: undefined }))}
+          />
+          <StatCard
+            title="Entradas"
+            value={estadisticas.totalEntradas}
+            icon={ArrowDownCircle}
+            color="emerald"
+            isActive={filters.tipoMovimiento === 'entrada'}
+            onClick={() => setFilters(f => ({ ...f, tipoMovimiento: 'entrada' }))}
+          />
+          <StatCard
+            title="Salidas"
+            value={estadisticas.totalSalidas}
+            icon={ArrowUpCircle}
+            color="red"
+            isActive={filters.tipoMovimiento === 'salida'}
+            onClick={() => setFilters(f => ({ ...f, tipoMovimiento: 'salida' }))}
+          />
+          <StatCard
+            title="Ajustes"
+            value={estadisticas.totalAjustes}
+            icon={SlidersHorizontal}
+            color="indigo"
+            isActive={filters.tipoMovimiento === 'ajuste'}
+            onClick={() => setFilters(f => ({ ...f, tipoMovimiento: 'ajuste' }))}
+          />
+        </div>
+
+        {/* ── Stats secundarias por tipo extendido (consumos, devoluciones, producción, incidencias) ── */}
         <EstadisticasMovimientos estadisticas={estadisticas} isLoading={isLoading} />
 
-        {/* Panel de filtros + export */}
+        {/* ── Filtros + export ── */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5">
           <MovimientosFilters onFilterChange={setFilters} />
 
@@ -130,7 +163,6 @@ export default function MovimientosInventarioPage() {
                   <span className="text-slate-300 ml-1">(últimos 50 por defecto)</span>
                 )}
               </p>
-              {/* Botón refresh */}
               <button
                 onClick={loadAll}
                 disabled={isLoading}
@@ -140,18 +172,16 @@ export default function MovimientosInventarioPage() {
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
-            <ExportarMovimientos
-              movimientos={movimientos}
-              titulo="Movimientos_Inventario"
-            />
+            <ExportarMovimientos movimientos={movimientos} titulo="Movimientos_Inventario" />
           </div>
         </div>
 
-        {/* Tabla de movimientos */}
+        {/* ── Tabla ── */}
         <MovimientosTable movimientos={movimientos} isLoading={isLoading} />
+
       </div>
 
-      {/* Modal de registro */}
+      {/* ── Modal registro ── */}
       <RegistrarMovimientoDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

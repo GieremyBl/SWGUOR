@@ -11,6 +11,18 @@ interface Props {
   onFilterChange: (estado: EstadoTesoreriaFiltro) => void;
 }
 
+function formatMontoCompacto(monto: number): string {
+  if (monto >= 1_000_000) {
+    const val = monto / 1_000_000;
+    return `S/ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}M`;
+  }
+  if (monto >= 1_000) {
+    const val = monto / 1_000;
+    return `S/ ${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}K`;
+  }
+  return `S/ ${monto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function TesoreriaPagosStats({ stats, estadoFilter, onFilterChange }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -40,7 +52,7 @@ export function TesoreriaPagosStats({ stats, estadoFilter, onFilterChange }: Pro
       />
       <StatCard
         title="Monto exitoso"
-        value={`S/ ${stats.monto_exitoso.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`}
+        value={formatMontoCompacto(stats.monto_exitoso)}
         icon={stats.fallidos > 0 ? XCircle : DollarSign}
         color="blue"
         disabled

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Coins, Plus } from 'lucide-react';
+import { Coins, LayoutList, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import StatCard from '@/components/admin/common/StatCard';
 import { PagoTallerDetailModal } from '@/components/admin/pagos-taller/PagoTallerDetailModal';
@@ -65,7 +65,6 @@ export default function PagosTallerPage() {
   const canView =
     can('view', 'talleres') || can('view', 'pagos') || hasRole(PAGOS_TALLER_ROLES_VER);
   const canGestionar = hasRole(PAGOS_TALLER_ROLES_ESCRITURA);
-  const canCreate = canGestionar;
 
   const talleresOptions = useMemo(
     () => talleres.map((t) => ({ id: t.id, nombre: t.nombre })),
@@ -75,12 +74,14 @@ export default function PagosTallerPage() {
   const stats = useMemo(() => {
     const pendientes = pagos.filter((p) => p.estado === 'pendiente');
     const pagados = pagos.filter((p) => p.estado === 'pagado');
+    const anulados = pagos.filter((p) => p.estado === 'anulado');
     const montoPendiente = pendientes.reduce((s, p) => s + Number(p.monto), 0);
     const montoPagado = pagados.reduce((s, p) => s + Number(p.monto), 0);
     return {
       total: meta?.total ?? pagos.length,
       pendientes: pendientes.length,
       pagados: pagados.length,
+      anulados: anulados.length,
       montoPendiente,
       montoPagado,
     };
@@ -89,6 +90,11 @@ export default function PagosTallerPage() {
   const handleVer = (row: PagoTallerFila) => {
     setSelectedId(row.id);
     setDetailOpen(true);
+  };
+
+  const handleFiltroChange = (next: PagosTallerFiltros) => {
+    setFiltros(next);
+    setPage(1);
   };
 
   if (authLoading) {
@@ -102,6 +108,7 @@ export default function PagosTallerPage() {
   if (!canView) {
     return (
       <div className="h-screen flex flex-col items-center justify-center text-center p-6">
+        <Coins className="w-12 h-12 text-red-400 mb-3" />
         <h2 className="text-2xl font-black text-slate-900">Acceso restringido</h2>
         <p className="text-slate-500 mt-2">No tienes permisos para ver pagos a talleres.</p>
       </div>
@@ -111,52 +118,63 @@ export default function PagosTallerPage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <AdminPageHeader
-            title="Pagos a Talleres"
-            description="Gestión de obligaciones y confirmación de pagos a talleres externos"
-            icon={Coins}
-          />
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold"
-            >
-              <Plus className="w-4 h-4" />
-              Nuevo pago
-            </button>
-          )}
-        </div>
 
+        {/* ── Encabezado ── */}
+        <AdminPageHeader
+          title="Pagos a Talleres"
+          description="Gestión de obligaciones y confirmación de pagos a talleres externos"
+          icon={Coins}
+          showAction={canGestionar}
+          actionLabel="Nuevo pago"
+          onAction={() => setCreateOpen(true)}
+        />
+
+        {/* ── Stats ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard title="Total registros" value={stats.total} icon={Coins} color="blue" />
-          <StatCard title="Pendientes (página)" value={stats.pendientes} icon={Coins} color="amber" />
           <StatCard
-            title="Monto pendiente"
-            value={formatMontoPagoTaller(stats.montoPendiente)}
-            icon={Coins}
-            color="red"
+            title="Total registros"
+            value={stats.total}
+            icon={LayoutList}
+            color="slate"
+            isActive={filtros.estado === 'todos'}
+            onClick={() => handleFiltroChange({ ...filtros, estado: 'todos' })}
           />
           <StatCard
-            title="Monto pagado (página)"
+            title="Pendientes"
+            value={stats.pendientes}
+            icon={Clock}
+            color="amber"
+            isActive={filtros.estado === 'pendiente'}
+            onClick={() => handleFiltroChange({ ...filtros, estado: 'pendiente' })}
+          />
+          <StatCard
+            title="Pagados"
+            value={stats.pagados}
+            icon={CheckCircle2}
+            color="emerald"
+            isActive={filtros.estado === 'pagado'}
+            onClick={() => handleFiltroChange({ ...filtros, estado: 'pagado' })}
+          />
+          <StatCard
+            title="Monto pagado"
             value={formatMontoPagoTaller(stats.montoPagado)}
             icon={Coins}
-            color="emerald"
+            color="blue"
+            disabled
           />
         </div>
 
+        {/* ── Toolbar ── */}
         <PagosTallerToolbar
           filtros={filtros}
           talleres={talleresOptions}
-          onChange={(next) => {
-            setFiltros(next);
-            setPage(1);
-          }}
+          onChange={handleFiltroChange}
         />
 
+        {/* ── Tabla ── */}
         <PagosTallerTable data={pagos} isLoading={isLoading} onVer={handleVer} />
 
+        {/* ── Paginación ── */}
         {meta && meta.totalPages > 1 && (
           <div className="flex items-center justify-between text-sm text-slate-600">
             <span>
@@ -183,32 +201,29 @@ export default function PagosTallerPage() {
           </div>
         )}
 
-        <PagoTallerDetailModal
-          open={detailOpen}
-          pagoId={selectedId}
-          canGestionar={canGestionar}
-          isRegistering={isRegistering}
-          isAnulling={isAnulling}
-          onClose={() => setDetailOpen(false)}
-          onLoad={obtenerPorId}
-          onRegistrar={async (id, data) => {
-            await registrar({ id, data });
-          }}
-          onAnular={async (id, data) => {
-            await anular({ id, data });
-          }}
-        />
-
-        <PagoTallerFormModal
-          open={createOpen}
-          isCreating={isCreating}
-          talleres={talleresOptions}
-          onClose={() => setCreateOpen(false)}
-          onCreate={async (data) => {
-            await crear(data);
-          }}
-        />
       </div>
+
+      {/* ── Modal detalle ── */}
+      <PagoTallerDetailModal
+        open={detailOpen}
+        pagoId={selectedId}
+        canGestionar={canGestionar}
+        isRegistering={isRegistering}
+        isAnulling={isAnulling}
+        onClose={() => setDetailOpen(false)}
+        onLoad={obtenerPorId}
+        onRegistrar={async (id, data) => { await registrar({ id, data }); }}
+        onAnular={async (id, data) => { await anular({ id, data }); }}
+      />
+
+      {/* ── Modal crear ── */}
+      <PagoTallerFormModal
+        open={createOpen}
+        isCreating={isCreating}
+        talleres={talleresOptions}
+        onClose={() => setCreateOpen(false)}
+        onCreate={async (data) => { await crear(data); }}
+      />
     </div>
   );
 }

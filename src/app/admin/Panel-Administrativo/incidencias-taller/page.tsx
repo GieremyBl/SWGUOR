@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle, LayoutList, Clock, CheckCircle2, Flame } from 'lucide-react';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import StatCard from '@/components/admin/common/StatCard';
 import { IncidenciaTallerCreateModal } from '@/components/admin/incidencias-taller/IncidenciaTallerCreateModal';
@@ -46,34 +46,20 @@ export default function IncidenciasTallerPage() {
   );
 
   const {
-    incidencias,
-    meta,
-    isLoading,
-    obtenerPorId,
-    crear,
-    resolver,
-    asignar,
-    isCreating,
-    isResolving,
-    isAssigning,
+    incidencias, meta, isLoading,
+    obtenerPorId, crear, resolver, asignar,
+    isCreating, isResolving, isAssigning,
   } = useIncidenciasTaller(listParams);
 
-  const canView =
-    can('view', 'incidencias_taller') || hasRole(INCIDENCIAS_TALLER_ROLES_VER);
-  const canCreate =
-    can('create', 'incidencias_taller') || hasRole(INCIDENCIAS_TALLER_ROLES_CREAR);
+  const canView = can('view', 'incidencias_taller') || hasRole(INCIDENCIAS_TALLER_ROLES_VER);
+  const canCreate = can('create', 'incidencias_taller') || hasRole(INCIDENCIAS_TALLER_ROLES_CREAR);
   const canGestionar = hasRole(INCIDENCIAS_TALLER_ROLES_GESTION);
 
   const stats = useMemo(() => {
     const pendientes = incidencias.filter((i) => !i.resuelto).length;
     const resueltas = incidencias.filter((i) => i.resuelto).length;
     const criticas = incidencias.filter((i) => i.severidad === 'critica' && !i.resuelto).length;
-    return {
-      total: meta?.total ?? incidencias.length,
-      pendientes,
-      resueltas,
-      criticas,
-    };
+    return { total: meta?.total ?? incidencias.length, pendientes, resueltas, criticas };
   }, [incidencias, meta]);
 
   const handleVer = (row: IncidenciaTallerFila) => {
@@ -81,112 +67,116 @@ export default function IncidenciasTallerPage() {
     setDetailOpen(true);
   };
 
-  if (authLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center text-sm text-slate-500">
-        Verificando permisos...
-      </div>
-    );
-  }
+  const handleFiltroChange = (next: IncidenciasTallerFiltros) => {
+    setFiltros(next);
+    setPage(1);
+  };
 
-  if (!canView) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center text-center p-6">
-        <h2 className="text-2xl font-black text-slate-900">Acceso restringido</h2>
-        <p className="text-slate-500 mt-2">No tienes permisos para ver incidencias de taller.</p>
-      </div>
-    );
-  }
+  if (authLoading) return (
+    <div className="h-screen flex items-center justify-center text-sm text-slate-500">
+      Verificando permisos...
+    </div>
+  );
+
+  if (!canView) return (
+    <div className="h-screen flex flex-col items-center justify-center text-center p-6">
+      <AlertTriangle className="w-12 h-12 text-red-400 mb-3" />
+      <h2 className="text-2xl font-black text-slate-900">Acceso restringido</h2>
+      <p className="text-slate-500 mt-2">No tienes permisos para ver incidencias de taller.</p>
+    </div>
+  );
 
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <AdminPageHeader
-            title="Incidencias de Taller"
-            description="Reportes operativos de averías, retrasos y defectos en confección externa"
-            icon={AlertTriangle}
-          />
-          {canCreate && (
-            <button
-              type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold"
-            >
-              <Plus className="w-4 h-4" />
-              Nueva incidencia
-            </button>
-          )}
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard title="Total" value={stats.total} icon={AlertTriangle} color="blue" />
-          <StatCard title="Pendientes" value={stats.pendientes} icon={AlertTriangle} color="amber" />
-          <StatCard title="Resueltas (página)" value={stats.resueltas} icon={AlertTriangle} color="emerald" />
-          <StatCard title="Críticas abiertas" value={stats.criticas} icon={AlertTriangle} color="red" />
-        </div>
-
-        <IncidenciasTallerToolbar
-          filtros={filtros}
-          onChange={(next) => {
-            setFiltros(next);
-            setPage(1);
-          }}
+        {/* ── Encabezado ── */}
+        <AdminPageHeader
+          title="Incidencias de Taller"
+          description="Reportes operativos de averías, retrasos y defectos en confección externa"
+          icon={AlertTriangle}
+          showAction={canCreate}
+          actionLabel="Nueva incidencia"
+          onAction={() => setCreateOpen(true)}
         />
 
+        {/* ── Stats ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <StatCard
+            title="Total"
+            value={stats.total}
+            icon={LayoutList}
+            color="slate"
+            isActive={filtros.resuelto === 'todos'}
+            onClick={() => handleFiltroChange({ ...filtros, resuelto: 'todos' })}
+          />
+          <StatCard
+            title="Pendientes"
+            value={stats.pendientes}
+            icon={Clock}
+            color="amber"
+            isActive={filtros.resuelto === 'false'}
+            onClick={() => handleFiltroChange({ ...filtros, resuelto: 'false' })}
+          />
+          <StatCard
+            title="Resueltas"
+            value={stats.resueltas}
+            icon={CheckCircle2}
+            color="emerald"
+            isActive={filtros.resuelto === 'true'}
+            onClick={() => handleFiltroChange({ ...filtros, resuelto: 'true' })}
+          />
+          <StatCard
+            title="Críticas abiertas"
+            value={stats.criticas}
+            icon={Flame}
+            color="red"
+            isActive={filtros.severidad === 'critica'}
+            onClick={() => handleFiltroChange({ ...filtros, severidad: 'critica', resuelto: 'false' })}
+          />
+        </div>
+
+        {/* ── Toolbar ── */}
+        <IncidenciasTallerToolbar filtros={filtros} onChange={handleFiltroChange} />
+
+        {/* ── Tabla ── */}
         <IncidenciasTallerTable data={incidencias} isLoading={isLoading} onVer={handleVer} />
 
+        {/* ── Paginación ── */}
         {meta && meta.totalPages > 1 && (
           <div className="flex items-center justify-between text-sm text-slate-600">
-            <span>
-              Página {meta.page} de {meta.totalPages} ({meta.total} registros)
-            </span>
+            <span>Página {meta.page} de {meta.totalPages} ({meta.total} registros)</span>
             <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={page <= 1}
+              <button type="button" disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-lg border disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={page >= meta.totalPages}
+                className="px-3 py-1.5 rounded-lg border disabled:opacity-40">Anterior</button>
+              <button type="button" disabled={page >= meta.totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="px-3 py-1.5 rounded-lg border disabled:opacity-40"
-              >
-                Siguiente
-              </button>
+                className="px-3 py-1.5 rounded-lg border disabled:opacity-40">Siguiente</button>
             </div>
           </div>
         )}
 
-        <IncidenciaTallerDetailModal
-          open={detailOpen}
-          incidenciaId={selectedId}
-          canGestionar={canGestionar}
-          isResolving={isResolving}
-          isAssigning={isAssigning}
-          onClose={() => setDetailOpen(false)}
-          onLoad={obtenerPorId}
-          onResolver={async (id, data) => {
-            await resolver({ id, data });
-          }}
-          onAsignar={async (id, data) => {
-            await asignar({ id, data });
-          }}
-        />
-
-        <IncidenciaTallerCreateModal
-          open={createOpen}
-          isCreating={isCreating}
-          onClose={() => setCreateOpen(false)}
-          onCreate={async (data) => {
-            await crear(data);
-          }}
-        />
       </div>
+
+      {/* ── Modales ── */}
+      <IncidenciaTallerDetailModal
+        open={detailOpen}
+        incidenciaId={selectedId}
+        canGestionar={canGestionar}
+        isResolving={isResolving}
+        isAssigning={isAssigning}
+        onClose={() => setDetailOpen(false)}
+        onLoad={obtenerPorId}
+        onResolver={async (id, data) => { await resolver({ id, data }); }}
+        onAsignar={async (id, data) => { await asignar({ id, data }); }}
+      />
+      <IncidenciaTallerCreateModal
+        open={createOpen}
+        isCreating={isCreating}
+        onClose={() => setCreateOpen(false)}
+        onCreate={async (data) => { await crear(data); }}
+      />
     </div>
   );
 }

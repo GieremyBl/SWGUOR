@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, RotateCcw } from 'lucide-react';
+import { RotateCcw, LayoutList, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import StatCard from '@/components/admin/common/StatCard';
 import { DevolucionClienteCreateModal } from '@/components/admin/devoluciones-cliente/DevolucionClienteCreateModal';
@@ -80,6 +80,7 @@ export default function DevolucionesClientePage() {
   if (!canView) {
     return (
       <div className="h-screen flex flex-col items-center justify-center text-center p-6">
+        <RotateCcw className="w-12 h-12 text-red-400 mb-3" />
         <h2 className="text-2xl font-black text-slate-900">Acceso restringido</h2>
         <p className="text-slate-500 mt-2">No tienes permisos para ver devoluciones de clientes.</p>
       </div>
@@ -89,6 +90,8 @@ export default function DevolucionesClientePage() {
   return (
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* ── Encabezado ── */}
         <AdminPageHeader
           title="Devoluciones de Clientes"
           description="Gestión de solicitudes de devolución vinculadas a pedidos"
@@ -98,38 +101,67 @@ export default function DevolucionesClientePage() {
           onAction={() => setCreateOpen(true)}
         />
 
+        {/* ── Stats ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard title="Total" value={stats.total} icon={RotateCcw} color="blue" />
-          <StatCard title="Pendientes" value={stats.pendientes} icon={Plus} color="amber" />
-          <StatCard title="Aprobadas" value={stats.aprobadas} icon={RotateCcw} color="emerald" />
-          <StatCard title="Rechazadas" value={stats.rechazadas} icon={RotateCcw} color="pink" />
+          <StatCard
+            title="Total devoluciones"
+            value={stats.total}
+            icon={LayoutList}
+            color="slate"
+            isActive={filtros.estado === 'todos'}
+            onClick={() => setFiltros(f => ({ ...f, estado: 'todos' }))}
+          />
+          <StatCard
+            title="Pendientes / En revisión"
+            value={stats.pendientes}
+            icon={Clock}
+            color="amber"
+            isActive={filtros.estado === 'pendiente'}
+            onClick={() => setFiltros(f => ({ ...f, estado: 'pendiente' }))}
+          />
+          <StatCard
+            title="Aprobadas"
+            value={stats.aprobadas}
+            icon={CheckCircle2}
+            color="emerald"
+            isActive={filtros.estado === 'aprobada'}
+            onClick={() => setFiltros(f => ({ ...f, estado: 'aprobada' }))}
+          />
+          <StatCard
+            title="Rechazadas"
+            value={stats.rechazadas}
+            icon={XCircle}
+            color="red"
+            isActive={filtros.estado === 'rechazada'}
+            onClick={() => setFiltros(f => ({ ...f, estado: 'rechazada' }))}
+          />
         </div>
 
+        {/* ── Toolbar ── */}
         <DevolucionesClienteToolbar filtros={filtros} onChange={setFiltros} />
+
+        {/* ── Tabla ── */}
         <DevolucionesClienteTable data={devoluciones} isLoading={isLoading} onVer={handleVer} />
+
       </div>
 
+      {/* ── Modal crear ── */}
       <DevolucionClienteCreateModal
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onSubmit={async (payload) => {
-          await crear(payload);
-        }}
+        onSubmit={async (payload) => { await crear(payload); }}
         isSubmitting={isCreating}
       />
 
+      {/* ── Modal detalle / resolver ── */}
       <DevolucionClienteDetailModal
         open={detailOpen}
         onOpenChange={setDetailOpen}
         devolucionId={selectedId}
         canResolver={canResolver}
         onLoad={obtenerPorId}
-        onAprobar={async (id, data) => {
-          await aprobar({ id, data });
-        }}
-        onRechazar={async (id, data) => {
-          await rechazar({ id, data });
-        }}
+        onAprobar={async (id, data) => { await aprobar({ id, data }); }}
+        onRechazar={async (id, data) => { await rechazar({ id, data }); }}
         isResolving={isResolving}
       />
     </div>
