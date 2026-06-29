@@ -513,7 +513,6 @@ model almacen_stock {
   materiales    materiales?    @relation(fields: [material_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   productos     productos?     @relation(fields: [producto_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   almacen_zonas almacen_zonas? @relation(fields: [zona_id], references: [id], onUpdate: NoAction)
-  insumo        insumo?        @relation(fields: [insumo_id], references: [id], onUpdate: NoAction)
 
   @@unique([almacen_id, insumo_id], map: "uq_almacen_insumo_sin_zona", where: raw("(zona_id IS NULL)"))
   @@unique([almacen_id, material_id], map: "uq_almacen_material_sin_zona", where: raw("(zona_id IS NULL)"))
@@ -842,8 +841,9 @@ model cotizaciones_proveedor_items {
   unidad                 String?                @default("unidades")
   tipo_item              String?                @default("insumo")
   cotizaciones_proveedor cotizaciones_proveedor @relation(fields: [cotizacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  materiales             materiales?            @relation(fields: [material_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   insumo                 insumo?                @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  materiales             materiales?            @relation(fields: [material_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   @@schema("public")
 }
 
@@ -991,6 +991,7 @@ model devoluciones_proveedor {
   proveedores              proveedores          @relation(fields: [proveedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "dev_prov_proveedor_fkey")
   usuarios                 usuarios?            @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "dev_prov_usuario_fkey")
   insumo                   insumo               @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   @@schema("public")
 }
 
@@ -1206,28 +1207,25 @@ model incidencias_cliente {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model insumo {
-  id                 BigInt          @id @default(autoincrement())
-  nombre             String
-  descripcion        String?
-  tipo               TipoInsumo
-  categoria_id       Int
-  unidad_medida      UnidadMedida    @default(unidades)
-  stock_actual       Decimal         @default(0.00) @db.Decimal(12, 2)
-  stock_minimo       Decimal         @default(0.00) @db.Decimal(12, 2)
-  stock_maximo       Decimal?        @db.Decimal(12, 2)
-  precio_unitario    Decimal?        @default(0.00) @db.Decimal(10, 2)
-  proveedor_id       BigInt?
-  alerta_bajo_stock  Boolean?        @default(true)
-  created_at         DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?       @default(now()) @db.Timestamptz(6)
-
-  categoria_insumo   categoria_insumo @relation(fields: [categoria_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_categoria")
-  proveedores        proveedores?     @relation(fields: [proveedor_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "insumo_proveedor_id_fkey")
-
-  almacen_stock                almacen_stock[]
+  id                           BigInt                         @id @default(autoincrement())
+  nombre                       String
+  descripcion                  String?
+  tipo                         TipoInsumo
+  categoria_id                 Int
+  unidad_medida                UnidadMedida                   @default(unidades)
+  stock_actual                 Decimal                        @default(0.00) @db.Decimal(12, 2)
+  stock_minimo                 Decimal                        @default(0.00) @db.Decimal(12, 2)
+  stock_maximo                 Decimal?                       @db.Decimal(12, 2)
+  precio_unitario              Decimal?                       @default(0.00) @db.Decimal(10, 2)
+  proveedor_id                 BigInt?
+  alerta_bajo_stock            Boolean?                       @default(true)
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime?                      @default(now()) @db.Timestamptz(6)
   cotizaciones_proveedor_items cotizaciones_proveedor_items[]
   devoluciones_proveedor       devoluciones_proveedor[]
   fichas_tecnicas_detalle      fichas_tecnicas_detalle[]
+  categoria_insumo             categoria_insumo               @relation(fields: [categoria_id], references: [id], onUpdate: NoAction, map: "fk_categoria")
+  proveedores                  proveedores?                   @relation(fields: [proveedor_id], references: [id], onUpdate: NoAction, map: "insumo_proveedor_id_fkey")
   movimientos_inventario       movimientos_inventario[]
   ordenes_compra_items         ordenes_compra_items[]
 
@@ -1410,9 +1408,10 @@ model ordenes_compra_items {
   precio_unitario   Decimal        @db.Decimal(12, 2)
   notas             String?
   subtotal          Decimal?       @default(dbgenerated("(cantidad_pedida * precio_unitario)")) @db.Decimal(12, 2)
+  insumo            insumo?        @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   materiales        materiales?    @relation(fields: [material_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   ordenes_compra    ordenes_compra @relation(fields: [orden_compra_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  insumo            insumo?        @relation(fields: [insumo_id], references: [id], onDelete: NoAction,  onUpdate: NoAction)
+
   @@schema("public")
 }
 
@@ -1644,7 +1643,7 @@ model productos {
   moq                      Int                        @default(400)
   colores_disponibles      Json?                      @default("[]")
   tallas_disponibles       Json?                      @default("[]")
-  reglas_descuento         Json?
+  regla_descuento_id       BigInt?
   almacen_stock            almacen_stock[]
   cotizacion_items         cotizacion_items[]
   devoluciones_cliente     devoluciones_cliente[]
@@ -1654,12 +1653,14 @@ model productos {
   ordenes_produccion       ordenes_produccion[]
   ordenes_produccion_items ordenes_produccion_items[]
   pedido_items             pedido_items[]
+  reglas_descuento         reglas_descuento?          @relation(fields: [regla_descuento_id], references: [id], onUpdate: NoAction, map: "fk_productos_regla_descuento")
   categorias_productos     categorias_productos?      @relation(fields: [categoria_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   variantes_producto       variantes_producto[]
 
   @@index([categoria_id, estado], map: "idx_productos_categoria_estado")
   @@index([estado], map: "idx_productos_estado")
   @@index([nombre], map: "idx_productos_nombre")
+  @@index([regla_descuento_id], map: "idx_productos_regla_descuento")
   @@schema("public")
 }
 
@@ -1702,6 +1703,7 @@ model reglas_descuento {
   cotizaciones           cotizaciones[]
   descuento_aplicaciones descuento_aplicaciones[]
   oferta_reglas          oferta_reglas[]
+  productos              productos[]
   promocion_reglas       promocion_reglas[]
 
   @@index([activo, fecha_inicio, fecha_fin], map: "idx_reglas_activas_fechas")
@@ -2434,6 +2436,7 @@ enum TipoAsiento {
 
 enum TipoBeneficio {
   porcentaje_subtotal
+  porcentaje_precio_unitario
 
   @@schema("public")
 }
@@ -2458,6 +2461,7 @@ enum TipoComprobante {
 
 enum TipoConteo {
   modelos_distintos
+  cantidad_unidades
 
   @@schema("public")
 }

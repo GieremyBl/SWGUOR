@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
 import { ShoppingBag, Eye, Star, Loader2, CheckCircle, Ban } from 'lucide-react';
 import { useCartStore, type CartState } from '@/lib/store/useCartStore';
@@ -207,16 +208,18 @@ export function ProductoCard<T extends ProductoBase>({ producto, onSelect, onQui
                         className={`absolute inset-0 bg-black/20 backdrop-blur-xs flex items-center justify-center gap-3 transition-opacity duration-300 z-10 ${isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
                             }`}
                     >
-                        {onQuickView && (
-                            <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); onQuickView(producto); }}
-                                className="p-3 bg-white rounded-full hover:bg-gray-100 transition-all hover:scale-110 shadow-md"
-                                title="Vista Rápida"
-                            >
-                                <Eye size={18} style={{ color: 'var(--guor-dark)' }} />
-                            </button>
-                        )}
+                        <Link
+                            href={`/portal/catalogo/detalle/${producto.id}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onQuickView) onQuickView(producto);
+                            }}
+                            className="p-3 bg-white rounded-full hover:bg-gray-100 transition-all hover:scale-110 shadow-md flex items-center justify-center"
+                            title="Ver detalle del producto"
+                        >
+                            <Eye size={18} style={{ color: 'var(--guor-dark)' }} />
+                        </Link>
+
                         <ActionButton />
                     </div>
                 )}
@@ -292,7 +295,7 @@ export function ProductoCard<T extends ProductoBase>({ producto, onSelect, onQui
                         </div>
                     )}
 
-                    {/* Tallas y Alerta Detallada de Variantes Sin Stock */}
+                    {/* Tallas */}
                     <div className="flex flex-wrap items-center gap-1.5">
                         {(producto.tallas_disponibles?.length ?? 0) > 0 && (
                             <div className="flex flex-wrap gap-1">
@@ -312,7 +315,6 @@ export function ProductoCard<T extends ProductoBase>({ producto, onSelect, onQui
                             </div>
                         )}
 
-                        {/* Texto explícito de Sin Stock al lado de las variantes en color rojo */}
                         {estaAgotado && (
                             <span className="text-[10px] font-bold text-red-600 ml-auto tracking-wide bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
                                 Sin Stock

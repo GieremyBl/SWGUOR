@@ -12,10 +12,6 @@ interface VarianteRaw {
     stock: number;
 }
 
-interface ReglasDescuentoJson {
-    variantes?: VarianteRaw[];
-}
-
 interface CatalogoVariantePickerProps {
     producto: ProductoPortal | null;
     isOpen: boolean;

@@ -6,7 +6,6 @@ import { ProductoPortal } from '@/components/portal/_contexts/PortalContext';
 import { FiltrosCatalogo } from '@/components/portal/catalogo/FiltrosCatalogo';
 import { ProductoCard } from '@/components/portal/catalogo/ProductoCard';
 import { VariantePicker } from '@/components/portal/catalogo/VariantePicker';
-import { DetallesProductoModal } from '@/components/portal/catalogo/DetalleProductoModal';
 import { ShoppingBag, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/lib/store/useCartStore';
 import { toast } from 'sonner';
@@ -203,7 +202,6 @@ export default function CatalogoPage() {
                   producto={producto}
                   onSelect={handleAbrirPicker}
                   onQuickView={(p) => setProductoDetalle(p)}
-                  // CORRECCIÓN CRÍTICA: Enviar las promociones que vienen dentro del objeto producto
                   promociones={(producto as any).badges_campanas || []}
                 />
               ))}
@@ -220,12 +218,6 @@ export default function CatalogoPage() {
           setProductoSeleccionado(null);
         }}
         onAgregar={handleConfirmarAgregar}
-      />
-
-      <DetallesProductoModal
-        producto={productoDetalle}
-        isOpen={productoDetalle !== null}
-        onClose={() => setProductoDetalle(null)}
       />
     </div>
   );

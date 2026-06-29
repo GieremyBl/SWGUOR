@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, Loader2, UserPlus, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Loader2, UserPlus, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginClientePage() {
@@ -182,7 +182,7 @@ export default function LoginClientePage() {
             href="/"
             className="text-[10px] font-black text-[#231e1d]/50 uppercase hover:text-[#b5854b]"
           >
-            ← Volver a la página principal
+            <ArrowLeft className="inline-block text-center " size={14} /> Volver a la página principal
           </Link>
         </div>
 

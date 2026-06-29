@@ -3,16 +3,15 @@ import { prisma } from '@/lib/prisma';
 import { serializeBigInt } from '@/lib/utils/serialize';
 import { NextResponse } from 'next/server';
 
-// Orden canónico de tallas
 const ORDEN_TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '28', '30', '32', '34'];
-const ordenarTallas = (tallas: string[]) =>
+
+const ordenarTallas = (tallas: string[]): string[] =>
   [...tallas].sort((a, b) => {
     const ia = ORDEN_TALLAS.indexOf(a);
     const ib = ORDEN_TALLAS.indexOf(b);
     return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
   });
 
-// Normalizar imagen de Supabase Storage
 const normalizarImagen = (img: string | null | undefined, bucket = 'productos'): string | null => {
   if (!img) return null;
   if (img.startsWith('http')) return img;
@@ -20,11 +19,6 @@ const normalizarImagen = (img: string | null | undefined, bucket = 'productos'):
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${cleanPath}`;
 };
 
-/**
- * GET /api/portal/productos/[id]
- * Detalle profundo de un producto con variantes activas,
- * mapas de tallas_por_color y colores_por_talla con stock.
- */
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -33,11 +27,13 @@ export async function GET(
     const resolvedParams = await params;
     const productoId = BigInt(resolvedParams.id);
 
-    // ── 1. Producto con categoría y variantes activas ──
+    // ── 1. Producto con variantes y categoría ──
     const producto = await prisma.productos.findUnique({
       where: { id: productoId },
       include: {
-        categorias_productos: { select: { id: true, nombre: true, imagen: true } },
+        categorias_productos: {
+          select: { id: true, nombre: true, imagen: true },
+        },
         variantes_producto: {
           where: { estado: 'activo' },
           select: {
@@ -70,20 +66,53 @@ export async function GET(
       );
     }
 
-    // ── 2. Variantes con stock > 0 (para selectores del frontend) ──
+    // ── 2. Traer regla de descuento por separado (si existe) ──
+    let reglaDescuentoData = null;
+    try {
+      const regla_id = (producto as any).regla_descuento_id;
+      if (regla_id) {
+        const regla = await prisma.reglas_descuento.findUnique({
+          where: { id: regla_id },
+          select: {
+            id: true,
+            nombre: true,
+            cantidad_min: true,
+            tipo_beneficio: true,
+            valor_descuento: true,
+            activo: true,
+            tipo_conteo: true,
+          },
+        });
+        if (regla) {
+          reglaDescuentoData = {
+            id: regla.id,
+            nombre: regla.nombre,
+            cantidad_minima: regla.cantidad_min,
+            descuento_porcentaje: Number(regla.valor_descuento),
+            tipo_beneficio: regla.tipo_beneficio,
+            tipo_conteo: regla.tipo_conteo,
+          };
+        }
+      }
+    } catch (e) {
+      // Tabla o columna no existe aún
+      console.warn('Reglas de descuento no disponibles:', e);
+    }
+
+    // ── 3. Variantes con stock > 0 ──
     const variantesConStock = producto.variantes_producto.filter(
-      (v) => v.stock > 0
+      (v: any) => v.stock > 0
     );
 
     const coloresDisponibles = [
-      ...new Set(variantesConStock.map((v) => v.color)),
+      ...new Set(variantesConStock.map((v: any) => v.color)),
     ] as string[];
 
-    const tallasDisponibles = ordenarTallas([
-      ...new Set(variantesConStock.map((v) => v.talla)),
-    ] as string[]);
+    const tallasDisponibles = ordenarTallas(
+      [...new Set(variantesConStock.map((v: any) => v.talla))] as string[]
+    );
 
-    // ── 3. Mapa: color → tallas disponibles ──
+    // ── 4. Mapa: color → tallas disponibles ──
     const tallasPorColor: Record<string, string[]> = {};
     for (const v of variantesConStock) {
       if (!tallasPorColor[v.color]) tallasPorColor[v.color] = [];
@@ -95,7 +124,7 @@ export async function GET(
       tallasPorColor[color] = ordenarTallas(tallasPorColor[color]);
     }
 
-    // ── 4. Mapa: talla → colores disponibles ──
+    // ── 5. Mapa: talla → colores disponibles ──
     const coloresPorTalla: Record<string, string[]> = {};
     for (const v of variantesConStock) {
       if (!coloresPorTalla[v.talla]) coloresPorTalla[v.talla] = [];
@@ -104,13 +133,10 @@ export async function GET(
       }
     }
 
-    // ── 5. Stock total disponible ──
-    const stockTotal = variantesConStock.reduce(
-      (sum, v) => sum + v.stock,
-      0
-    );
+    // ── 6. Stock total ──
+    const stockTotal = variantesConStock.reduce((sum: number, v: any) => sum + v.stock, 0);
 
-    // ── 6. Construir respuesta ──
+    // ── 7. Construir respuesta ──
     const imagenPrincipal = normalizarImagen(producto.imagen);
 
     const data = {
@@ -122,14 +148,18 @@ export async function GET(
         ? {
           id: producto.categorias_productos.id,
           nombre: producto.categorias_productos.nombre,
-          imagen: normalizarImagen(producto.categorias_productos.imagen, 'categorias'),
+          imagen: normalizarImagen(
+            producto.categorias_productos.imagen,
+            'categorias'
+          ),
         }
         : { id: null, nombre: 'Sin categoría', imagen: null },
       colores_disponibles: coloresDisponibles,
       tallas_disponibles: tallasDisponibles,
       tallas_por_color: tallasPorColor,
       colores_por_talla: coloresPorTalla,
-      variantes: producto.variantes_producto.map((v) => ({
+      regla_descuento: reglaDescuentoData,
+      variantes: producto.variantes_producto.map((v: any) => ({
         id: v.id,
         color: v.color,
         talla: v.talla,
