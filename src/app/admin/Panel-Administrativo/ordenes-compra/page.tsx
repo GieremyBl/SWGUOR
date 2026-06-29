@@ -24,7 +24,6 @@ export default function OrdenesCompraPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<string>('todos');
 
-  // Estados de carga para las exportaciones
   const [exportingExcel, setExportingExcel] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
 
@@ -69,7 +68,6 @@ export default function OrdenesCompraPage() {
     };
   }, [ordenes]);
 
-  // ── LÓGICA DE EXPORTACIÓN EXCEL Y PDF ────────────────────────────────────────
   const handleExportExcel = async () => {
     if (filtered.length === 0) {
       toast.error('No hay datos para exportar');
@@ -177,34 +175,44 @@ export default function OrdenesCompraPage() {
     <div className="p-4 md:p-8 space-y-6 bg-gray-50/50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header con AdminPageHeader */}
-        <AdminPageHeader
-          title="Órdenes de Compra"
-          description="Gestión integral de compras, proveedores y control de gastos"
-          actionLabel="Nueva orden"
-          onAction={() => router.push('/admin/Panel-Administrativo/ordenes-compra/nueva')}
-        />
+        {/* Header + Botones de Acción en la misma línea */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <AdminPageHeader
+              title="Órdenes de Compra"
+              description="Gestión integral de compras, proveedores y control de gastos"
+              showAction={false}
+            />
+          </div>
 
-        {/* Botones de Exportación */}
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={handleExportExcel}
-            disabled={exportingExcel || isLoading}
-            className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all"
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
-            {exportingExcel ? 'Exportando...' : 'Descargar Excel'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleExportPDF}
-            disabled={exportingPDF || isLoading}
-            className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all"
-          >
-            <FileText className="w-4 h-4 mr-2 text-red-600" />
-            {exportingPDF ? 'Exportando...' : 'Descargar PDF'}
-          </Button>
+          {/* Botones de Acción (Exportar + Nueva orden) */}
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={handleExportExcel}
+              disabled={exportingExcel || isLoading}
+              className="h-11 rounded-xl border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-gray-600 font-medium transition-all whitespace-nowrap"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-emerald-600" />
+              {exportingExcel ? 'Exportando...' : 'Descargar Excel'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={exportingPDF || isLoading}
+              className="h-11 rounded-xl border-red-200 hover:bg-red-50 hover:text-red-700 text-gray-600 font-medium transition-all whitespace-nowrap"
+            >
+              <FileText className="w-4 h-4 mr-2 text-red-600" />
+              {exportingPDF ? 'Exportando...' : 'Descargar PDF'}
+            </Button>
+            <Button
+              onClick={() => router.push('/admin/Panel-Administrativo/ordenes-compra/nueva')}
+              disabled={!canCreate}
+              className="h-11 px-6 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-medium transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+            >
+              + Nueva orden
+            </Button>
+          </div>
         </div>
 
         {/* Tarjetas Estadísticas */}
