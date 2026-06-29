@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useId } from "react";
-import SearchInput from "../common/SearchInput";
-import FilterSelect from "../common/FilterSelect";
+import SearchInput from "../common/SearchInput"; // ← Mantiene el original
 import { Button } from "@/components/ui/button";
-import { Scale, RefreshCw, ChevronDown } from "lucide-react";
+import { Scale, RefreshCw, ChevronDown, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CategoriaOpcion {
@@ -14,21 +13,17 @@ interface CategoriaOpcion {
 
 interface InventarioToolbarProps {
   isInsumos: boolean;
-  // Búsqueda
   searchTermIns: string;
   setSearchTermIns: (v: string) => void;
   searchTermMat: string;
   setSearchTermMat: (v: string) => void;
-  // Tipo
   selectedTipoIns: string;
   setSelectedTipoIns: (v: string) => void;
   selectedTipoMat: string;
   setSelectedTipoMat: (v: string) => void;
-  // Categoría (solo insumos por ahora — viene de categoria_insumo)
   selectedCategoriaIns: string;
   setSelectedCategoriaIns: (v: string) => void;
   categorias: CategoriaOpcion[];
-  // Refresh
   cargando: boolean;
   onRefresh: () => void;
 }
@@ -60,50 +55,65 @@ export default function InventarioToolbar({
       {/* ── Fila principal ── */}
       <div className="flex flex-col md:flex-row gap-3 p-4">
 
-        {/* Búsqueda */}
+        {/* Búsqueda Original */}
         <SearchInput
           placeholder={isInsumos ? "Buscar insumo por nombre..." : "Buscar tela, hilos, cierres o avíos..."}
           value={isInsumos ? searchTermIns : searchTermMat}
           onChange={isInsumos ? setSearchTermIns : setSearchTermMat}
         />
 
-        {/* Tipo — valores deben matchear el enum de Postgres exactamente */}
-        <FilterSelect
-          value={isInsumos ? selectedTipoIns : selectedTipoMat}
-          onValueChange={isInsumos ? setSelectedTipoIns : setSelectedTipoMat}
-          options={[
-            { label: "Todos los tipos", value: "todos" },
-            ...(isInsumos ? [
-              // TipoInsumo (Postgres): materia_prima, avio, empaque, suministro
-              { label: "Materia Prima", value: "materia_prima" },
-              { label: "Avíos (botones, cierres)", value: "avio" },
-              { label: "Empaque", value: "empaque" },
-              { label: "Suministros", value: "suministro" },
-            ] : [
-              // TipoMaterial (Postgres): punto, plano, no_tejido, especial
-              { label: "Punto", value: "punto" },
-              { label: "Plano", value: "plano" },
-              { label: "No Tejido", value: "no_tejido" },
-              { label: "Especial", value: "especial" },
-            ])
-          ]}
-        />
+        {/* Selector de Tipo — Integrado y Personalizado */}
+        <div className="relative min-w-[180px]">
+          <Filter className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+          <select
+            value={isInsumos ? selectedTipoIns : selectedTipoMat}
+            onChange={(e) => (isInsumos ? setSelectedTipoIns(e.target.value) : setSelectedTipoMat(e.target.value))}
+            className="h-11 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-gray-400 focus:bg-white"
+          >
+            <option value="todos">Todos los tipos</option>
+            {isInsumos ? (
+              <>
+                <option value="materia_prima">Materia Prima</option>
+                <option value="avio">Avíos (botones, cierres)</option>
+                <option value="empaque">Empaque</option>
+                <option value="suministro">Suministros</option>
+              </>
+            ) : (
+              <>
+                <option value="punto">Punto</option>
+                <option value="plano">Plano</option>
+                <option value="no_tejido">No Tejido</option>
+                <option value="especial">Especial</option>
+              </>
+            )}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        </div>
 
-        {/* Categoría — solo insumos, viene de categoria_insumo */}
+        {/* Selector de Categoría — Integrado y Personalizado */}
         {isInsumos && (
-          <FilterSelect
-            value={selectedCategoriaIns}
-            onValueChange={setSelectedCategoriaIns}
-            options={[
-              { label: "Todas las categorías", value: "todos" },
-              ...categorias.map((c) => ({ label: c.nombre, value: String(c.id) })),
-            ]}
-          />
+          <div className="relative min-w-[180px]">
+            <Filter className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+            <select
+              value={selectedCategoriaIns}
+              onChange={(e) => setSelectedCategoriaIns(e.target.value)}
+              className="h-11 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-10 text-sm font-semibold text-gray-700 outline-none transition-all focus:border-gray-400 focus:bg-white"
+            >
+              <option value="todos">Todas las categorías</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          </div>
         )}
 
         {/* Botón calculadora — solo en materiales */}
         {!isInsumos && (
           <button
+            type="button"
             onClick={() => setCalcOpen(v => !v)}
             className={cn(
               "flex items-center gap-2 rounded-xl px-4 h-11 text-sm font-bold transition-all",
@@ -124,7 +134,7 @@ export default function InventarioToolbar({
         </Button>
       </div>
 
-      {/* ── Panel calculadora deslizante ── */}
+      {/* Panel calculadora deslizante */}
       <div
         className="transition-[grid-template-rows] duration-300 ease-in-out"
         style={{
@@ -210,6 +220,7 @@ export default function InventarioToolbar({
             {/* Limpiar */}
             {hasResult && (
               <button
+                type="button"
                 onClick={() => { setKilos(""); setRendimiento(""); }}
                 className="mb-0.5 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#b5854b] border border-[#3d3028] hover:border-[rgba(228,194,138,0.4)] hover:text-[#e4c28a] transition-all active:scale-95"
               >
