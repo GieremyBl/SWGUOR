@@ -53,7 +53,6 @@ export async function POST(req: Request) {
       datosEtapaJson.merma_tela = merma_tela ? Number(merma_tela) : null;
     }
 
-    // 🧵 ESTRUCTURA JSONB PARA REMALLADO
     if (etapa === 'remallado') {
       datosEtapaJson.operario_remalladora = operario_remalladora ? String(operario_remalladora) : 'Asignado en Planta';
       datosEtapaJson.fecha_remallado = new Date().toISOString();

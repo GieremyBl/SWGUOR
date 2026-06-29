@@ -8,7 +8,6 @@ interface EvidenciaUploadProps {
     required?: boolean;
     label?: string;
     disabled?: boolean;
-    // Parámetros para la creación automática de carpetas
     ordenId?: string | number;
     confeccionId?: string | number;
     etapa?: string;

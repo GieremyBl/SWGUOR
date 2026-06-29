@@ -72,3 +72,15 @@ export function evidenciaConfeccionStoragePath(
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
   return `confeccion-${confeccionId}/${Date.now()}-${safe}`;
 }
+
+export const STORAGE_BUCKET_EVIDENCIAS_ORDENES =
+  process.env.SUPABASE_STORAGE_BUCKET_EVIDENCIAS_ORDENES ?? 'evidencias-ordenes-produccion';
+
+export function evidenciaOrdenProduccionStoragePath(
+  ordenId: string | number,
+  etapa: string,
+  fileName: string,
+): string {
+  const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return `orden-${ordenId}/${etapa.toLowerCase()}/${Date.now()}-${safe}`;
+}

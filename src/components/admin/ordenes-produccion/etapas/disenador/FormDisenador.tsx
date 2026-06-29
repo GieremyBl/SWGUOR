@@ -17,10 +17,7 @@ export function FormDisenador({ orden, onComplete }: FormProps) {
     const [evidenciaUrl, setEvidenciaUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // 💡 EXTRACCIÓN DINÁMICA: Navegamos en la relación de la orden
-    // Se adapta a nomenclaturas comunes: orden.pedido_detalles, orden.detalles o orden.items
-    const detallesPedido = orden.pedido_detalles || orden.detalles || orden.items || [];
+    const detallesPedido = orden.ordenes_produccion_items || [];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -65,7 +62,8 @@ export function FormDisenador({ orden, onComplete }: FormProps) {
                 </h4>
                 <p className="text-xs text-gray-500">Registra el avance de muestras y aprobación de moldería física o digital.</p>
             </div>
-            {/* Solo en Diseño */}
+
+            {/* Solo en Diseño: tabla de requerimientos */}
             {etapaActual === "diseno" && (
                 <div className="rounded-2xl border border-blue-100 bg-blue-50/30 p-4 space-y-3">
                     <div className="flex items-center gap-2 text-blue-900">
@@ -78,31 +76,51 @@ export function FormDisenador({ orden, onComplete }: FormProps) {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                        <th className="px-3 py-2">Imagen</th>
                                         <th className="px-3 py-2">Prenda / Producto</th>
-                                        <th className="px-3 py-2">Color Solicitado</th>
+                                        <th className="px-3 py-2">Color</th>
                                         <th className="px-3 py-2 text-center">Talla</th>
                                         <th className="px-3 py-2 text-right">Cant.</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 text-xs text-gray-700 font-medium">
-                                    {detallesPedido.map((item: any, idx: number) => (
-                                        <tr key={item.id || idx} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-3 py-2 font-bold text-gray-950">
-                                                {item.productos?.nombre || item.producto_nombre || "Prenda Base"}
-                                            </td>
-                                            <td className="px-3 py-2">
-                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gray-100 text-gray-800 text-[11px]">
-                                                    {item.color || item.color_nombre || "No definido"}
-                                                </span>
-                                            </td>
-                                            <td className="px-3 py-2 text-center font-mono font-bold text-gray-600">
-                                                {item.talla || item.talla_nombre || "-"}
-                                            </td>
-                                            <td className="px-3 py-2 text-right font-mono font-bold text-gray-900 tabular-nums">
-                                                {item.cantidad || 0} unds.
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {detallesPedido.map((item: any, idx: number) => {
+                                        const producto = item.productos;
+                                        const variante = item.variantes_producto;
+                                        const imagen = variante?.imagen_url || producto?.imagen || null;
+
+                                        return (
+                                            <tr key={item.id || idx} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-3 py-2">
+                                                    {imagen ? (
+                                                        <img
+                                                            src={imagen}
+                                                            alt={producto?.nombre || "Prenda"}
+                                                            className="w-10 h-10 rounded-lg object-cover border border-gray-100"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                            <span className="text-[9px] text-gray-400 font-bold">S/I</span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 font-bold text-gray-950">
+                                                    {producto?.nombre || "—"}
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-800 text-[11px]">
+                                                        {variante?.color || "—"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-center font-mono font-bold text-gray-600">
+                                                    {variante?.talla || "—"}
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-mono font-bold text-gray-900 tabular-nums">
+                                                    {item.cantidad} unds.
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -115,9 +133,8 @@ export function FormDisenador({ orden, onComplete }: FormProps) {
                     )}
                 </div>
             )}
-            {/* ====================================================================== */}
 
-            {/* --- 1. FORMULARIO PERSONALIZADO PARA DISEÑO --- */}
+            {/* --- 1. FORMULARIO PARA DISEÑO --- */}
             {etapaActual === "diseno" && (
                 <>
                     <div>
@@ -155,7 +172,7 @@ export function FormDisenador({ orden, onComplete }: FormProps) {
                 </>
             )}
 
-            {/* --- 2. FORMULARIO PERSONALIZADO PARA PATRONAJE --- */}
+            {/* --- 2. FORMULARIO PARA PATRONAJE --- */}
             {etapaActual === "patronaje" && (
                 <>
                     <div className="p-3 bg-amber-50 text-amber-800 rounded-xl text-xs font-medium border border-amber-100">

@@ -99,8 +99,10 @@ export const OrdenesProduccionService = {
         ordenes_produccion_items: {
           include: {
             pedido_items: { select: { id: true, cantidad: true } },
-            productos: { select: { id: true, nombre: true, sku: true } },
-            variantes_producto: { select: { id: true, talla: true, color: true } },
+            productos: { select: { id: true, nombre: true, sku: true, imagen: true } }, // ← agrega imagen
+            variantes_producto: {
+              select: { id: true, talla: true, color: true, imagen_url: true } // ← agrega imagen_url
+            },
           },
         },
         confecciones: {
