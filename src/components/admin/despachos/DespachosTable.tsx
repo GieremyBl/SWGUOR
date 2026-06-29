@@ -32,6 +32,7 @@ interface Props {
   verificandoId: number | null;
   onIniciarRuta: (id: number) => void;
   onVerificarAlmacen: (id: number) => void;
+  onVerSeguimiento: (id: number) => void;
 }
 
 export function DespachoTable({
@@ -42,6 +43,7 @@ export function DespachoTable({
   verificandoId,
   onIniciarRuta,
   onVerificarAlmacen,
+  onVerSeguimiento,
 }: Props) {
   if (loading) {
     return (
@@ -136,6 +138,15 @@ export function DespachoTable({
                           )}
                         </>
                       )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => onVerSeguimiento(desp.id)}
+                        className="h-8 border-slate-200 text-slate-700 hover:bg-slate-50 text-[10px] font-black uppercase tracking-widest"
+                      >
+                        Seguimiento
+                      </Button>
                       {desp.estado === 'en_ruta' && (
                         <Link
                           href={`/admin/Panel-Administrativo/pedidos/${desp.pedido_id}/entrega`}

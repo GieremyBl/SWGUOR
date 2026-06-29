@@ -15,10 +15,20 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-
-        // Buscar guías por despacho_id
-        const guias = await prisma.guias_remision.findMany({
+        const despacho = await prisma.despachos.findUnique({
             where: { id: BigInt(id) },
+            select: { pedido_id: true },
+        });
+
+        if (!despacho) {
+            return NextResponse.json({ data: [] });
+        }
+
+        const guias = await prisma.guias_remision.findMany({
+            where: {
+                pedido_id: despacho.pedido_id,
+                tipo: 'despacho_cliente',
+            },
             include: { guias_remision_items: true, pedidos: true },
             orderBy: { created_at: 'desc' },
         });

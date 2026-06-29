@@ -8,7 +8,6 @@ import { PedidoDetalleTabs, type TabId } from './PedidoDetalleTabs';
 import OrdenesTable from '@/components/admin/ordenes-produccion/OrdenesTable';
 import { SectionCard } from './PedidoDetalleUI';
 import { ChatAsistenciaAdmin } from './ChatAsistenciaAdmin';
-import { TabGuiaRemision } from './TabGuiaRemision';
 import {
   requiereAtencionChat,
   type MensajeChatPedidoUI,
@@ -22,7 +21,10 @@ interface PedidoDetalleProps {
   puedeAnular: boolean;
 }
 
-export default function PedidoDetalle({ pedido, puedeAnular }: PedidoDetalleProps) {
+export default function PedidoDetalle({
+  pedido,
+  puedeAnular,
+}: PedidoDetalleProps) {
   const router = useRouter();
 
   // El estado acepta 'guia' gracias a la extensión de TabId en el siguiente paso
@@ -31,32 +33,8 @@ export default function PedidoDetalle({ pedido, puedeAnular }: PedidoDetalleProp
   const [totalOrdenes, setTotalOrdenes] = useState<number>(0);
   const [loadingOrdenes, setLoadingOrdenes] = useState(false);
   const [chatPendiente, setChatPendiente] = useState(false);
-  const [guiaPendiente, setGuiaPendiente] = useState(false);
 
   const ordenesCargadas = useRef(false);
-
-  // ── Guía de Remisión pendiente ───────────────────────────────────────────────
-  useEffect(() => {
-    let activo = true;
-
-    async function fetchGuiaPendiente() {
-      try {
-        const res = await fetch(`/api/despachos/pedido/${pedido.id}/guia-remision`, {
-          cache: 'no-store',
-        });
-        const json = await res.json();
-        if (activo && res.ok && Array.isArray(json.data)) {
-          // Si no hay guías o todas están en borrador, marca como pendiente
-          setGuiaPendiente(json.data.length === 0 || json.data.every((g: any) => g.estado === 'borrador'));
-        }
-      } catch (e) {
-        console.error('[PedidoDetalle] Error fetching guía pendiente:', e);
-      }
-    }
-
-    fetchGuiaPendiente();
-    return () => { activo = false; };
-  }, [pedido.id]);
 
   // ── Chat pendiente ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -138,7 +116,6 @@ export default function PedidoDetalle({ pedido, puedeAnular }: PedidoDetalleProp
           activeTab={activeTab}
           totalOrdenes={totalOrdenes}
           chatPendiente={chatPendiente}
-          guiaPendiente={guiaPendiente}
           onTabChange={(t) => setActiveTab(t)}
         />
       </div>
@@ -165,10 +142,6 @@ export default function PedidoDetalle({ pedido, puedeAnular }: PedidoDetalleProp
             pedidoId={pedido.id}
             onPendienteChange={setChatPendiente}
           />
-        </SectionCard>
-      ) : activeTab === 'guia' ? (
-        <SectionCard title="Guía de Remisión Electrónica (GRE)">
-          <TabGuiaRemision pedido={pedido} />
         </SectionCard>
       ) : (
         <PedidoDetalleSecciones

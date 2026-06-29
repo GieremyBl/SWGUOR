@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Building2,
@@ -36,7 +37,7 @@ import type { TipoCliente } from '@prisma/client';
 
 interface PedidoDetalleSeccionesProps {
   pedido: DetallePedidoData;
-  puedeAnular: boolean; // ← Cambio: era puedeCambiarEstado
+  puedeAnular: boolean;
 }
 
 function EspecificacionesLista({
@@ -59,9 +60,29 @@ function EspecificacionesLista({
   );
 }
 
+function parsearNotaYEvidencias(notasRaw: string | null): { texto: string; evidencias: string[] } {
+  if (!notasRaw) return { texto: '', evidencias: [] };
+
+  const token = '\n[EVIDENCIAS] ';
+  if (!notasRaw.includes(token)) {
+    return { texto: notasRaw, evidencias: [] };
+  }
+
+  const partes = notasRaw.split(token);
+  try {
+    const evidencias = JSON.parse(partes[1]);
+    return {
+      texto: partes[0],
+      evidencias: Array.isArray(evidencias) ? evidencias.filter((url) => typeof url === 'string') : [],
+    };
+  } catch {
+    return { texto: notasRaw, evidencias: [] };
+  }
+}
+
 export function PedidoDetalleSecciones({
   pedido,
-  puedeAnular, // ← Cambio: era puedeCambiarEstado
+  puedeAnular,
 }: PedidoDetalleSeccionesProps) {
   const router = useRouter();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false); // ← Agregar
@@ -386,9 +407,26 @@ export function PedidoDetalleSecciones({
                         </span>
                       </div>
                       {s.notas && (
-                        <p className="text-xs text-stone-600 mt-1 bg-stone-50 rounded-lg px-2 py-1.5 border border-stone-100">
-                          {s.notas}
-                        </p>
+                          <div className="mt-1 space-y-2">
+                            <p className="text-xs text-stone-600 bg-stone-50 rounded-lg px-2 py-1.5 border border-stone-100 whitespace-pre-line">
+                              {parsearNotaYEvidencias(s.notas).texto}
+                            </p>
+                            {parsearNotaYEvidencias(s.notas).evidencias.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {parsearNotaYEvidencias(s.notas).evidencias.map((url, index) => (
+                                  <a
+                                    key={`${s.id}-${index}`}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="relative h-20 w-20 overflow-hidden rounded-xl border border-stone-200 bg-stone-50"
+                                  >
+                                    <Image src={url} alt="Evidencia de estado" fill className="object-cover" unoptimized />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                       )}
                     </div>
                   </li>
