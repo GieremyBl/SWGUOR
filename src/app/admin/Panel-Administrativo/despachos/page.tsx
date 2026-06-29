@@ -8,6 +8,9 @@ import AdminPageHeader from '@/components/admin/common/AdminPageHeader';
 import { DespachosStats }   from '@/components/admin/despachos/DespachosStats';
 import { DespachosToolbar } from '@/components/admin/despachos/DespachosToolbar';
 import { DespachoTable }   from '@/components/admin/despachos/DespachosTable';
+import { DespachoDetalleDialog } from '@/components/admin/despachos/DespachoDetalleDialog';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { getUsuarioData } from '@/lib/helpers/usuarios-helpers';
 
 export interface Despacho {
   id:             number;
@@ -16,7 +19,7 @@ export interface Despacho {
   cliente:        string;
   direccion:      string;
   cantidad_pedida: number;
-  estado:         'preparando' | 'en_ruta' | 'entregado' | 'incidencia';
+  estado:         string;
   tracking:       string;
   fecha_despacho: string;
   fecha_entrega:  string;
@@ -33,8 +36,32 @@ export default function DespachosPage() {
   const [currentPage, setCurrentPage]   = useState(0);
   const [iniciandoId, setIniciandoId]   = useState<number | null>(null);
   const [verificandoId, setVerificandoId] = useState<number | null>(null);
+  const [detalleOpen, setDetalleOpen] = useState(false);
+  const [detalleDespacho, setDetalleDespacho] = useState<Despacho | null>(null);
+  const [perfilAyudante, setPerfilAyudante] = useState<{ nombreCompleto: string | null; placaVehiculo: string | null } | null>(null);
 
   const canView = can('view', 'despachos');
+
+  useEffect(() => {
+    const cargarPerfil = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) return;
+
+        const { data } = await getUsuarioData(session.user.id);
+        const payload = data as any;
+        setPerfilAyudante({
+          nombreCompleto: payload?.nombre_completo ?? null,
+          placaVehiculo: null,
+        });
+      } catch {
+        setPerfilAyudante(null);
+      }
+    };
+
+    if (canView) void cargarPerfil();
+  }, [canView]);
 
   const cargarDatos = useCallback(async () => {
     if (!canView) return;
@@ -118,6 +145,12 @@ export default function DespachosPage() {
     }
   }, [despachos, cargarDatos]);
 
+  const handleVerSeguimiento = useCallback((despachoId: number) => {
+    const despacho = despachos.find((item) => item.id === despachoId) ?? null;
+    setDetalleDespacho(despacho);
+    setDetalleOpen(Boolean(despacho));
+  }, [despachos]);
+
   useEffect(() => { if (!authLoading) cargarDatos(); }, [authLoading, cargarDatos]);
 
   const filtered = useMemo(() => despachos.filter((d) => {
@@ -174,8 +207,19 @@ export default function DespachosPage() {
           verificandoId={verificandoId}
           onIniciarRuta={handleIniciarRuta}
           onVerificarAlmacen={handleVerificarAlmacen}
+          onVerSeguimiento={handleVerSeguimiento}
         />
       </div>
+
+      {detalleDespacho && (
+        <DespachoDetalleDialog
+          open={detalleOpen}
+          onOpenChange={setDetalleOpen}
+          despacho={detalleDespacho}
+          perfilAyudante={perfilAyudante}
+          onSuccess={cargarDatos}
+        />
+      )}
     </div>
   );
 }

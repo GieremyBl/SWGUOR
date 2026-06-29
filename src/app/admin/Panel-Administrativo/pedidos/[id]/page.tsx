@@ -132,7 +132,8 @@ export default async function PedidoDetallePage({ params }: PageProps) {
 
   return (
     <PedidoDetalle
-      pedido={pedidoFormateado} puedeAnular={puedeAnular}
+      pedido={pedidoFormateado}
+      puedeAnular={puedeAnular}
     />
   );
 }

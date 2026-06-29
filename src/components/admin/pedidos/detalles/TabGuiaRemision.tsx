@@ -2,16 +2,21 @@
 
 import { ArrowRight, Truck, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import {
+    ESTADO_GUIA_LABELS,
+    ESTADO_GUIA_STYLES,
+} from '@/lib/constants/guias-remision-ui';
 
 interface TabGuiaRemisionProps {
     pedido: any;
+    pdfFallbackUrl?: string;
 }
 
-export function TabGuiaRemision({ pedido }: TabGuiaRemisionProps) {
+export function TabGuiaRemision({ pedido, pdfFallbackUrl }: TabGuiaRemisionProps) {
     const router = useRouter();
 
-    // Relación con tabla guias_remision via pedido_id
-    const guias = pedido.guias_remision || [];
+    const guias = Array.isArray(pedido.guias_remision) ? pedido.guias_remision : [];
+    const pdfFallback = pdfFallbackUrl ?? null;
 
     const irADespachos = () => {
         router.push('/admin/Panel-Administrativo/despachos');
@@ -25,7 +30,7 @@ export function TabGuiaRemision({ pedido }: TabGuiaRemisionProps) {
                 </div>
                 <h3 className="text-base font-bold text-stone-900 mb-1">Sin Guía de Remisión Electrónica</h3>
                 <p className="text-sm text-stone-500 max-w-md mx-auto mb-6">
-                    Este pedido aún no cuenta con un documento de traslado (GRE) autorizado ante SUNAT.
+                    Este despacho aún no cuenta con un documento de traslado (GRE) autorizado ante SUNAT.
                 </p>
                 <button
                     onClick={irADespachos}
@@ -53,14 +58,9 @@ export function TabGuiaRemision({ pedido }: TabGuiaRemisionProps) {
                                     <FileText className="w-4 h-4 text-stone-600" />
                                     <span className="font-semibold text-stone-900">GRE #{guia.numero}</span>
                                     <span
-                                        className={`text-xs font-medium px-2 py-1 rounded ${guia.estado === 'aceptado'
-                                                ? 'bg-emerald-50 text-emerald-700'
-                                                : guia.estado === 'rechazado'
-                                                    ? 'bg-red-50 text-red-700'
-                                                    : 'bg-yellow-50 text-yellow-700'
-                                            }`}
+                                        className={`text-xs font-medium px-2 py-1 rounded border ${ESTADO_GUIA_STYLES[guia.estado as keyof typeof ESTADO_GUIA_STYLES] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}
                                     >
-                                        {guia.estado}
+                                        {ESTADO_GUIA_LABELS[guia.estado as keyof typeof ESTADO_GUIA_LABELS] ?? guia.estado}
                                     </span>
                                 </div>
                                 <p className="text-xs text-stone-500 mb-2">
@@ -72,9 +72,9 @@ export function TabGuiaRemision({ pedido }: TabGuiaRemisionProps) {
                                 <p className="text-sm text-stone-600">
                                     <strong>Destino:</strong> {guia.destino_direccion}
                                 </p>
-                                {guia.pdf_url && (
+                                {(guia.pdf_url || pdfFallback) && (
                                     <a
-                                        href={guia.pdf_url}
+                                        href={guia.pdf_url || pdfFallback}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-xs text-blue-600 hover:underline mt-2 inline-block"
