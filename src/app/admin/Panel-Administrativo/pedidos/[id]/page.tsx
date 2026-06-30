@@ -48,7 +48,7 @@ export default async function PedidoDetallePage({ params }: PageProps) {
             tipo_cliente: true,
           },
         },
-        cotizacion: {
+        cotizaciones: {
           select: {
             id: true,
             numero: true,
@@ -101,8 +101,8 @@ export default async function PedidoDetallePage({ params }: PageProps) {
   const itemsDisplay =
     pedido.pedido_items.length > 0
       ? pedido.pedido_items.map((item) => mapPedidoItemRow(item))
-      : pedido.cotizacion?.cotizacion_items
-        ? mapCotizacionItemsToPedidoItems(pedido.cotizacion.cotizacion_items)
+      : pedido.cotizaciones?.cotizacion_items
+        ? mapCotizacionItemsToPedidoItems(pedido.cotizaciones.cotizacion_items)
         : [];
 
   const documentos = await obtenerDocumentosPedidoAdmin(pedido.id);

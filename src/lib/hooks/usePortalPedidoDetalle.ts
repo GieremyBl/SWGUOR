@@ -36,6 +36,7 @@ export function usePortalPedidoDetalle(pedidoId: string) {
           monto_pagado: Number(data.monto_pagado ?? 0),
           saldo_pendiente: Number(data.saldo_pendiente ?? 0),
           direccion_envio: data.direccion_despacho ?? null,
+          ubigeo_envio: data.ubigeo_envio ?? null,
           notas: data.notas_cliente ?? data.notas_pedido ?? null,
         });
       } catch (err) {

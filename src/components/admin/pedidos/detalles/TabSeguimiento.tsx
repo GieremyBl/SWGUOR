@@ -1,7 +1,8 @@
+// components/admin/pedidos/detalles/TabSeguimiento.tsx
 'use client';
 
 import React from 'react';
-import { PedidoTracker } from '@/components/portal/pedidos/PedidoTracker';
+import { PedidoTimeline } from './PedidoTimeline';
 import type { DetallePedidoData } from './types';
 
 interface TabSeguimientoProps {
@@ -11,7 +12,7 @@ interface TabSeguimientoProps {
 export function TabSeguimiento({ pedido }: TabSeguimientoProps) {
   return (
     <div className="space-y-4">
-      <PedidoTracker pedidoId={pedido.id} variant="admin" />
+      <PedidoTimeline pedidoId={pedido.id} />
     </div>
   );
 }

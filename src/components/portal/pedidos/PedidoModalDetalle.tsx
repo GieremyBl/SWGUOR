@@ -82,7 +82,7 @@ export function PedidoModalDetalle({
           <PedidoDetalleTabs
             pedidoId={pedido.id}
             resumen={
-              <PedidoDetalleResumen pedido={pedido} onVerComprobante={onVerComprobante} />
+              <PedidoDetalleResumen pedido={pedido} />
             }
           />
         </div>

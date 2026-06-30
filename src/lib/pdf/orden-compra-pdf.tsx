@@ -10,7 +10,7 @@ import {
 import { EMPRESA_GUOR } from '@/lib/constants/empresa';
 import { ESTADOS_ORDEN_COMPRA, ESTADOS_PAGO_ORDEN_COMPRA } from '@/lib/constants/estados';
 import { formatNumeroOc } from '@/lib/helpers/ordenes-compra-helpers';
-import type { OrdenCompraDetalle } from '@/lib/services/ordenes-compra.types';
+import type { OrdenCompraDetalle } from '@/types/ordenes-compra.types';
 
 const COLOR = {
   ocre: '#b5854b',

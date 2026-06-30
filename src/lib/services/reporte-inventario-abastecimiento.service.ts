@@ -107,18 +107,18 @@ function mapStockToAlerta(row: StockRow): ReporteInventarioAlerta | null {
     const stockMaximo = resolverStockMaximo(insumo.stock_maximo, stockMinimo);
 
     return {
-      stock_id:         Number(row.id),
-      tipo:             'insumo',
-      item_id:          Number(insumo.id),
-      nombre:           insumo.nombre,
-      categoria:        insumo.categoria_insumo?.nombre ?? null,
-      almacen_id:       Number(row.almacen_id),
-      almacen_nombre:   row.almacenes.nombre,
+      stock_id: Number(row.id),
+      tipo: 'insumo',
+      item_id: Number(insumo.id),
+      nombre: insumo.nombre,
+      categoria: insumo.categoria_insumo?.nombre ?? null,
+      almacen_id: Number(row.almacen_id),
+      almacen_nombre: row.almacenes.nombre,
       cantidad,
-      stock_minimo:     stockMinimo,
-      stock_maximo:     stockMaximo,
+      stock_minimo: stockMinimo,
+      stock_maximo: stockMaximo,
       porcentaje_stock: calcularPorcentajeStock(cantidad, stockMaximo),
-      deficit:          calcularDeficit(cantidad, stockMinimo),
+      deficit: calcularDeficit(cantidad, stockMinimo),
     };
   }
 
@@ -129,18 +129,18 @@ function mapStockToAlerta(row: StockRow): ReporteInventarioAlerta | null {
     const stockMaximo = resolverStockMaximo(null, stockMinimo);
 
     return {
-      stock_id:         Number(row.id),
-      tipo:             'material',
-      item_id:          Number(row.materiales.id),
-      nombre:           row.materiales.nombre,
-      categoria:        null,
-      almacen_id:       Number(row.almacen_id),
-      almacen_nombre:   row.almacenes.nombre,
+      stock_id: Number(row.id),
+      tipo: 'material',
+      item_id: Number(row.materiales.id),
+      nombre: row.materiales.nombre,
+      categoria: null,
+      almacen_id: Number(row.almacen_id),
+      almacen_nombre: row.almacenes.nombre,
       cantidad,
-      stock_minimo:     stockMinimo,
-      stock_maximo:     stockMaximo,
+      stock_minimo: stockMinimo,
+      stock_maximo: stockMaximo,
       porcentaje_stock: calcularPorcentajeStock(cantidad, stockMaximo),
-      deficit:          calcularDeficit(cantidad, stockMinimo),
+      deficit: calcularDeficit(cantidad, stockMinimo),
     };
   }
 

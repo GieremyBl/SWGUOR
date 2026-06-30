@@ -12,7 +12,7 @@ import type {
 import {
   COTIZACION_PROVEEDOR_INCLUDE,
   type CotizacionProveedorDetalle,
-} from '@/lib/services/cotizaciones-proveedor.types';
+} from '@/types/cotizaciones-proveedor.types';
 import { buildCotizacionItemsCreateData } from '@/lib/helpers/cotizacion-proveedor-items.helper';
 
 export type { CotizacionProveedorDetalle };

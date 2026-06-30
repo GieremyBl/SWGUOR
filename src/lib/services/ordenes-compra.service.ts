@@ -14,7 +14,7 @@ import type {
 import {
   ORDEN_COMPRA_INCLUDE,
   type OrdenCompraDetalle,
-} from '@/lib/services/ordenes-compra.types';
+} from '@/types/ordenes-compra.types';
 
 export type { OrdenCompraDetalle };
 

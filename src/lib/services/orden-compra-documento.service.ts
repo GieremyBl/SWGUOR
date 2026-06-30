@@ -5,7 +5,7 @@ import {
   ordenCompraPdfStoragePath,
 } from '@/lib/constants/storage';
 import { renderOrdenCompraPdfBuffer } from '@/lib/pdf/orden-compra-pdf';
-import type { OrdenCompraDetalle } from '@/lib/services/ordenes-compra.types';
+import type { OrdenCompraDetalle } from '@/types/ordenes-compra.types';
 
 export function getOrdenCompraPdfPublicUrl(ordenId: string | number): string {
   const supabase = createAdminClient();
@@ -39,7 +39,7 @@ export async function ordenCompraPdfExists(
     .list(folder, { search: 'orden.pdf' });
 
   if (error) return false;
-  
+
   return Array.isArray(data) && data.some((f) => f.name === 'orden.pdf');
 }
 
