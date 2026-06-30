@@ -139,15 +139,15 @@ export function PedidoTracker({ pedidoId, className, variant = 'portal' }: Pedid
   const accent =
     variant === 'admin'
       ? {
-          completado: 'bg-emerald-600 border-emerald-600',
-          actual: 'border-blue-600 text-blue-600 ring-blue-100',
-          linea: 'bg-emerald-600',
-        }
+        completado: 'bg-emerald-600 border-emerald-600',
+        actual: 'border-blue-600 text-blue-600 ring-blue-100',
+        linea: 'bg-emerald-600',
+      }
       : {
-          completado: 'bg-[#B8962D] border-[#B8962D]',
-          actual: 'border-[#B8962D] text-[#B8962D] ring-amber-100',
-          linea: 'bg-[#B8962D]',
-        };
+        completado: 'bg-[#B8962D] border-[#B8962D]',
+        actual: 'border-[#B8962D] text-[#B8962D] ring-amber-100',
+        linea: 'bg-[#B8962D]',
+      };
 
   if (loading) {
     return (
@@ -176,8 +176,8 @@ export function PedidoTracker({ pedidoId, className, variant = 'portal' }: Pedid
   const progresoPct =
     data.pasos.length > 1
       ? (data.pasos.filter((p) => p.estadoVisual === 'completado').length /
-          (data.pasos.length - 1)) *
-        100
+        (data.pasos.length - 1)) *
+      100
       : 0;
 
   return (
@@ -292,37 +292,6 @@ export function PedidoTracker({ pedidoId, className, variant = 'portal' }: Pedid
                 La confección alimenta automáticamente el seguimiento del pedido.
               </p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {(data.flujo_interno?.length ?? 0) > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">
-            Flujo interno conectado
-          </p>
-          <div className="space-y-2">
-            {data.flujo_interno!.map((paso) => {
-              const estadoClase =
-                paso.estadoVisual === 'completado'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : paso.estadoVisual === 'actual'
-                    ? 'border-blue-200 bg-blue-50 text-blue-700'
-                    : 'border-slate-200 bg-slate-50 text-slate-500';
-
-              return (
-                <div
-                  key={paso.key}
-                  className={cn(
-                    'rounded-lg border px-3 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1',
-                    estadoClase,
-                  )}
-                >
-                  <p className="text-xs font-semibold">{paso.label}</p>
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">{paso.rol}</p>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}
