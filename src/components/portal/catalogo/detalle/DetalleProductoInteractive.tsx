@@ -125,6 +125,7 @@ export default function DetalleProductoInteractive({ producto }: DetalleProducto
                     <h2 className="text-sm font-semibold text-slate-900 mb-4">Configurar Orden Mayorista</h2>
                     <DetalleProductoForm
                         productoId={producto.id}
+                        nombreProducto={producto.nombre}
                         precioBase={precioActual}
                         variante={varianteActiva}
                         listaReglas={listaReglasDeBaseDeDatos}

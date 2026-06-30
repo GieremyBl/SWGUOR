@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ClipboardList, Plus, Minus, CheckCircle2, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { ClipboardList, Plus, Minus, CheckCircle2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { useCartStore } from '@/lib/store/useCartStore';
 
 interface Variante {
     id: number | bigint;
@@ -21,6 +23,7 @@ interface ReglaDescuento {
 
 interface DetalleProductoFormProps {
     productoId: number | bigint;
+    nombreProducto: string; // Añadido para poder guardar el nombre en el carrito
     precioBase: number;
     variante: Variante | null;
     listaReglas?: ReglaDescuento[];
@@ -46,6 +49,7 @@ function calcularDescuentoDinamico(
 
 export default function DetalleProductoForm({
     productoId,
+    nombreProducto,
     precioBase,
     variante,
     listaReglas = [],
@@ -54,6 +58,9 @@ export default function DetalleProductoForm({
 }: DetalleProductoFormProps) {
     const [cantidad, setCantidad] = useState(stockMinimoPedido);
     const [enviado, setEnviado] = useState(false);
+
+    // Traemos la acción de agregar del store global de Zustand
+    const addItem = useCartStore((s) => s.addItem);
 
     const { precioUnitario, descuentoPct, total, ahorro } = calcularDescuentoDinamico(
         precioBase,
@@ -86,21 +93,44 @@ export default function DetalleProductoForm({
         setCantidad(isNaN(val) ? 0 : val);
     };
 
-    const handleSimulateSubmit = () => {
-        if (!puedeOrdenar) return;
+    const handleAddToCart = () => {
+        if (!puedeOrdenar || !variante) return;
+
+        // Ejecutamos la acción del store mapeando las propiedades esperadas por PortalCartDrawer
+        addItem({
+            producto_id: Number(productoId),
+            variante_id: Number(variante.id),
+            nombre: nombreProducto,
+            precio: precioUnitario,
+            color: variante.color,
+            talla: variante.talla,
+            imagen_url: variante.imagen_url,
+            moq: stockMinimoPedido,
+        }, cantidad);
+
         setEnviado(true);
         setTimeout(() => setEnviado(false), 3000);
     };
 
     return (
         <div className="space-y-5">
+            {/* Botón superior izquierdo: Regresar al catálogo */}
+            <div className="pt-1">
+                <Link
+                    href="/portal/catalogo"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors"
+                >
+                    <ArrowLeft size={14} strokeWidth={2.5} />
+                    Regresar al catálogo
+                </Link>
+            </div>
+
             {/* Control de Cantidades */}
             <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
                     Cantidad a solicitar
                 </label>
                 <div className="flex items-center gap-2">
-                    {/* BOTÓN MENOS CORREGIDO: Forzado text-slate-900 y stroke-[3px] */}
                     <button
                         type="button"
                         onClick={handleDecrement}
@@ -172,24 +202,24 @@ export default function DetalleProductoForm({
                 </div>
             </div>
 
-            {/* Botón de Acción */}
+            {/* Botón de Acción Conectado al Carrito */}
             <button
                 type="button"
-                onClick={handleSimulateSubmit}
+                onClick={handleAddToCart}
                 disabled={!puedeOrdenar || bajoCantidadMinima}
                 className={`w-full h-12 px-6 rounded-xl font-bold text-sm flex items-center justify-center gap-2.5 transition-all duration-200 shadow-sm
-                    ${!puedeOrdenar || bajoCantidadMinima
+          ${!puedeOrdenar || bajoCantidadMinima
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                         : enviado
                             ? 'bg-emerald-600 text-white'
                             : 'bg-indigo-600 text-white hover:bg-indigo-700 active:scale-[0.98] hover:shadow-md'
                     }
-                `}
+        `}
             >
                 {enviado ? (
                     <>
                         <CheckCircle2 size={18} />
-                        Pedido generado
+                        ¡Agregado al carrito!
                     </>
                 ) : (
                     <>
@@ -198,7 +228,7 @@ export default function DetalleProductoForm({
                             ? 'Selecciona color y talla'
                             : bajoCantidadMinima
                                 ? `Mínimo ${stockMinimoPedido.toLocaleString('es-PE')} unidades`
-                                : 'Generar pedido'}
+                                : 'Agregar al Pedido'}
                     </>
                 )}
             </button>
